@@ -616,7 +616,7 @@ export default function SettingsScreen() {
                                 e.stopPropagation();
                                 openColorPicker('group', group.id);
                               }}
-                              style={styles.colorButton}
+                              style={[styles.colorButton, getItemColor('group', group.id) && { backgroundColor: getItemColor('group', group.id) + '20', borderRadius: 6 }]}
                               activeOpacity={0.7}
                             >
                               <Paintbrush size={18} color={getItemColor('group', group.id) || colors.primary} />
@@ -660,7 +660,7 @@ export default function SettingsScreen() {
                                 e.stopPropagation();
                                 openColorPicker('department', department.id);
                               }}
-                              style={styles.colorButton}
+                              style={[styles.colorButton, getItemColor('department', department.id) && { backgroundColor: getItemColor('department', department.id) + '20', borderRadius: 6 }]}
                               activeOpacity={0.7}
                             >
                               <Paintbrush size={18} color={getItemColor('department', department.id) || colors.primary} />
@@ -895,45 +895,51 @@ export default function SettingsScreen() {
               <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator>
                 <View style={styles.colorGrid}>
                   {[
-                    '#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d',
-                    '#f97316', '#ea580c', '#c2410c', '#9a3412', '#7c2d12',
-                    '#f59e0b', '#d97706', '#b45309', '#92400e', '#78350f',
-                    '#eab308', '#ca8a04', '#a16207', '#854d0e', '#713f12',
-                    '#84cc16', '#65a30d', '#4d7c0f', '#3f6212', '#365314',
-                    '#22c55e', '#16a34a', '#15803d', '#166534', '#14532d',
-                    '#10b981', '#059669', '#047857', '#065f46', '#064e3b',
-                    '#14b8a6', '#0d9488', '#0f766e', '#115e59', '#134e4a',
-                    '#06b6d4', '#0891b2', '#0e7490', '#155e75', '#164e63',
-                    '#0ea5e9', '#0284c7', '#0369a1', '#075985', '#0c4a6e',
-                    '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a',
-                    '#6366f1', '#4f46e5', '#4338ca', '#3730a3', '#312e81',
-                    '#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6', '#4c1d95',
-                    '#a855f7', '#9333ea', '#7e22ce', '#6b21a8', '#581c87',
-                    '#d946ef', '#c026d3', '#a21caf', '#86198f', '#701a75',
-                    '#ec4899', '#db2777', '#be185d', '#9f1239', '#831843',
-                    '#f43f5e', '#e11d48', '#be123c', '#9f1239', '#881337',
-                    '#64748b', '#475569', '#334155', '#1e293b', '#0f172a',
-                    '#71717a', '#52525b', '#3f3f46', '#27272a', '#18181b',
-                    '#78716c', '#57534e', '#44403c', '#292524', '#1c1917',
-                    '#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1',
-                    '#94a3b8', '#64748b', '#475569', '#334155', '#1e293b',
-                    '#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626',
-                    '#fed7aa', '#fdba74', '#fb923c', '#f97316', '#ea580c',
-                    '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706',
-                    '#fef08a', '#fde047', '#facc15', '#eab308', '#ca8a04',
-                    '#d9f99d', '#bef264', '#a3e635', '#84cc16', '#65a30d',
-                    '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a',
-                    '#a7f3d0', '#6ee7b7', '#34d399', '#10b981', '#059669',
-                    '#99f6e4', '#5eead4', '#2dd4bf', '#14b8a6', '#0d9488',
-                    '#a5f3fc', '#67e8f9', '#22d3ee', '#06b6d4', '#0891b2',
-                    '#bae6fd', '#7dd3fc', '#38bdf8', '#0ea5e9', '#0284c7',
-                    '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb',
-                    '#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5',
-                    '#ddd6fe', '#c4b5fd', '#a78bfa', '#8b5cf6', '#7c3aed',
-                    '#e9d5ff', '#d8b4fe', '#c084fc', '#a855f7', '#9333ea',
-                    '#f5d0fe', '#f0abfc', '#e879f9', '#d946ef', '#c026d3',
-                    '#fce7f3', '#fbcfe8', '#f9a8d4', '#ec4899', '#db2777',
-                    '#ffe4e6', '#fecdd3', '#fda4af', '#f43f5e', '#e11d48',
+                    '#000000', '#1a1a1a', '#333333', '#4d4d4d', '#666666', '#808080', '#999999', '#b3b3b3', '#cccccc', '#e6e6e6', '#f2f2f2', '#ffffff',
+                    '#ff0000', '#ff1a1a', '#ff3333', '#ff4d4d', '#ff6666', '#ff8080', '#ff9999', '#ffb3b3', '#ffcccc', '#ffe6e6',
+                    '#cc0000', '#e60000', '#ff0000', '#ff1a1a', '#ff3333', '#ff4d4d', '#ff6666', '#ff8080', '#ff9999', '#ffb3b3',
+                    '#990000', '#b30000', '#cc0000', '#e60000', '#ff0000', '#ff1a1a', '#ff3333', '#ff4d4d', '#ff6666', '#ff8080',
+                    '#660000', '#800000', '#990000', '#b30000', '#cc0000', '#e60000', '#ff0000', '#ff1a1a', '#ff3333', '#ff4d4d',
+                    '#ff6600', '#ff751a', '#ff8533', '#ff944d', '#ffa366', '#ffb380', '#ffc299', '#ffd1b3', '#ffe0cc', '#fff0e6',
+                    '#cc5200', '#e65c00', '#ff6600', '#ff751a', '#ff8533', '#ff944d', '#ffa366', '#ffb380', '#ffc299', '#ffd1b3',
+                    '#994d00', '#b35900', '#cc6600', '#e67300', '#ff8000', '#ff8c1a', '#ff9933', '#ffa64d', '#ffb366', '#ffc080',
+                    '#ffcc00', '#ffd11a', '#ffd633', '#ffdb4d', '#ffe066', '#ffe680', '#ffeb99', '#fff0b3', '#fff5cc', '#fffae6',
+                    '#ccaa00', '#e6bf00', '#ffd400', '#ffd91a', '#ffde33', '#ffe34d', '#ffe866', '#ffed80', '#fff299', '#fff7b3',
+                    '#ffff00', '#ffff1a', '#ffff33', '#ffff4d', '#ffff66', '#ffff80', '#ffff99', '#ffffb3', '#ffffcc', '#ffffe6',
+                    '#ccff00', '#d6ff1a', '#e0ff33', '#ebff4d', '#f5ff66', '#ffff80', '#ffff99', '#ffffb3', '#ffffcc', '#ffffe6',
+                    '#99ff00', '#adff1a', '#c2ff33', '#d6ff4d', '#ebff66', '#ffff80', '#ffff99', '#ffffb3', '#ffffcc', '#ffffe6',
+                    '#66ff00', '#75ff1a', '#85ff33', '#94ff4d', '#a3ff66', '#b3ff80', '#c2ff99', '#d1ffb3', '#e0ffcc', '#f0ffe6',
+                    '#33ff00', '#47ff1a', '#5cff33', '#70ff4d', '#85ff66', '#99ff80', '#adff99', '#c2ffb3', '#d6ffcc', '#ebffe6',
+                    '#00ff00', '#1aff1a', '#33ff33', '#4dff4d', '#66ff66', '#80ff80', '#99ff99', '#b3ffb3', '#ccffcc', '#e6ffe6',
+                    '#00ff33', '#1aff47', '#33ff5c', '#4dff70', '#66ff85', '#80ff99', '#99ffad', '#b3ffc2', '#ccffd6', '#e6ffeb',
+                    '#00ff66', '#1aff75', '#33ff85', '#4dff94', '#66ffa3', '#80ffb3', '#99ffc2', '#b3ffd1', '#ccffe0', '#e6fff0',
+                    '#00ff99', '#1affad', '#33ffc2', '#4dffd6', '#66ffeb', '#80ffff', '#99ffff', '#b3ffff', '#ccffff', '#e6ffff',
+                    '#00ffcc', '#1affd6', '#33ffe0', '#4dffeb', '#66fff5', '#80ffff', '#99ffff', '#b3ffff', '#ccffff', '#e6ffff',
+                    '#00ffff', '#1affff', '#33ffff', '#4dffff', '#66ffff', '#80ffff', '#99ffff', '#b3ffff', '#ccffff', '#e6ffff',
+                    '#00ccff', '#1ad6ff', '#33e0ff', '#4debff', '#66f5ff', '#80ffff', '#99ffff', '#b3ffff', '#ccffff', '#e6ffff',
+                    '#0099ff', '#1aadff', '#33c2ff', '#4dd6ff', '#66ebff', '#80ffff', '#99ffff', '#b3ffff', '#ccffff', '#e6ffff',
+                    '#0066ff', '#1a75ff', '#3385ff', '#4d94ff', '#66a3ff', '#80b3ff', '#99c2ff', '#b3d1ff', '#cce0ff', '#e6f0ff',
+                    '#0033ff', '#1a47ff', '#335cff', '#4d70ff', '#6685ff', '#8099ff', '#99adff', '#b3c2ff', '#ccd6ff', '#e6ebff',
+                    '#0000ff', '#1a1aff', '#3333ff', '#4d4dff', '#6666ff', '#8080ff', '#9999ff', '#b3b3ff', '#ccccff', '#e6e6ff',
+                    '#3300ff', '#4d1aff', '#6633ff', '#804dff', '#9966ff', '#b380ff', '#cc99ff', '#e0b3ff', '#f0ccff', '#fae6ff',
+                    '#6600ff', '#751aff', '#8533ff', '#944dff', '#a366ff', '#b380ff', '#c299ff', '#d1b3ff', '#e0ccff', '#f0e6ff',
+                    '#9900ff', '#ad1aff', '#c233ff', '#d64dff', '#eb66ff', '#ff80ff', '#ff99ff', '#ffb3ff', '#ffccff', '#ffe6ff',
+                    '#cc00ff', '#d61aff', '#e033ff', '#eb4dff', '#f566ff', '#ff80ff', '#ff99ff', '#ffb3ff', '#ffccff', '#ffe6ff',
+                    '#ff00ff', '#ff1aff', '#ff33ff', '#ff4dff', '#ff66ff', '#ff80ff', '#ff99ff', '#ffb3ff', '#ffcccc', '#ffe6ff',
+                    '#ff00cc', '#ff1ad6', '#ff33e0', '#ff4deb', '#ff66f5', '#ff80ff', '#ff99ff', '#ffb3ff', '#ffccff', '#ffe6ff',
+                    '#ff0099', '#ff1aad', '#ff33c2', '#ff4dd6', '#ff66eb', '#ff80ff', '#ff99ff', '#ffb3ff', '#ffccff', '#ffe6ff',
+                    '#ff0066', '#ff1a75', '#ff3385', '#ff4d94', '#ff66a3', '#ff80b3', '#ff99c2', '#ffb3d1', '#ffcce0', '#ffe6f0',
+                    '#ff0033', '#ff1a47', '#ff335c', '#ff4d70', '#ff6685', '#ff8099', '#ff99ad', '#ffb3c2', '#ffccd6', '#ffe6eb',
+                    '#8b4513', '#a0522d', '#b8860b', '#cd853f', '#daa520', '#d2691e', '#bc8f8f', '#f4a460', '#deb887', '#d2b48c',
+                    '#f5deb3', '#ffe4b5', '#ffefd5', '#fff8dc', '#fffaf0', '#faebd7', '#ffe4c4', '#ffdead', '#ffe4e1', '#fff5ee',
+                    '#faf0e6', '#fdf5e6', '#ffefd5', '#fff8dc', '#fffacd', '#ffffe0', '#f0fff0', '#f5fffa', '#f0ffff', '#f0f8ff',
+                    '#708090', '#778899', '#b0c4de', '#add8e6', '#87ceeb', '#87cefa', '#00bfff', '#1e90ff', '#6495ed', '#4682b4',
+                    '#5f9ea0', '#20b2aa', '#48d1cc', '#40e0d0', '#00ced1', '#00ffff', '#e0ffff', '#afeeee', '#7fffd4', '#66cdaa',
+                    '#3cb371', '#2e8b57', '#90ee90', '#98fb98', '#8fbc8f', '#32cd32', '#00fa9a', '#00ff7f', '#adff2f', '#7fff00',
+                    '#7cfc00', '#00ff00', '#32cd32', '#9acd32', '#6b8e23', '#556b2f', '#8b4513', '#a0522d', '#cd853f', '#daa520',
+                    '#b8860b', '#ffd700', '#ffff00', '#ffffe0', '#fffacd', '#fafad2', '#ffefd5', '#ffe4b5', '#ffdab9', '#eee8aa',
+                    '#f0e68c', '#bdb76b', '#e6e6fa', '#d8bfd8', '#dda0dd', '#ee82ee', '#da70d6', '#ff00ff', '#ba55d3', '#9370db',
+                    '#8a2be2', '#9400d3', '#9932cc', '#8b008b', '#800080', '#4b0082', '#483d8b', '#6a5acd', '#7b68ee', '#9370db',
                   ].map((color) => (
                     <TouchableOpacity
                       key={color}
