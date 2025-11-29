@@ -851,7 +851,7 @@ export default function ProductsScreen() {
       {notification && (
         <Animated.View style={{ opacity: notificationOpacity }}>
           {isLiquidGlassAvailable() ? (
-            <GlassView style={styles.notification} glassEffectStyle="regular" tintColor="#10b981">
+            <GlassView style={styles.notification} glassEffectStyle="regular" tintColor="#1e3a8a">
               <Text style={styles.notificationText}>{notification}</Text>
             </GlassView>
           ) : (
@@ -1079,9 +1079,9 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   notificationFallback: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: 'rgba(30, 58, 138, 0.8)',
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.4)',
+    borderColor: 'rgba(59, 130, 246, 0.6)',
     backdropFilter: 'blur(20px)',
   },
   notificationText: {
