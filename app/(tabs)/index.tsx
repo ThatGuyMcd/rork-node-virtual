@@ -435,7 +435,9 @@ export default function ProductsScreen() {
   };
 
   const handleMenuItemPress = (menuProduct: MenuProduct) => {
-    console.log('[Products] Menu item pressed:', menuProduct.productName, 'HOTCODE:', menuProduct.hotcode);
+    console.log('[Products] ========== MENU ITEM PRESSED ==========');
+    console.log('[Products] Product name:', menuProduct.productName);
+    console.log('[Products] Product hotcode:', menuProduct.hotcode);
 
     const product = products.find(p => p.name === menuProduct.productName);
     if (!product) {
@@ -444,15 +446,21 @@ export default function ProductsScreen() {
       return;
     }
 
+    console.log('[Products] Product found in products list');
+    console.log('[Products] Product prices:', product.prices);
+
     if (menuProduct.hotcode && menuProduct.hotcode.toUpperCase() !== 'NOT SET') {
       const hotcode = menuProduct.hotcode.toUpperCase();
+      console.log('[Products] Checking hotcode:', hotcode);
       const menuMatch = hotcode.match(/^MENU(\d+)$/);
       
       if (menuMatch) {
         const menuId = `MENU${menuMatch[1]}`;
-        console.log('[Products] Opening nested menu:', menuId);
+        console.log('[Products] This is a menu hotcode, opening nested menu:', menuId);
+        console.log('[Products] Available menus:', Object.keys(menuData));
         
         if (menuData[menuId]) {
+          console.log('[Products] Menu found, navigating to it');
           setCurrentMenuId(menuId);
           setMenuStack(prev => [...prev, menuId]);
           return;
@@ -461,9 +469,15 @@ export default function ProductsScreen() {
           showNotification(`Menu ${menuId} not found`, true);
           return;
         }
+      } else {
+        console.log('[Products] Hotcode does not match MENU pattern:', hotcode);
       }
+    } else {
+      console.log('[Products] No hotcode or hotcode is NOT SET');
     }
 
+    console.log('[Products] Closing menu modal and adding product to basket');
+    closeMenuModal();
     handleProductPress(product);
   };
 
