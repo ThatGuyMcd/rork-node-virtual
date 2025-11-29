@@ -280,12 +280,14 @@ export default function ProductsScreen() {
       return;
     }
 
+    const productToCheck = selectedProduct;
+
     addToBasket(selectedProduct, price, 1);
     showNotification(`Added ${selectedProduct.name} to basket`);
     closePriceModal();
 
-    if (selectedProduct.hotcode && selectedProduct.hotcode.toUpperCase() !== 'NOT SET') {
-      const hotcode = selectedProduct.hotcode.toUpperCase();
+    if (productToCheck.hotcode && productToCheck.hotcode.toUpperCase() !== 'NOT SET') {
+      const hotcode = productToCheck.hotcode.toUpperCase();
       const menuMatch = hotcode.match(/^MENU(\d+)$/);
       
       if (menuMatch) {
