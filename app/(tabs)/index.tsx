@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { ChevronLeft, X, RefreshCw, Grid3x3, Save } from 'lucide-react-native';
+import { GlassView } from 'expo-glass-effect';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
@@ -812,9 +813,9 @@ export default function ProductsScreen() {
       </Modal>
 
       {notification && (
-        <View style={styles.notification}>
+        <GlassView style={styles.notification} glassEffectStyle="regular" tintColor="#10b981">
           <Text style={styles.notificationText}>{notification}</Text>
-        </View>
+        </GlassView>
       )}
     </View>
   );
@@ -1021,10 +1022,9 @@ const styles = StyleSheet.create({
   },
   notification: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 40,
     left: 20,
     right: 20,
-    backgroundColor: '#10b981',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
