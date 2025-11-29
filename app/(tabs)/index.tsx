@@ -421,7 +421,6 @@ export default function ProductsScreen() {
                 style={[
                   styles.card,
                   {
-                    backgroundColor: getGroupColor(group.id),
                     width: getCardDimensions(productViewLayout).width,
                     height: getCardDimensions(productViewLayout).groupHeight,
                   },
@@ -429,6 +428,15 @@ export default function ProductsScreen() {
                 onPress={() => setSelectedGroup(group.id)}
                 activeOpacity={0.8}
               >
+                {isLiquidGlassAvailable() ? (
+                  <GlassView
+                    style={StyleSheet.absoluteFill}
+                    glassEffectStyle="regular"
+                    tintColor={getGroupColor(group.id)}
+                  />
+                ) : (
+                  <View style={[StyleSheet.absoluteFill, { backgroundColor: getGroupColor(group.id), opacity: 0.9 }]} />
+                )}
                 <Text style={styles.cardTitle}>{trimName(group.name)}</Text>
                 <Text style={styles.cardCount}>
                   {visibleDepartments.filter((d) => d.groupId === group.id).length} departments
@@ -460,7 +468,6 @@ export default function ProductsScreen() {
                 style={[
                   styles.card,
                   {
-                    backgroundColor: getDepartmentColor(dept.id),
                     width: getCardDimensions(productViewLayout).width,
                     height: getCardDimensions(productViewLayout).groupHeight,
                   },
@@ -468,6 +475,15 @@ export default function ProductsScreen() {
                 onPress={() => setSelectedDepartment(dept.id)}
                 activeOpacity={0.8}
               >
+                {isLiquidGlassAvailable() ? (
+                  <GlassView
+                    style={StyleSheet.absoluteFill}
+                    glassEffectStyle="regular"
+                    tintColor={getDepartmentColor(dept.id)}
+                  />
+                ) : (
+                  <View style={[StyleSheet.absoluteFill, { backgroundColor: getDepartmentColor(dept.id), opacity: 0.9 }]} />
+                )}
                 <Text style={styles.cardTitle}>{trimName(dept.name)}</Text>
                 <Text style={styles.cardCount}>
                   {products.filter((p) => {
@@ -901,6 +917,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     justifyContent: 'space-between',
+    overflow: 'hidden',
   },
   cardTitle: {
     fontSize: 18,
@@ -915,6 +932,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     justifyContent: 'space-between',
+    overflow: 'hidden',
   },
   productName: {
     fontSize: 15,
@@ -958,6 +976,7 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '100%',
     maxWidth: 400,
+    overflow: 'hidden',
   },
   modalHeader: {
     flexDirection: 'row',
