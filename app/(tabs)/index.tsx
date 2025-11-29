@@ -281,20 +281,28 @@ export default function ProductsScreen() {
     }
 
     const productToCheck = selectedProduct;
+    console.log('[Products] Price selected, product:', productToCheck.name);
+    console.log('[Products] Product hotcode:', productToCheck.hotcode);
 
     addToBasket(selectedProduct, price, 1);
     showNotification(`Added ${selectedProduct.name} to basket`);
     closePriceModal();
 
+    console.log('[Products] Checking for menu after price selection...');
+    console.log('[Products] Available menu data:', Object.keys(menuData));
+    
     if (productToCheck.hotcode && productToCheck.hotcode.toUpperCase() !== 'NOT SET') {
       const hotcode = productToCheck.hotcode.toUpperCase();
+      console.log('[Products] Hotcode detected:', hotcode);
       const menuMatch = hotcode.match(/^MENU(\d+)$/);
       
       if (menuMatch) {
         const menuId = `MENU${menuMatch[1]}`;
         console.log('[Products] Opening menu after price selection:', menuId);
+        console.log('[Products] Menu exists?', menuData[menuId] ? 'YES' : 'NO');
         
         if (menuData[menuId]) {
+          console.log('[Products] Setting menu modal visible');
           setCurrentMenuId(menuId);
           setMenuStack([menuId]);
           setMenuModalVisible(true);
@@ -303,7 +311,11 @@ export default function ProductsScreen() {
           console.warn('[Products] Menu not found:', menuId);
           showNotification(`Menu ${menuId} not found`, true);
         }
+      } else {
+        console.log('[Products] Hotcode did not match MENU pattern:', hotcode);
       }
+    } else {
+      console.log('[Products] No hotcode or hotcode is NOT SET');
     }
   };
 
@@ -316,19 +328,29 @@ export default function ProductsScreen() {
       return;
     }
 
+    const productToCheck = selectedProduct;
+    console.log('[Products] Manual price submitted, product:', productToCheck.name);
+    console.log('[Products] Product hotcode:', productToCheck.hotcode);
+
     addToBasket(selectedProduct, selectedPriceForManual, 1, price);
     showNotification(`Added ${selectedProduct.name} to basket (£${price.toFixed(2)})`);
     closeManualPriceModal();
 
-    if (selectedProduct.hotcode && selectedProduct.hotcode.toUpperCase() !== 'NOT SET') {
-      const hotcode = selectedProduct.hotcode.toUpperCase();
+    console.log('[Products] Checking for menu after manual price...');
+    console.log('[Products] Available menu data:', Object.keys(menuData));
+    
+    if (productToCheck.hotcode && productToCheck.hotcode.toUpperCase() !== 'NOT SET') {
+      const hotcode = productToCheck.hotcode.toUpperCase();
+      console.log('[Products] Hotcode detected:', hotcode);
       const menuMatch = hotcode.match(/^MENU(\d+)$/);
       
       if (menuMatch) {
         const menuId = `MENU${menuMatch[1]}`;
         console.log('[Products] Opening menu after manual price:', menuId);
+        console.log('[Products] Menu exists?', menuData[menuId] ? 'YES' : 'NO');
         
         if (menuData[menuId]) {
+          console.log('[Products] Setting menu modal visible');
           setCurrentMenuId(menuId);
           setMenuStack([menuId]);
           setMenuModalVisible(true);
@@ -337,7 +359,11 @@ export default function ProductsScreen() {
           console.warn('[Products] Menu not found:', menuId);
           showNotification(`Menu ${menuId} not found`, true);
         }
+      } else {
+        console.log('[Products] Hotcode did not match MENU pattern:', hotcode);
       }
+    } else {
+      console.log('[Products] No hotcode or hotcode is NOT SET');
     }
   };
 
