@@ -1,7 +1,7 @@
 import { Tabs, Redirect } from 'expo-router';
 import { ShoppingCart, Store, Settings, Search, LogOut } from 'lucide-react-native';
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, View, Text } from 'react-native';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -57,7 +57,12 @@ export default function TabLayout() {
         options={{
           title: 'Products',
           tabBarIcon: ({ color, size }) => <Store size={size} color={color} />,
-          headerTitle: 'Virtual EPOS',
+          headerTitle: () => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>NODE Virtual</Text>
+              <Store size={24} color={colors.primary} />
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
@@ -65,6 +70,7 @@ export default function TabLayout() {
         options={{
           title: 'Search',
           tabBarIcon: ({ color, size }) => <Search size={size} color={color} />,
+          headerTitle: 'Search for a Product',
         }}
       />
       <Tabs.Screen
