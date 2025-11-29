@@ -283,11 +283,14 @@ export default function ProductsScreen() {
       addToBasket(product, firstValidPrice, 1);
       showNotification(`Added ${product.name} to basket`);
 
-      // Check for menu IMMEDIATELY when single price is auto-selected
-      const hasMenu = checkAndShowMenu(product);
-      if (!hasMenu) {
-        console.log('[Products] No menu found for product');
-      }
+      // Check for menu after a short delay to ensure basket state is updated
+      setTimeout(() => {
+        console.log('[Products] Checking for menu after single price auto-selection');
+        const hasMenu = checkAndShowMenu(product);
+        if (!hasMenu) {
+          console.log('[Products] No menu found for product');
+        }
+      }, 100);
     } else {
       setSelectedProduct(product);
       setPriceModalVisible(true);
@@ -325,11 +328,14 @@ export default function ProductsScreen() {
     
     closePriceModal();
     
-    // Check for menu IMMEDIATELY after closing price modal
-    const hasMenu = checkAndShowMenu(productToCheck);
-    if (!hasMenu) {
-      console.log('[Products] No menu found for product');
-    }
+    // Check for menu AFTER price modal animation completes
+    setTimeout(() => {
+      console.log('[Products] Checking for menu after price modal closed');
+      const hasMenu = checkAndShowMenu(productToCheck);
+      if (!hasMenu) {
+        console.log('[Products] No menu found for product');
+      }
+    }, 250);
   };
 
   const handleManualPriceSubmit = () => {
@@ -348,11 +354,14 @@ export default function ProductsScreen() {
     
     closeManualPriceModal();
     
-    // Check for menu IMMEDIATELY after closing manual price modal
-    const hasMenu = checkAndShowMenu(productToCheck);
-    if (!hasMenu) {
-      console.log('[Products] No menu found for product');
-    }
+    // Check for menu AFTER manual price modal closes
+    setTimeout(() => {
+      console.log('[Products] Checking for menu after manual price modal closed');
+      const hasMenu = checkAndShowMenu(productToCheck);
+      if (!hasMenu) {
+        console.log('[Products] No menu found for product');
+      }
+    }, 250);
   };
 
   const showNotification = (message: string, isError: boolean = false) => {
