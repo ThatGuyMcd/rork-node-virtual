@@ -450,9 +450,25 @@ export default function ProductsScreen() {
     console.log('[Products] Product name:', menuProduct.productName);
     console.log('[Products] Product hotcode:', menuProduct.hotcode);
 
-    const product = products.find(p => p.name === menuProduct.productName);
+    // Try exact match first
+    let product = products.find(p => p.name === menuProduct.productName);
+    
+    // If not found, try case-insensitive match
+    if (!product) {
+      console.log('[Products] Exact match not found, trying case-insensitive match...');
+      product = products.find(p => p.name.toLowerCase() === menuProduct.productName.toLowerCase());
+    }
+    
+    // If still not found, try trimming whitespace
+    if (!product) {
+      console.log('[Products] Case-insensitive match not found, trying trimmed match...');
+      product = products.find(p => p.name.trim().toLowerCase() === menuProduct.productName.trim().toLowerCase());
+    }
+    
     if (!product) {
       console.warn('[Products] Product not found in menu:', menuProduct.productName);
+      console.warn('[Products] Available products (first 10):', products.slice(0, 10).map(p => p.name));
+      console.warn('[Products] Total products:', products.length);
       showNotification(`Product "${menuProduct.productName}" not found`, true);
       return;
     }
