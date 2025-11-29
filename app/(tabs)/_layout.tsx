@@ -74,7 +74,16 @@ export default function TabLayout() {
         options={{
           title: 'Search',
           tabBarIcon: ({ color, size }) => <Search size={size} color={color} />,
-          headerTitle: 'Search for a Product',
+          headerTitle: () => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Image
+                source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/aks991iz9extc1dtz2zq4' }}
+                style={{ width: 24, height: 24 }}
+                resizeMode="contain"
+              />
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>NODE Virtual</Text>
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
@@ -82,6 +91,16 @@ export default function TabLayout() {
         options={{
           title: 'Basket',
           tabBarIcon: ({ color, size }) => <ShoppingCart size={size} color={color} />,
+          headerTitle: () => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Image
+                source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/aks991iz9extc1dtz2zq4' }}
+                style={{ width: 24, height: 24 }}
+                resizeMode="contain"
+              />
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>NODE Virtual</Text>
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
@@ -90,6 +109,16 @@ export default function TabLayout() {
           title: 'Settings',
           tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
           href: showSettings ? '/settings' : null,
+          headerTitle: () => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Image
+                source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/aks991iz9extc1dtz2zq4' }}
+                style={{ width: 24, height: 24 }}
+                resizeMode="contain"
+              />
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>NODE Virtual</Text>
+            </View>
+          ),
         }}
       />
     </Tabs>
