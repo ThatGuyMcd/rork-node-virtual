@@ -758,6 +758,7 @@ export class DataSyncService {
 
         products.push({
           productName,
+          filename: pluFileName,
           hotcode,
           buttonColor,
           fontColor,
@@ -773,6 +774,7 @@ export class DataSyncService {
       if (hasBackButton && products.length > 0) {
         products.push({
           productName: 'BACK.PLU',
+          filename: 'BACK.PLU',
           hotcode: undefined,
           buttonColor: undefined,
           fontColor: undefined,

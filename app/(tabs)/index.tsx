@@ -448,34 +448,34 @@ export default function ProductsScreen() {
   const handleMenuItemPress = (menuProduct: MenuProduct) => {
     console.log('[Products] ========== MENU ITEM PRESSED ==========');
     console.log('[Products] Product name:', menuProduct.productName);
+    console.log('[Products] Product filename:', menuProduct.filename);
     console.log('[Products] Product hotcode:', menuProduct.hotcode);
 
-    // Try exact match first
-    let product = products.find(p => p.name === menuProduct.productName);
+    // Find product by filename (more reliable than name matching)
+    // The product ID is based on index, so we need to find by matching the filename pattern
+    const filename = menuProduct.filename.toUpperCase().replace(/\.PLU$/i, '');
+    console.log('[Products] Searching for filename pattern:', filename);
     
-    // If not found, try case-insensitive match
-    if (!product) {
-      console.log('[Products] Exact match not found, trying case-insensitive match...');
-      product = products.find(p => p.name.toLowerCase() === menuProduct.productName.toLowerCase());
-    }
-    
-    // If still not found, try trimming whitespace
-    if (!product) {
-      console.log('[Products] Case-insensitive match not found, trying trimmed match...');
-      product = products.find(p => p.name.trim().toLowerCase() === menuProduct.productName.trim().toLowerCase());
-    }
+    let product = products.find(p => {
+      // Products from the 001-000-00001.PLU format will have that as their ID component
+      return p.id.toUpperCase().includes(filename) || p.name.toUpperCase() === menuProduct.productName.toUpperCase();
+    });
     
     if (!product) {
-      console.warn('[Products] Product not found in menu:', menuProduct.productName);
-      console.warn('[Products] Available products (first 10):', products.slice(0, 10).map(p => p.name));
+      console.warn('[Products] Product not found by filename or name:', menuProduct.productName);
+      console.warn('[Products] Searched for filename:', filename);
+      console.warn('[Products] Available products (first 10 with IDs):', products.slice(0, 10).map(p => ({ id: p.id, name: p.name })));
       console.warn('[Products] Total products:', products.length);
       showNotification(`Product "${menuProduct.productName}" not found`, true);
       return;
     }
 
-    console.log('[Products] Product found in products list');
+    console.log('[Products] Product found!');
+    console.log('[Products] Product ID:', product.id);
+    console.log('[Products] Product name:', product.name);
     console.log('[Products] Product prices:', product.prices);
 
+    // Check if this product has a menu hotcode to open a nested menu
     if (menuProduct.hotcode && menuProduct.hotcode.toUpperCase() !== 'NOT SET') {
       const hotcode = menuProduct.hotcode.toUpperCase();
       console.log('[Products] Checking hotcode:', hotcode);
@@ -504,7 +504,7 @@ export default function ProductsScreen() {
       console.log('[Products] No hotcode or hotcode is NOT SET');
     }
 
-    console.log('[Products] Adding product to basket');
+    console.log('[Products] Processing product press (will handle prices, PRODUCTMSG, etc.)');
     handleProductPress(product);
   };
 

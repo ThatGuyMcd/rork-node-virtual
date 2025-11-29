@@ -88,6 +88,7 @@ export interface MenuData {
 
 export interface MenuProduct {
   productName: string;
+  filename: string;
   hotcode?: string;
   buttonColor?: string;
   fontColor?: string;
