@@ -30,6 +30,7 @@ export interface Product {
   fontColor: string;
   hotcode?: string;
   barcode?: string;
+  filename?: string;
 }
 
 export interface PriceOption {

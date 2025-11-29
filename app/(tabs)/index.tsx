@@ -472,20 +472,26 @@ export default function ProductsScreen() {
     console.log('[Products] Product filename:', menuProduct.filename);
     console.log('[Products] Product hotcode:', menuProduct.hotcode);
 
-    // Find product by filename (more reliable than name matching)
-    // The product ID is based on index, so we need to find by matching the filename pattern
-    const filename = menuProduct.filename.toUpperCase().replace(/\.PLU$/i, '');
-    console.log('[Products] Searching for filename pattern:', filename);
+    // Find product by filename (case-insensitive)
+    const menuFilename = menuProduct.filename.toUpperCase();
+    console.log('[Products] Searching for filename:', menuFilename);
     
     let product = products.find(p => {
-      // Products from the 001-000-00001.PLU format will have that as their ID component
-      return p.id.toUpperCase().includes(filename) || p.name.toUpperCase() === menuProduct.productName.toUpperCase();
+      // Match by the filename field that we added to Product
+      return p.filename && p.filename.toUpperCase() === menuFilename;
     });
     
     if (!product) {
+      console.warn('[Products] Product not found by filename:', menuProduct.filename);
+      console.warn('[Products] Trying fallback search by name...');
+      // Fallback: try to find by product name
+      product = products.find(p => p.name.toUpperCase() === menuProduct.productName.toUpperCase());
+    }
+    
+    if (!product) {
       console.warn('[Products] Product not found by filename or name:', menuProduct.productName);
-      console.warn('[Products] Searched for filename:', filename);
-      console.warn('[Products] Available products (first 10 with IDs):', products.slice(0, 10).map(p => ({ id: p.id, name: p.name })));
+      console.warn('[Products] Searched for filename:', menuProduct.filename);
+      console.warn('[Products] Available product filenames (first 10):', products.slice(0, 10).map(p => ({ filename: p.filename, name: p.name })));
       console.warn('[Products] Total products:', products.length);
       showNotification(`Product "${menuProduct.productName}" not found`, true);
       return;

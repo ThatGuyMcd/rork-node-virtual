@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   SITE_NAME: 'pos_site_name',
   CREDENTIALS: 'pos_credentials',
   LAST_SYNC: 'pos_last_sync',
+  LAST_MANIFEST: 'pos_last_manifest',
   OPERATORS: 'pos_operators',
   GROUPS: 'pos_groups',
   DEPARTMENTS: 'pos_departments',
@@ -404,6 +405,7 @@ export class DataSyncService {
         fontColor,
         hotcode,
         barcode,
+        filename: fileName + '.PLU',
       });
     }
 
@@ -794,6 +796,10 @@ export class DataSyncService {
   async getStoredMenuData(): Promise<MenuData> {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.MENU_DATA);
     return data ? JSON.parse(data) : {};
+  }
+
+  async getLastSyncTime(): Promise<string | null> {
+    return await AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC);
   }
 
   async clearAllData(): Promise<void> {

@@ -48,6 +48,7 @@ export default function SettingsScreen() {
   const [colorPickerVisible, setColorPickerVisible] = useState(false);
   const [colorPickerTarget, setColorPickerTarget] = useState<{ type: 'group' | 'department'; id: string } | null>(null);
   const [customColorInput, setCustomColorInput] = useState('');
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   useEffect(() => {
     loadSiteInfo();
@@ -57,6 +58,7 @@ export default function SettingsScreen() {
     loadProductViewMode();
     loadProductSettings();
     loadProductData();
+    loadLastSyncTime();
   }, []);
 
   const loadSiteInfo = async () => {
@@ -99,6 +101,33 @@ export default function SettingsScreen() {
     setGroups(loadedGroups);
     setDepartments(loadedDepartments);
     setHasData(loadedGroups.length > 0);
+  };
+
+  const loadLastSyncTime = async () => {
+    const time = await dataSyncService.getLastSyncTime();
+    setLastSyncTime(time);
+  };
+
+  const formatSyncTime = (isoString: string) => {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    
+    return date.toLocaleDateString('en-GB', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const toggleGroupVisibility = async (groupId: string) => {
@@ -224,6 +253,7 @@ export default function SettingsScreen() {
       });
 
       await loadProductData();
+      await loadLastSyncTime();
       Alert.alert('Success', 'Data synchronized successfully!');
     } catch (error) {
       console.error('Sync error:', error);
@@ -343,6 +373,11 @@ export default function SettingsScreen() {
               <Text style={[styles.infoText, { color: colors.textSecondary }]}>
                 Sync products, operators, and settings from the server to this device.
               </Text>
+              {lastSyncTime && (
+                <Text style={[styles.lastSyncText, { color: colors.textTertiary, marginTop: 12 }]}>
+                  Last synced: {formatSyncTime(lastSyncTime)}
+                </Text>
+              )}
             </View>
 
             {syncProgress && (
@@ -1074,6 +1109,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94a3b8',
     lineHeight: 20,
+  },
+  lastSyncText: {
+    fontSize: 13,
+    fontStyle: 'italic' as const,
   },
   progressCard: {
     backgroundColor: '#1e293b',
