@@ -17,37 +17,52 @@ export class PositronAPI {
 
   async linkAccount(credentials: AuthCredentials): Promise<LinkResponse> {
     try {
+      const url = `${API_BASE_URL.replace('/api/v1', '')}/linkwebviewaccount`;
+      console.log('[API] Attempting to link account to:', url);
+      console.log('[API] Using credentials:', { username: credentials.username, password: '***' });
+      
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-      const response = await fetch(`${API_BASE_URL.replace('/api/v1', '')}/linkwebviewaccount`, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify(credentials),
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
+      
+      console.log('[API] Response status:', response.status, response.statusText);
+      console.log('[API] Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
 
       if (!response.ok) {
         const text = await response.text();
+        console.error('[API] Error response body:', text);
         throw new Error(`HTTP ${response.status} ${response.statusText}${text ? ` — ${text}` : ''}`);
       }
 
-      const data = await response.json();
+      const text = await response.text();
+      console.log('[API] Response body:', text);
+      const data = JSON.parse(text);
+      
+      console.log('[API] Parsed response:', data);
       
       if (!data.ok || !data.venueId) {
         throw new Error(data.error || 'No venue/site returned');
       }
 
       this.siteId = data.venueId;
+      console.log('[API] Successfully linked account. Venue ID:', data.venueId);
       return data;
     } catch (error: any) {
-      console.error('Link account error:', error);
+      console.error('[API] Link account error:', error);
+      console.error('[API] Error name:', error.name);
+      console.error('[API] Error message:', error.message);
+      console.error('[API] Error stack:', error.stack);
       
       if (error.name === 'AbortError') {
         throw new Error('Connection timeout. Please check your internet connection and try again.');
@@ -68,7 +83,6 @@ export class PositronAPI {
 
       const response = await fetch(`${API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/manifest`, {
         method: 'GET',
-        credentials: 'include',
         signal: controller.signal,
       });
 
@@ -116,7 +130,6 @@ export class PositronAPI {
         `${API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`,
         {
           method: 'GET',
-          credentials: 'include',
           signal: controller.signal,
         }
       );
