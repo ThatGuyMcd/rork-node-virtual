@@ -196,11 +196,12 @@ export default function ProductsScreen() {
     if (product.hotcode && product.hotcode.toUpperCase() !== 'NOT SET') {
       const hotcode = product.hotcode.toUpperCase();
       console.log('[Products] Checking for menu hotcode:', hotcode);
-      const menuMatch = hotcode.match(/^MENU(\d+)$/);
+      const menuMatch = hotcode.match(/^MENU\s*(\d+)$/i);
       
       if (menuMatch) {
-        const menuId = `MENU${menuMatch[1]}`;
-        console.log('[Products] Menu ID:', menuId);
+        const menuNumber = menuMatch[1].padStart(2, '0');
+        const menuId = `MENU${menuNumber}`;
+        console.log('[Products] Menu ID:', menuId, 'from hotcode:', hotcode);
         console.log('[Products] Menu exists?', menuData[menuId] ? 'YES' : 'NO');
         
         if (menuData[menuId] && menuData[menuId].length > 0) {
@@ -405,11 +406,12 @@ export default function ProductsScreen() {
     if (menuProduct.hotcode && menuProduct.hotcode.toUpperCase() !== 'NOT SET') {
       const hotcode = menuProduct.hotcode.toUpperCase();
       console.log('[Products] Checking hotcode:', hotcode);
-      const menuMatch = hotcode.match(/^MENU(\d+)$/);
+      const menuMatch = hotcode.match(/^MENU\s*(\d+)$/i);
       
       if (menuMatch) {
-        const menuId = `MENU${menuMatch[1]}`;
-        console.log('[Products] This is a menu hotcode, opening nested menu:', menuId);
+        const menuNumber = menuMatch[1].padStart(2, '0');
+        const menuId = `MENU${menuNumber}`;
+        console.log('[Products] This is a menu hotcode, opening nested menu:', menuId, 'from hotcode:', hotcode);
         console.log('[Products] Available menus:', Object.keys(menuData));
         
         if (menuData[menuId] && menuData[menuId].length > 0) {

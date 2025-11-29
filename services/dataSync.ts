@@ -651,7 +651,8 @@ export class DataSyncService {
         continue;
       }
 
-      const menuId = `MENU${menuMatch[1]}`;
+      const menuNumber = menuMatch[1].padStart(2, '0');
+      const menuId = `MENU${menuNumber}`;
       console.log(`[DataSync] ========== Parsing menu: ${menuId} ==========`);
       console.log(`[DataSync] Menu ${menuId} raw CSV content (first 500 chars): ${content.substring(0, 500)}`);
 
