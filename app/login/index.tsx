@@ -165,7 +165,7 @@ export default function LoginScreen() {
             />
             <Text style={[styles.title, { color: colors.text }]}>NODE Virtual</Text>
           </View>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Select your account to sign in</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Select your name to sign in</Text>
         </View>
 
         <ScrollView 
