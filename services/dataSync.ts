@@ -622,6 +622,21 @@ export class DataSyncService {
     
     console.log('[DataSync] Parsing menu data...');
 
+    const pluFileNames = new Map<string, string>();
+    for (const [path] of files.entries()) {
+      const upper = path.toUpperCase();
+      if (!upper.startsWith('PLUDATA/')) continue;
+      if (!upper.endsWith('.PLU')) continue;
+      if (upper.includes('ERRORCORRECT.PLU')) continue;
+      
+      const fileName = path.split('/').pop();
+      if (fileName) {
+        pluFileNames.set(fileName.toUpperCase(), fileName);
+      }
+    }
+
+    console.log(`[DataSync] Found ${pluFileNames.size} .PLU files in PLUDATA`);
+
     for (const [path, content] of files.entries()) {
       const upper = path.toUpperCase();
       if (!upper.startsWith('MENUDATA/')) continue;
@@ -636,31 +651,50 @@ export class DataSyncService {
 
       const rows = dataParser.parseCSV(content);
       const products: MenuData[string] = [];
+      const seenProducts = new Set<string>();
 
       for (const row of rows) {
-        if (row.length === 0) continue;
+        if (row.length < 2) continue;
         
-        const productName = row[0]?.trim();
-        if (!productName) continue;
+        const pluPath = row[1]?.trim();
+        if (!pluPath) continue;
 
-        let hotcode: string | undefined;
-        let buttonColor: string | undefined;
-        let fontColor: string | undefined;
+        const pathParts = pluPath.split(/[\\/]/);
+        const pluFileName = pathParts[pathParts.length - 1];
+        if (!pluFileName) continue;
 
-        if (row.length > 1) {
-          const secondCol = row[1]?.trim();
-          if (secondCol && /^MENU\d+$/i.test(secondCol)) {
-            hotcode = secondCol.toUpperCase();
+        const pluFileNameUpper = pluFileName.toUpperCase();
+        const actualFileName = pluFileNames.get(pluFileNameUpper);
+        if (!actualFileName) {
+          console.log(`[DataSync] Menu ${menuId}: .PLU file not found: ${pluFileName}`);
+          continue;
+        }
+
+        let matchingPluPath: string | undefined;
+        for (const [fullPath] of files.entries()) {
+          if (fullPath.toUpperCase().endsWith(pluFileNameUpper)) {
+            matchingPluPath = fullPath;
+            break;
           }
         }
 
-        if (row.length > 2) {
-          buttonColor = dataParser.parseColor(row[2]) || undefined;
+        if (!matchingPluPath) {
+          console.log(`[DataSync] Menu ${menuId}: Could not locate full path for ${pluFileName}`);
+          continue;
         }
 
-        if (row.length > 3) {
-          fontColor = dataParser.parseColor(row[3]) || undefined;
-        }
+        const pluContent = files.get(matchingPluPath);
+        if (!pluContent) continue;
+
+        const kv = dataParser.parseKV(pluContent);
+        const productName = kv.PRODUCT_DESCRIPTION || pluFileName.replace(/\.PLU$/i, '');
+        const hotcode = kv.HOTCODE || undefined;
+        const buttonColor = dataParser.parseColor(kv.BUTTON_COLOUR) || undefined;
+        const fontColor = dataParser.parseColor(kv.FONT_COLOUR) || undefined;
+
+        const productKey = productName.toUpperCase();
+        if (seenProducts.has(productKey)) continue;
+        seenProducts.add(productKey);
 
         products.push({
           productName,
@@ -669,7 +703,7 @@ export class DataSyncService {
           fontColor,
         });
 
-        console.log(`[DataSync] Menu ${menuId} product: ${productName}${hotcode ? ` -> ${hotcode}` : ''}`);
+        console.log(`[DataSync] Menu ${menuId} product: ${productName}${hotcode ? ` (hotcode: ${hotcode})` : ''}`);
       }
 
       menuData[menuId] = products;
