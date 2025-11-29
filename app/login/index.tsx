@@ -9,10 +9,11 @@ import {
   StatusBar,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from 'react-native';
 
 import { useRouter } from 'expo-router';
-import { LogIn, Lock, RefreshCw } from 'lucide-react-native';
+import { Lock, RefreshCw } from 'lucide-react-native';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
@@ -156,8 +157,14 @@ export default function LoginScreen() {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
         <View style={styles.header}>
-          <LogIn size={48} color={colors.primary} />
-          <Text style={[styles.title, { color: colors.text }]}>Virtual EPOS</Text>
+          <View style={styles.headerLogo}>
+            <Image
+              source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/aks991iz9extc1dtz2zq4' }}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+            <Text style={[styles.title, { color: colors.text }]}>NODE Virtual</Text>
+          </View>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Select your account to sign in</Text>
         </View>
 
@@ -292,10 +299,18 @@ const styles = StyleSheet.create({
     marginTop: 60,
     marginBottom: 40,
   },
+  headerLogo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  logoImage: {
+    width: 48,
+    height: 48,
+  },
   title: {
     fontSize: 32,
     fontWeight: '700',
-    marginTop: 16,
     letterSpacing: 0.5,
   },
   subtitle: {
