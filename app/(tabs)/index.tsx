@@ -196,6 +196,9 @@ export default function ProductsScreen() {
     if (product.hotcode && product.hotcode.toUpperCase() !== 'NOT SET') {
       const hotcode = product.hotcode.toUpperCase();
       console.log('[Products] Checking for menu hotcode:', hotcode);
+      console.log('[Products] Available menu IDs:', Object.keys(menuData));
+      console.log('[Products] menuData object:', JSON.stringify(menuData));
+      
       const menuMatch = hotcode.match(/^MENU\s*(\d+)$/i);
       
       if (menuMatch) {
@@ -204,14 +207,25 @@ export default function ProductsScreen() {
         console.log('[Products] Menu ID:', menuId, 'from hotcode:', hotcode);
         console.log('[Products] Menu exists?', menuData[menuId] ? 'YES' : 'NO');
         
+        if (menuData[menuId]) {
+          console.log('[Products] Menu length:', menuData[menuId].length);
+          console.log('[Products] Menu contents:', JSON.stringify(menuData[menuId]));
+        }
+        
         if (menuData[menuId] && menuData[menuId].length > 0) {
           console.log('[Products] Opening menu modal');
           setCurrentMenuId(menuId);
           setMenuStack([menuId]);
           setMenuModalVisible(true);
           return true;
+        } else {
+          console.log('[Products] Menu not found or empty');
         }
+      } else {
+        console.log('[Products] Hotcode does not match MENU pattern');
       }
+    } else {
+      console.log('[Products] No hotcode or hotcode is NOT SET');
     }
     return false;
   }, [menuData]);
