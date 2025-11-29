@@ -155,6 +155,9 @@ export default function ProductsScreen() {
   };
 
   const getGroupColor = useCallback((groupId: string) => {
+    if (displaySettings.groupColors?.[groupId]) {
+      return displaySettings.groupColors[groupId];
+    }
     const depts = departments.filter(d => d.groupId === groupId);
     const productColors: string[] = [];
     depts.forEach(dept => {
@@ -165,16 +168,19 @@ export default function ProductsScreen() {
       deptProducts.forEach(prod => productColors.push(prod.buttonColor));
     });
     return getMostCommonColor(productColors);
-  }, [departments, products]);
+  }, [departments, products, displaySettings.groupColors]);
 
   const getDepartmentColor = useCallback((deptId: string) => {
+    if (displaySettings.departmentColors?.[deptId]) {
+      return displaySettings.departmentColors[deptId];
+    }
     const deptProducts = products.filter(p => {
       const matchingDept = departments.find(d => d.name === p.departmentId);
       return matchingDept?.id === deptId;
     });
     const productColors = deptProducts.map(p => p.buttonColor);
     return getMostCommonColor(productColors);
-  }, [departments, products]);
+  }, [departments, products, displaySettings.departmentColors]);
 
   const handleProductPress = (product: Product) => {
     if (isTableSelectionRequired && !currentTable) {

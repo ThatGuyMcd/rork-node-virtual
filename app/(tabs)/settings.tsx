@@ -10,9 +10,10 @@ import {
   ActivityIndicator,
   Switch,
   StatusBar,
+  Modal,
 } from 'react-native';
 
-import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, Filter, Eye, EyeOff, AlertTriangle } from 'lucide-react-native';
+import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
 import type { ProductDisplaySettings, ProductGroup, Department } from '@/types/pos';
 import { usePOS } from '@/contexts/POSContext';
@@ -38,10 +39,14 @@ export default function SettingsScreen() {
     hiddenGroupIds: [],
     hiddenDepartmentIds: [],
     sortOrder: 'filename',
+    groupColors: {},
+    departmentColors: {},
   });
   const [groups, setGroups] = useState<ProductGroup[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [hasData, setHasData] = useState(false);
+  const [colorPickerVisible, setColorPickerVisible] = useState(false);
+  const [colorPickerTarget, setColorPickerTarget] = useState<{ type: 'group' | 'department'; id: string } | null>(null);
 
   useEffect(() => {
     loadSiteInfo();
@@ -121,6 +126,27 @@ export default function SettingsScreen() {
     const newSettings = { ...productSettings, sortOrder };
     setProductSettings(newSettings);
     await dataSyncService.setProductDisplaySettings(newSettings);
+  };
+
+  const openColorPicker = (type: 'group' | 'department', id: string) => {
+    setColorPickerTarget({ type, id });
+    setColorPickerVisible(true);
+  };
+
+  const setCustomColor = async (color: string) => {
+    if (!colorPickerTarget) return;
+    
+    const newSettings = { ...productSettings };
+    if (colorPickerTarget.type === 'group') {
+      newSettings.groupColors = { ...newSettings.groupColors, [colorPickerTarget.id]: color };
+    } else {
+      newSettings.departmentColors = { ...newSettings.departmentColors, [colorPickerTarget.id]: color };
+    }
+    
+    setProductSettings(newSettings);
+    await dataSyncService.setProductDisplaySettings(newSettings);
+    setColorPickerVisible(false);
+    setColorPickerTarget(null);
   };
 
   const handleTableSelectionToggle = async (value: boolean) => {
@@ -560,6 +586,16 @@ export default function SettingsScreen() {
                             <View style={{ flex: 1 }}>
                               <Text style={[styles.filterItemText, { color: colors.text }]}>{group.name}</Text>
                             </View>
+                            <TouchableOpacity
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                openColorPicker('group', group.id);
+                              }}
+                              style={styles.colorButton}
+                              activeOpacity={0.7}
+                            >
+                              <Paintbrush size={18} color={colors.primary} />
+                            </TouchableOpacity>
                             {isHidden ? (
                               <EyeOff size={20} color={colors.textTertiary} />
                             ) : (
@@ -594,6 +630,16 @@ export default function SettingsScreen() {
                                 <Text style={[styles.filterItemSubtext, { color: colors.textTertiary }]}>in {group.name}</Text>
                               )}
                             </View>
+                            <TouchableOpacity
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                openColorPicker('department', department.id);
+                              }}
+                              style={styles.colorButton}
+                              activeOpacity={0.7}
+                            >
+                              <Paintbrush size={18} color={colors.primary} />
+                            </TouchableOpacity>
                             {isHidden ? (
                               <EyeOff size={20} color={colors.textTertiary} />
                             ) : (
@@ -805,6 +851,40 @@ export default function SettingsScreen() {
             <Text style={styles.buttonText}>Clear All Data</Text>
           </TouchableOpacity>
         </View>
+
+        <Modal
+          transparent
+          visible={colorPickerVisible}
+          onRequestClose={() => setColorPickerVisible(false)}
+          animationType="fade"
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.colorPickerModal, { backgroundColor: colors.cardBackground }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Select Color</Text>
+                <TouchableOpacity onPress={() => setColorPickerVisible(false)}>
+                  <X size={24} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.colorGrid}>
+                {[
+                  '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
+                  '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
+                  '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#64748b',
+                  '#475569', '#334155', '#1e293b', '#0f172a', '#78716c', '#57534e',
+                ].map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[styles.colorOption, { backgroundColor: color }]}
+                    onPress={() => setCustomColor(color)}
+                    activeOpacity={0.7}
+                  />
+                ))}
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </View>
   );
@@ -1060,5 +1140,42 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: '#94a3b8',
+  },
+  colorButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  colorPickerModal: {
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  colorOption: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
   },
 });

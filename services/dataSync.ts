@@ -608,6 +608,8 @@ export class DataSyncService {
       hiddenGroupIds: [],
       hiddenDepartmentIds: [],
       sortOrder: 'filename',
+      groupColors: {},
+      departmentColors: {},
     };
   }
 

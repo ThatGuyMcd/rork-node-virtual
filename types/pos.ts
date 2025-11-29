@@ -78,4 +78,6 @@ export interface ProductDisplaySettings {
   sortOrder: 'filename' | 'alphabetical' | 'custom';
   customGroupOrder?: string[];
   customDepartmentOrder?: string[];
+  groupColors?: Record<string, string>;
+  departmentColors?: Record<string, string>;
 }
