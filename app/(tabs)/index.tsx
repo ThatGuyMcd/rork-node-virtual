@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 
 import { ChevronLeft, X, RefreshCw, Grid3x3, Save } from 'lucide-react-native';
-import { GlassView } from 'expo-glass-effect';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
@@ -813,9 +813,15 @@ export default function ProductsScreen() {
       </Modal>
 
       {notification && (
-        <GlassView style={styles.notification} glassEffectStyle="regular" tintColor="#10b981">
-          <Text style={styles.notificationText}>{notification}</Text>
-        </GlassView>
+        isLiquidGlassAvailable() ? (
+          <GlassView style={styles.notification} glassEffectStyle="regular" tintColor="#10b981">
+            <Text style={styles.notificationText}>{notification}</Text>
+          </GlassView>
+        ) : (
+          <View style={[styles.notification, styles.notificationFallback]}>
+            <Text style={styles.notificationText}>{notification}</Text>
+          </View>
+        )
       )}
     </View>
   );
@@ -1022,7 +1028,7 @@ const styles = StyleSheet.create({
   },
   notification: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 60,
     left: 20,
     right: 20,
     borderRadius: 12,
@@ -1033,6 +1039,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  notificationFallback: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.4)',
+    backdropFilter: 'blur(20px)',
   },
   notificationText: {
     fontSize: 14,

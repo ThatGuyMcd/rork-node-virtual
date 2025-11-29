@@ -542,7 +542,9 @@ const styles = StyleSheet.create({
     bottom: 100,
     left: 20,
     right: 20,
-    backgroundColor: '#10b981',
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.4)',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -551,6 +553,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    backdropFilter: 'blur(20px)',
   },
   notificationText: {
     fontSize: 14,
