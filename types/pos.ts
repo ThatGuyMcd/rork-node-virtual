@@ -81,3 +81,14 @@ export interface ProductDisplaySettings {
   groupColors?: Record<string, string>;
   departmentColors?: Record<string, string>;
 }
+
+export interface MenuData {
+  [menuId: string]: MenuProduct[];
+}
+
+export interface MenuProduct {
+  productName: string;
+  hotcode?: string;
+  buttonColor?: string;
+  fontColor?: string;
+}

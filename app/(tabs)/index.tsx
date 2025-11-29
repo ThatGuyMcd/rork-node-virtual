@@ -18,7 +18,7 @@ import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
 import { getMostCommonColor } from '@/utils/colorUtils';
-import type { Product, PriceOption, ProductGroup, Department, Table, ProductDisplaySettings } from '@/types/pos';
+import type { Product, PriceOption, ProductGroup, Department, Table, ProductDisplaySettings, MenuData, MenuProduct } from '@/types/pos';
 
 const trimName = (name: string): string => {
   return name.length > 6 ? name.substring(6) : name;
@@ -75,6 +75,10 @@ export default function ProductsScreen() {
     hiddenDepartmentIds: [],
     sortOrder: 'filename',
   });
+  const [menuData, setMenuData] = useState<MenuData>({});
+  const [menuModalVisible, setMenuModalVisible] = useState(false);
+  const [currentMenuId, setCurrentMenuId] = useState<string | null>(null);
+  const [menuStack, setMenuStack] = useState<string[]>([]);
   const { addToBasket, currentTable, selectTable, isTableSelectionRequired, productViewLayout, productViewMode, saveTableTab } = usePOS();
   const { colors, theme } = useTheme();
 
@@ -97,16 +101,19 @@ export default function ProductsScreen() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [loadedGroups, loadedDepartments, loadedProducts, loadedTables] = await Promise.all([
+      const [loadedGroups, loadedDepartments, loadedProducts, loadedTables, loadedMenuData] = await Promise.all([
         dataSyncService.getStoredGroups(),
         dataSyncService.getStoredDepartments(),
         dataSyncService.getStoredProducts(),
         dataSyncService.getStoredTables(),
+        dataSyncService.getStoredMenuData(),
       ]);
       setGroups(loadedGroups);
       setDepartments(loadedDepartments);
       setProducts(loadedProducts);
       setTables(loadedTables);
+      setMenuData(loadedMenuData);
+      console.log('[Products] Loaded menu data:', Object.keys(loadedMenuData));
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -186,6 +193,28 @@ export default function ProductsScreen() {
   }, [departments, products, displaySettings.departmentColors]);
 
   const handleProductPress = (product: Product) => {
+    console.log('[Products] Product pressed:', product.name, 'HOTCODE:', product.hotcode);
+
+    if (product.hotcode && product.hotcode.toUpperCase() !== 'NOT SET') {
+      const hotcode = product.hotcode.toUpperCase();
+      const menuMatch = hotcode.match(/^MENU(\d+)$/);
+      
+      if (menuMatch) {
+        const menuId = `MENU${menuMatch[1]}`;
+        console.log('[Products] Opening menu:', menuId);
+        
+        if (menuData[menuId]) {
+          setCurrentMenuId(menuId);
+          setMenuStack([menuId]);
+          setMenuModalVisible(true);
+          return;
+        } else {
+          console.warn('[Products] Menu not found:', menuId);
+          showNotification(`Menu ${menuId} not found`, true);
+        }
+      }
+    }
+
     if (isTableSelectionRequired && !currentTable) {
       showNotification('Please select a table first', true);
       setTableModalVisible(true);
@@ -336,6 +365,64 @@ export default function ProductsScreen() {
   const handleManualPriceBackspace = () => {
     setManualPrice(prev => prev.slice(0, -1));
   };
+
+  const handleMenuItemPress = (menuProduct: MenuProduct) => {
+    console.log('[Products] Menu item pressed:', menuProduct.productName, 'HOTCODE:', menuProduct.hotcode);
+
+    if (menuProduct.hotcode && menuProduct.hotcode.toUpperCase() !== 'NOT SET') {
+      const hotcode = menuProduct.hotcode.toUpperCase();
+      const menuMatch = hotcode.match(/^MENU(\d+)$/);
+      
+      if (menuMatch) {
+        const menuId = `MENU${menuMatch[1]}`;
+        console.log('[Products] Opening nested menu:', menuId);
+        
+        if (menuData[menuId]) {
+          setCurrentMenuId(menuId);
+          setMenuStack(prev => [...prev, menuId]);
+          return;
+        } else {
+          console.warn('[Products] Nested menu not found:', menuId);
+          showNotification(`Menu ${menuId} not found`, true);
+          return;
+        }
+      }
+    }
+
+    const product = products.find(p => p.name === menuProduct.productName);
+    if (product) {
+      handleProductPress(product);
+    } else {
+      console.warn('[Products] Product not found in menu:', menuProduct.productName);
+      showNotification(`Product "${menuProduct.productName}" not found`, true);
+    }
+  };
+
+  const handleMenuBack = () => {
+    if (menuStack.length > 1) {
+      const newStack = [...menuStack];
+      newStack.pop();
+      setMenuStack(newStack);
+      setCurrentMenuId(newStack[newStack.length - 1]);
+    } else {
+      closeMenuModal();
+    }
+  };
+
+  const closeMenuModal = () => {
+    setMenuModalVisible(false);
+    setCurrentMenuId(null);
+    setMenuStack([]);
+  };
+
+  const currentMenu = currentMenuId ? menuData[currentMenuId] : null;
+  const hasBackButton = currentMenu ? currentMenu.some(item => item.productName.toUpperCase() === 'BACK.PLU' || item.productName.toUpperCase() === 'BACK') : false;
+  
+  const uniqueMenuProducts = currentMenu ? currentMenu.filter((item, index, self) => {
+    const name = item.productName.toUpperCase();
+    if (name === 'BACK.PLU' || name === 'BACK') return false;
+    return index === self.findIndex(t => t.productName.toUpperCase() === name);
+  }) : [];
 
   if (loading) {
     return (
@@ -864,6 +951,104 @@ export default function ProductsScreen() {
         </View>
       </Modal>
 
+      <Modal
+        transparent
+        visible={menuModalVisible}
+        onRequestClose={closeMenuModal}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.menuModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {currentMenuId ? currentMenuId : 'Menu'}
+              </Text>
+              <TouchableOpacity onPress={closeMenuModal}>
+                <X size={24} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+
+            {menuStack.length > 1 && (
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={handleMenuBack}
+              >
+                <ChevronLeft size={20} color={colors.primary} />
+                <Text style={[styles.backText, { color: colors.primary }]}>Back</Text>
+              </TouchableOpacity>
+            )}
+
+            <ScrollView
+              contentContainerStyle={styles.menuGridContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              {uniqueMenuProducts.map((menuProduct, index) => {
+                const matchingProduct = products.find(p => p.name === menuProduct.productName);
+                const buttonColor = menuProduct.buttonColor || matchingProduct?.buttonColor || '#1e293b';
+                const fontColor = menuProduct.fontColor || matchingProduct?.fontColor || '#ffffff';
+
+                return (
+                  <TouchableOpacity
+                    key={`${menuProduct.productName}-${index}`}
+                    style={[
+                      styles.menuProductCard,
+                      {
+                        backgroundColor: buttonColor,
+                        width: getCardDimensions(productViewLayout).width,
+                        height: getCardDimensions(productViewLayout).productHeight,
+                      },
+                    ]}
+                    onPress={() => handleMenuItemPress(menuProduct)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.productName, { color: fontColor }]}>
+                      {menuProduct.productName}
+                    </Text>
+                    {matchingProduct && (
+                      <Text style={[styles.productPrice, { color: fontColor }]}>
+                        {(() => {
+                          if (matchingProduct.prices.length === 0) return 'No price';
+                          if (matchingProduct.prices.length === 1) {
+                            const priceLabel = matchingProduct.prices[0].label.toUpperCase();
+                            if (priceLabel === 'OPEN') return 'Open price';
+                            if (priceLabel === 'NOT SET') return 'Not set';
+                            return `£${matchingProduct.prices[0].price.toFixed(2)}`;
+                          }
+                          const validPrices = matchingProduct.prices.filter(p => {
+                            const label = p.label.toUpperCase();
+                            return label !== 'OPEN' && label !== 'NOT SET';
+                          });
+                          if (validPrices.length === 0) return 'See options';
+                          return `from £${Math.min(...validPrices.map(p => p.price)).toFixed(2)}`;
+                        })()}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+
+              {hasBackButton && (
+                <TouchableOpacity
+                  style={[
+                    styles.menuProductCard,
+                    styles.menuBackButton,
+                    {
+                      width: getCardDimensions(productViewLayout).width,
+                      height: getCardDimensions(productViewLayout).productHeight,
+                    },
+                  ]}
+                  onPress={handleMenuBack}
+                  activeOpacity={0.8}
+                >
+                  <ChevronLeft size={24} color="#fff" />
+                  <Text style={[styles.productName, { color: '#fff' }]}>Back</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {notification && (
         <Animated.View style={{ opacity: notificationOpacity }}>
           {isLiquidGlassAvailable() ? (
@@ -1214,5 +1399,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 12,
+  },
+  menuModal: {
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 600,
+    maxHeight: '85%',
+  },
+  menuGridContainer: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 16,
+    paddingBottom: 20,
+    paddingTop: 8,
+  },
+  menuProductCard: {
+    borderRadius: 12,
+    padding: 12,
+    justifyContent: 'space-between' as const,
+    overflow: 'hidden' as const,
+  },
+  menuBackButton: {
+    backgroundColor: '#3b82f6',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
   },
 });

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from './api';
 import { dataParser } from './dataParser';
-import type { Operator, Product, ProductGroup, Department, Tender, VATRate, Table, ProductDisplaySettings } from '@/types/pos';
+import type { Operator, Product, ProductGroup, Department, Tender, VATRate, Table, ProductDisplaySettings, MenuData } from '@/types/pos';
 
 const STORAGE_KEYS = {
   SITE_ID: 'pos_site_id',
@@ -21,6 +21,7 @@ const STORAGE_KEYS = {
   THEME: 'pos_theme',
   THEME_PREFERENCE: 'pos_theme_preference',
   PRODUCT_DISPLAY_SETTINGS: 'pos_product_display_settings',
+  MENU_DATA: 'pos_menu_data',
 };
 
 export interface SyncProgress {
@@ -221,6 +222,7 @@ export class DataSyncService {
     const tenders = await this.parseTenders(files);
     const vatRates = await this.parseVAT(files);
     const tables = await this.parseTables(files);
+    const menuData = await this.parseMenuData(files);
 
     await AsyncStorage.setItem(STORAGE_KEYS.OPERATORS, JSON.stringify(operators));
     await AsyncStorage.setItem(STORAGE_KEYS.GROUPS, JSON.stringify(groups));
@@ -229,6 +231,7 @@ export class DataSyncService {
     await AsyncStorage.setItem(STORAGE_KEYS.TENDERS, JSON.stringify(tenders));
     await AsyncStorage.setItem(STORAGE_KEYS.VAT_RATES, JSON.stringify(vatRates));
     await AsyncStorage.setItem(STORAGE_KEYS.TABLES, JSON.stringify(tables));
+    await AsyncStorage.setItem(STORAGE_KEYS.MENU_DATA, JSON.stringify(menuData));
 
     console.log('[DataSync] Stored:', {
       operators: operators.length,
@@ -238,6 +241,7 @@ export class DataSyncService {
       tenders: tenders.length,
       vatRates: vatRates.length,
       tables: tables.length,
+      menus: Object.keys(menuData).length,
     });
   }
 
@@ -611,6 +615,73 @@ export class DataSyncService {
       groupColors: {},
       departmentColors: {},
     };
+  }
+
+  private async parseMenuData(files: Map<string, string>): Promise<MenuData> {
+    const menuData: MenuData = {};
+    
+    console.log('[DataSync] Parsing menu data...');
+
+    for (const [path, content] of files.entries()) {
+      const upper = path.toUpperCase();
+      if (!upper.startsWith('MENUDATA/')) continue;
+      if (!upper.endsWith('.CSV')) continue;
+
+      const fileName = path.split('/').pop()?.replace(/\.CSV$/i, '') || '';
+      const menuMatch = fileName.match(/^MENU(\d+)$/i);
+      if (!menuMatch) continue;
+
+      const menuId = `MENU${menuMatch[1]}`;
+      console.log(`[DataSync] Parsing menu: ${menuId}`);
+
+      const rows = dataParser.parseCSV(content);
+      const products: MenuData[string] = [];
+
+      for (const row of rows) {
+        if (row.length === 0) continue;
+        
+        const productName = row[0]?.trim();
+        if (!productName) continue;
+
+        let hotcode: string | undefined;
+        let buttonColor: string | undefined;
+        let fontColor: string | undefined;
+
+        if (row.length > 1) {
+          const secondCol = row[1]?.trim();
+          if (secondCol && /^MENU\d+$/i.test(secondCol)) {
+            hotcode = secondCol.toUpperCase();
+          }
+        }
+
+        if (row.length > 2) {
+          buttonColor = dataParser.parseColor(row[2]) || undefined;
+        }
+
+        if (row.length > 3) {
+          fontColor = dataParser.parseColor(row[3]) || undefined;
+        }
+
+        products.push({
+          productName,
+          hotcode,
+          buttonColor,
+          fontColor,
+        });
+
+        console.log(`[DataSync] Menu ${menuId} product: ${productName}${hotcode ? ` -> ${hotcode}` : ''}`);
+      }
+
+      menuData[menuId] = products;
+    }
+
+    console.log(`[DataSync] Parsed ${Object.keys(menuData).length} menus`);
+    return menuData;
+  }
+
+  async getStoredMenuData(): Promise<MenuData> {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.MENU_DATA);
+    return data ? JSON.parse(data) : {};
   }
 
   async clearAllData(): Promise<void> {
