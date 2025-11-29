@@ -79,6 +79,10 @@ export default function ProductsScreen() {
   const [menuModalVisible, setMenuModalVisible] = useState(false);
   const [currentMenuId, setCurrentMenuId] = useState<string | null>(null);
   const [menuStack, setMenuStack] = useState<string[]>([]);
+  const [productMsgModalVisible, setProductMsgModalVisible] = useState(false);
+  const [productMsgInput, setProductMsgInput] = useState('');
+  const [productMsgProduct, setProductMsgProduct] = useState<Product | null>(null);
+  const [productMsgPrice, setProductMsgPrice] = useState<PriceOption | null>(null);
   const { addToBasket, currentTable, selectTable, isTableSelectionRequired, productViewLayout, productViewMode, saveTableTab } = usePOS();
   const { colors, theme } = useTheme();
 
@@ -323,6 +327,16 @@ export default function ProductsScreen() {
 
     const productToCheck = selectedProduct;
     
+    // Check if product requires PRODUCTMSG
+    if (productToCheck.hotcode && productToCheck.hotcode.toUpperCase() === 'PRODUCTMSG') {
+      setProductMsgProduct(productToCheck);
+      setProductMsgPrice(price);
+      setProductMsgInput('');
+      closePriceModal();
+      setProductMsgModalVisible(true);
+      return;
+    }
+    
     addToBasket(selectedProduct, price, 1);
     showNotification(`Added ${selectedProduct.name} to basket`);
     
@@ -493,6 +507,53 @@ export default function ProductsScreen() {
     setMenuModalVisible(false);
     setCurrentMenuId(null);
     setMenuStack([]);
+  };
+
+  const handleProductMsgSubmit = () => {
+    if (!productMsgProduct || !productMsgPrice) return;
+    
+    const msg = productMsgInput.trim();
+    if (!msg) {
+      showNotification('Please enter a message', true);
+      return;
+    }
+
+    const productToCheck = productMsgProduct;
+    const customName = `${productMsgProduct.name} - ${msg}`;
+    
+    // Create a modified product with the custom name
+    const modifiedProduct = { ...productMsgProduct, name: customName };
+    addToBasket(modifiedProduct, productMsgPrice, 1);
+    showNotification(`Added ${customName} to basket`);
+    
+    setProductMsgModalVisible(false);
+    setProductMsgInput('');
+    setProductMsgProduct(null);
+    setProductMsgPrice(null);
+    
+    // Check for menu after PRODUCTMSG submission
+    setTimeout(() => {
+      console.log('[Products] Checking for menu after PRODUCTMSG');
+      const hasMenu = checkAndShowMenu(productToCheck);
+      if (!hasMenu) {
+        console.log('[Products] No menu found for product');
+      }
+    }, 250);
+  };
+
+  const handleProductMsgKeyPress = (char: string) => {
+    setProductMsgInput(prev => prev + char);
+  };
+
+  const handleProductMsgBackspace = () => {
+    setProductMsgInput(prev => prev.slice(0, -1));
+  };
+
+  const closeProductMsgModal = () => {
+    setProductMsgModalVisible(false);
+    setProductMsgInput('');
+    setProductMsgProduct(null);
+    setProductMsgPrice(null);
   };
 
   const currentMenu = currentMenuId ? menuData[currentMenuId] : null;
@@ -1072,11 +1133,7 @@ export default function ProductsScreen() {
                     key={`${menuProduct.productName}-${index}`}
                     style={[
                       styles.menuProductCard,
-                      {
-                        backgroundColor: buttonColor,
-                        width: getCardDimensions(productViewLayout).width,
-                        height: getCardDimensions(productViewLayout).productHeight,
-                      },
+                      { backgroundColor: buttonColor },
                     ]}
                     onPress={() => handleMenuItemPress(menuProduct)}
                     activeOpacity={0.8}
@@ -1112,10 +1169,7 @@ export default function ProductsScreen() {
                   style={[
                     styles.menuProductCard,
                     styles.menuBackButton,
-                    {
-                      width: getCardDimensions(productViewLayout).width,
-                      height: getCardDimensions(productViewLayout).productHeight,
-                    },
+                    styles.menuBackButtonFullWidth,
                   ]}
                   onPress={handleMenuBack}
                   activeOpacity={0.8}
@@ -1125,6 +1179,95 @@ export default function ProductsScreen() {
                 </TouchableOpacity>
               )}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        transparent
+        visible={productMsgModalVisible}
+        onRequestClose={closeProductMsgModal}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.manualPriceModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Enter Message</Text>
+              <TouchableOpacity onPress={closeProductMsgModal}>
+                <X size={24} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.modalProductName, { color: colors.textSecondary }]}>
+              {productMsgProduct?.name}
+            </Text>
+
+            <View style={[styles.priceInputDisplay, { backgroundColor: colors.background, borderColor: colors.primary }]}>
+              <Text style={[styles.priceInputText, { color: colors.text, fontSize: 18 }]}>
+                {productMsgInput || 'Type your message...'}
+              </Text>
+            </View>
+
+            <View style={styles.keyboardContainer}>
+              {['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'].map((char) => (
+                <TouchableOpacity
+                  key={char}
+                  style={[styles.keyboardButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  onPress={() => handleProductMsgKeyPress(char)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.keyboardButtonText, { color: colors.text }]}>{char}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.keyboardContainer}>
+              {['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'].map((char) => (
+                <TouchableOpacity
+                  key={char}
+                  style={[styles.keyboardButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  onPress={() => handleProductMsgKeyPress(char)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.keyboardButtonText, { color: colors.text }]}>{char}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.keyboardContainer}>
+              {['Z', 'X', 'C', 'V', 'B', 'N', 'M'].map((char) => (
+                <TouchableOpacity
+                  key={char}
+                  style={[styles.keyboardButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  onPress={() => handleProductMsgKeyPress(char)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.keyboardButtonText, { color: colors.text }]}>{char}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={[styles.keyboardButton, styles.keyboardButtonWide, { backgroundColor: colors.background, borderColor: colors.border }]}
+                onPress={handleProductMsgBackspace}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.keyboardButtonText, { color: colors.text }]}>⌫</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.keyboardContainer}>
+              <TouchableOpacity
+                style={[styles.keyboardButton, styles.keyboardButtonSpace, { backgroundColor: colors.background, borderColor: colors.border }]}
+                onPress={() => handleProductMsgKeyPress(' ')}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.keyboardButtonText, { color: colors.text }]}>SPACE</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.submitPriceButton, { backgroundColor: colors.primary, marginTop: 16 }]}
+              onPress={handleProductMsgSubmit}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.submitPriceText}>Add to Basket</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1490,11 +1633,13 @@ const styles = StyleSheet.create({
   menuGridContainer: {
     flexDirection: 'row' as const,
     flexWrap: 'wrap' as const,
-    gap: 16,
+    gap: 12,
     paddingBottom: 20,
     paddingTop: 8,
   },
   menuProductCard: {
+    width: '47%',
+    minHeight: 90,
     borderRadius: 12,
     padding: 12,
     justifyContent: 'space-between' as const,
@@ -1506,5 +1651,34 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     gap: 8,
+  },
+  menuBackButtonFullWidth: {
+    width: '100%',
+  },
+  keyboardContainer: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 6,
+    marginBottom: 6,
+    justifyContent: 'center' as const,
+  },
+  keyboardButton: {
+    minWidth: 32,
+    height: 42,
+    borderRadius: 8,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+  },
+  keyboardButtonWide: {
+    minWidth: 60,
+  },
+  keyboardButtonSpace: {
+    flex: 1,
+  },
+  keyboardButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
   },
 });
