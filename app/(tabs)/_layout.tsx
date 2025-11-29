@@ -32,7 +32,8 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.tabIconDefault,
         tabBarStyle: {
           backgroundColor: colors.tabBarBackground,
-          borderTopColor: colors.border,
+          borderTopColor: colors.primary,
+          borderTopWidth: 2,
           height: 90,
           paddingBottom: 25,
           paddingTop: 8,
@@ -44,6 +45,8 @@ export default function TabLayout() {
         },
         headerStyle: {
           backgroundColor: colors.headerBackground,
+          borderBottomColor: colors.primary,
+          borderBottomWidth: 2,
         },
         headerTintColor: colors.text,
         headerTitleStyle: {
