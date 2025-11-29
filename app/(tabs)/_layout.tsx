@@ -33,13 +33,14 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.tabBarBackground,
           borderTopColor: colors.border,
-          height: 70,
-          paddingBottom: 20,
-          paddingTop: 10,
+          height: 90,
+          paddingBottom: 25,
+          paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
+          marginTop: 4,
         },
         headerStyle: {
           backgroundColor: colors.headerBackground,
