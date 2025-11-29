@@ -643,26 +643,57 @@ export class DataSyncService {
       if (!upper.endsWith('.CSV')) continue;
 
       const fileName = path.split('/').pop()?.replace(/\.CSV$/i, '') || '';
-      const menuMatch = fileName.match(/^MENU(\d+)$/i);
-      if (!menuMatch) continue;
+      console.log(`[DataSync] Found MENUDATA file: ${fileName}`);
+      
+      const menuMatch = fileName.match(/^MENU\s*(\d+)$/i) || fileName.match(/^(\d+)$/);
+      if (!menuMatch) {
+        console.log(`[DataSync] Skipping non-menu file: ${fileName}`);
+        continue;
+      }
 
       const menuId = `MENU${menuMatch[1]}`;
-      console.log(`[DataSync] Parsing menu: ${menuId}`);
+      console.log(`[DataSync] ========== Parsing menu: ${menuId} ==========`);
       console.log(`[DataSync] Menu ${menuId} raw CSV content (first 500 chars): ${content.substring(0, 500)}`);
 
       const rows = dataParser.parseCSV(content);
-      console.log(`[DataSync] Menu ${menuId}: Parsed ${rows.length} CSV rows`);
+      console.log(`[DataSync] Menu ${menuId}: Parsed ${rows.length} CSV rows (including header)`);
+      
+      // Log first few rows for debugging
+      if (rows.length > 0) {
+        console.log(`[DataSync] Menu ${menuId}: Header row: ${JSON.stringify(rows[0])}`);
+        if (rows.length > 1) {
+          console.log(`[DataSync] Menu ${menuId}: First data row: ${JSON.stringify(rows[1])}`);
+        }
+        if (rows.length > 2) {
+          console.log(`[DataSync] Menu ${menuId}: Second data row: ${JSON.stringify(rows[2])}`);
+        }
+      }
       
       const products: MenuData[string] = [];
       const seenProducts = new Set<string>();
       let hasBackButton = false;
+      let rowIndex = 0;
 
       for (const row of rows) {
-        if (row.length < 2) continue;
+        rowIndex++;
         
-        // Extract PLU path from second column
+        // Skip header row
+        if (rowIndex === 1) {
+          console.log(`[DataSync] Menu ${menuId}: Skipping header row`);
+          continue;
+        }
+        
+        if (row.length < 2) {
+          console.log(`[DataSync] Menu ${menuId}: Row ${rowIndex} has fewer than 2 columns, skipping`);
+          continue;
+        }
+        
+        // Extract PLU path from second column (index 1)
         const pluPath = row[1]?.trim();
-        if (!pluPath) continue;
+        if (!pluPath) {
+          console.log(`[DataSync] Menu ${menuId}: Row ${rowIndex} has empty PLU path in column 2, skipping`);
+          continue;
+        }
 
         // Handle Windows paths with backslashes and forward slashes
         // Example: C:\X-ORDERFORM\Local_Data\Products\Product_Groups\002 - DRINK\010 - Soft Drinks\002-010-10901.PLU
