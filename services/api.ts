@@ -17,6 +17,9 @@ export class PositronAPI {
 
   async linkAccount(credentials: AuthCredentials): Promise<LinkResponse> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
       const response = await fetch(`${API_BASE_URL.replace('/api/v1', '')}/linkwebviewaccount`, {
         method: 'POST',
         headers: {
@@ -25,7 +28,10 @@ export class PositronAPI {
         },
         credentials: 'include',
         body: JSON.stringify(credentials),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const text = await response.text();
@@ -40,18 +46,33 @@ export class PositronAPI {
 
       this.siteId = data.venueId;
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Link account error:', error);
+      
+      if (error.name === 'AbortError') {
+        throw new Error('Connection timeout. Please check your internet connection and try again.');
+      }
+      
+      if (error.message === 'Failed to fetch' || error.message === 'Network request failed') {
+        throw new Error('Unable to connect to server. Please check your internet connection.');
+      }
+      
       throw error;
     }
   }
 
   async getManifest(siteId: string): Promise<string[]> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
       const response = await fetch(`${API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/manifest`, {
         method: 'GET',
         credentials: 'include',
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -71,29 +92,53 @@ export class PositronAPI {
           .filter(Boolean)
           .map(this.normalizePath);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Get manifest error:', error);
+      
+      if (error.name === 'AbortError') {
+        throw new Error('Connection timeout while fetching data manifest.');
+      }
+      
+      if (error.message === 'Failed to fetch' || error.message === 'Network request failed') {
+        throw new Error('Unable to connect to server. Please check your internet connection.');
+      }
+      
       throw error;
     }
   }
 
   async getFile(siteId: string, path: string): Promise<string> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
       const response = await fetch(
         `${API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`,
         {
           method: 'GET',
           credentials: 'include',
+          signal: controller.signal,
         }
       );
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
 
       return await response.text();
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Get file error (${path}):`, error);
+      
+      if (error.name === 'AbortError') {
+        throw new Error(`Timeout downloading file: ${path}`);
+      }
+      
+      if (error.message === 'Failed to fetch' || error.message === 'Network request failed') {
+        throw new Error('Connection lost. Please check your internet connection.');
+      }
+      
       throw error;
     }
   }
