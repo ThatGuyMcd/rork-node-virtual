@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -80,6 +80,7 @@ export default function ProductsScreen() {
 
   const scaleAnim = useState(new Animated.Value(0))[0];
   const notificationOpacity = useState(new Animated.Value(0))[0];
+  const notificationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadData();
@@ -271,24 +272,42 @@ export default function ProductsScreen() {
 
   const showNotification = (message: string, isError: boolean = false) => {
     setNotification(message);
-    
+  };
+
+  useEffect(() => {
+    if (!notification) return;
+
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+    }
+
+    notificationOpacity.stopAnimation();
     notificationOpacity.setValue(0);
-    Animated.sequence([
-      Animated.timing(notificationOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.delay(2000),
+
+    Animated.timing(notificationOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+
+    const timeout = setTimeout(() => {
       Animated.timing(notificationOpacity, {
         toValue: 0,
         duration: 300,
         useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setNotification(null);
-    });
-  };
+      }).start(() => {
+        setNotification(null);
+      });
+    }, 2000);
+
+    notificationTimeoutRef.current = timeout;
+
+    return () => {
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+      }
+    };
+  }, [notification, notificationOpacity]);
 
   const closePriceModal = () => {
     Animated.timing(scaleAnim, {
