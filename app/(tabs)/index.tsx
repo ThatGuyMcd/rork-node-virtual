@@ -193,41 +193,55 @@ export default function ProductsScreen() {
   }, [departments, products, displaySettings.departmentColors]);
 
   const checkAndShowMenu = useCallback((product: Product) => {
-    if (product.hotcode && product.hotcode.toUpperCase() !== 'NOT SET') {
-      const hotcode = product.hotcode.toUpperCase();
-      console.log('[Products] Checking for menu hotcode:', hotcode);
-      console.log('[Products] Available menu IDs:', Object.keys(menuData));
-      console.log('[Products] menuData object:', JSON.stringify(menuData));
-      
-      const menuMatch = hotcode.match(/^MENU\s*(\d+)$/i);
-      
-      if (menuMatch) {
-        const menuNumber = menuMatch[1].padStart(2, '0');
-        const menuId = `MENU${menuNumber}`;
-        console.log('[Products] Menu ID:', menuId, 'from hotcode:', hotcode);
-        console.log('[Products] Menu exists?', menuData[menuId] ? 'YES' : 'NO');
-        
-        if (menuData[menuId]) {
-          console.log('[Products] Menu length:', menuData[menuId].length);
-          console.log('[Products] Menu contents:', JSON.stringify(menuData[menuId]));
-        }
-        
-        if (menuData[menuId] && menuData[menuId].length > 0) {
-          console.log('[Products] Opening menu modal');
-          setCurrentMenuId(menuId);
-          setMenuStack([menuId]);
-          setMenuModalVisible(true);
-          return true;
-        } else {
-          console.log('[Products] Menu not found or empty');
-        }
-      } else {
-        console.log('[Products] Hotcode does not match MENU pattern');
-      }
-    } else {
+    console.log('[Products] ========== checkAndShowMenu START ==========');
+    console.log('[Products] Product:', product.name);
+    console.log('[Products] Product hotcode:', product.hotcode);
+    
+    if (!product.hotcode || product.hotcode.toUpperCase() === 'NOT SET') {
       console.log('[Products] No hotcode or hotcode is NOT SET');
+      console.log('[Products] ========== checkAndShowMenu END (no hotcode) ==========');
+      return false;
     }
-    return false;
+    
+    const hotcode = product.hotcode.toUpperCase().trim();
+    console.log('[Products] Checking for menu hotcode:', hotcode);
+    console.log('[Products] Available menu IDs:', Object.keys(menuData));
+    
+    const menuMatch = hotcode.match(/^MENU\s*(\d+)$/i);
+    
+    if (!menuMatch) {
+      console.log('[Products] Hotcode does not match MENU pattern');
+      console.log('[Products] ========== checkAndShowMenu END (no pattern match) ==========');
+      return false;
+    }
+    
+    const menuNumber = menuMatch[1].padStart(2, '0');
+    const menuId = `MENU${menuNumber}`;
+    console.log('[Products] Matched menu number:', menuMatch[1]);
+    console.log('[Products] Padded menu ID:', menuId);
+    console.log('[Products] Menu exists in menuData?', menuData[menuId] ? 'YES' : 'NO');
+    
+    if (menuData[menuId]) {
+      console.log('[Products] Menu data length:', menuData[menuId].length);
+      console.log('[Products] First 3 menu items:', menuData[menuId].slice(0, 3));
+    }
+    
+    if (!menuData[menuId] || menuData[menuId].length === 0) {
+      console.log('[Products] Menu not found or empty');
+      console.log('[Products] ========== checkAndShowMenu END (menu empty) ==========');
+      return false;
+    }
+    
+    console.log('[Products] Opening menu modal NOW');
+    console.log('[Products] Setting currentMenuId to:', menuId);
+    console.log('[Products] Setting menuModalVisible to: true');
+    
+    setCurrentMenuId(menuId);
+    setMenuStack([menuId]);
+    setMenuModalVisible(true);
+    
+    console.log('[Products] ========== checkAndShowMenu END (menu opened) ==========');
+    return true;
   }, [menuData]);
 
   const handleProductPress = (product: Product) => {
@@ -269,9 +283,11 @@ export default function ProductsScreen() {
       addToBasket(product, firstValidPrice, 1);
       showNotification(`Added ${product.name} to basket`);
 
-      setTimeout(() => {
-        checkAndShowMenu(product);
-      }, 300);
+      // Check for menu IMMEDIATELY when single price is auto-selected
+      const hasMenu = checkAndShowMenu(product);
+      if (!hasMenu) {
+        console.log('[Products] No menu found for product');
+      }
     } else {
       setSelectedProduct(product);
       setPriceModalVisible(true);
@@ -309,9 +325,11 @@ export default function ProductsScreen() {
     
     closePriceModal();
     
-    setTimeout(() => {
-      checkAndShowMenu(productToCheck);
-    }, 300);
+    // Check for menu IMMEDIATELY after closing price modal
+    const hasMenu = checkAndShowMenu(productToCheck);
+    if (!hasMenu) {
+      console.log('[Products] No menu found for product');
+    }
   };
 
   const handleManualPriceSubmit = () => {
@@ -330,9 +348,11 @@ export default function ProductsScreen() {
     
     closeManualPriceModal();
     
-    setTimeout(() => {
-      checkAndShowMenu(productToCheck);
-    }, 300);
+    // Check for menu IMMEDIATELY after closing manual price modal
+    const hasMenu = checkAndShowMenu(productToCheck);
+    if (!hasMenu) {
+      console.log('[Products] No menu found for product');
+    }
   };
 
   const showNotification = (message: string, isError: boolean = false) => {
