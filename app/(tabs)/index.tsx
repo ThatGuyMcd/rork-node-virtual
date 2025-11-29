@@ -79,6 +79,7 @@ export default function ProductsScreen() {
   const { colors, theme } = useTheme();
 
   const scaleAnim = useState(new Animated.Value(0))[0];
+  const notificationOpacity = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
     loadData();
@@ -270,7 +271,23 @@ export default function ProductsScreen() {
 
   const showNotification = (message: string, isError: boolean = false) => {
     setNotification(message);
-    setTimeout(() => setNotification(null), 2000);
+    
+    notificationOpacity.setValue(0);
+    Animated.sequence([
+      Animated.timing(notificationOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.delay(2000),
+      Animated.timing(notificationOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setNotification(null);
+    });
   };
 
   const closePriceModal = () => {
@@ -813,15 +830,17 @@ export default function ProductsScreen() {
       </Modal>
 
       {notification && (
-        isLiquidGlassAvailable() ? (
-          <GlassView style={styles.notification} glassEffectStyle="regular" tintColor="#10b981">
-            <Text style={styles.notificationText}>{notification}</Text>
-          </GlassView>
-        ) : (
-          <View style={[styles.notification, styles.notificationFallback]}>
-            <Text style={styles.notificationText}>{notification}</Text>
-          </View>
-        )
+        <Animated.View style={{ opacity: notificationOpacity }}>
+          {isLiquidGlassAvailable() ? (
+            <GlassView style={styles.notification} glassEffectStyle="regular" tintColor="#10b981">
+              <Text style={styles.notificationText}>{notification}</Text>
+            </GlassView>
+          ) : (
+            <View style={[styles.notification, styles.notificationFallback]}>
+              <Text style={styles.notificationText}>{notification}</Text>
+            </View>
+          )}
+        </Animated.View>
       )}
     </View>
   );
