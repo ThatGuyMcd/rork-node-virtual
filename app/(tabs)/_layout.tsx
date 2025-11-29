@@ -1,7 +1,7 @@
 import { Tabs, Redirect } from 'expo-router';
 import { ShoppingCart, Store, Settings, Search, LogOut } from 'lucide-react-native';
 import React from 'react';
-import { TouchableOpacity, View, Text } from 'react-native';
+import { TouchableOpacity, View, Text, Image } from 'react-native';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -59,8 +59,12 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <Store size={size} color={color} />,
           headerTitle: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Image
+                source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/aks991iz9extc1dtz2zq4' }}
+                style={{ width: 24, height: 24 }}
+                resizeMode="contain"
+              />
               <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>NODE Virtual</Text>
-              <Store size={24} color={colors.primary} />
             </View>
           ),
         }}
