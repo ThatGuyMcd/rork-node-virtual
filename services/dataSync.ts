@@ -648,32 +648,53 @@ export class DataSyncService {
 
       const menuId = `MENU${menuMatch[1]}`;
       console.log(`[DataSync] Parsing menu: ${menuId}`);
+      console.log(`[DataSync] Menu ${menuId} raw CSV content (first 500 chars): ${content.substring(0, 500)}`);
 
       const rows = dataParser.parseCSV(content);
+      console.log(`[DataSync] Menu ${menuId}: Parsed ${rows.length} CSV rows`);
+      
       const products: MenuData[string] = [];
       const seenProducts = new Set<string>();
+      let hasBackButton = false;
 
       for (const row of rows) {
         if (row.length < 2) continue;
         
+        // Extract PLU path from second column
         const pluPath = row[1]?.trim();
         if (!pluPath) continue;
 
+        // Handle Windows paths with backslashes and forward slashes
+        // Example: C:\X-ORDERFORM\Local_Data\Products\Product_Groups\002 - DRINK\010 - Soft Drinks\002-010-10901.PLU
         const pathParts = pluPath.split(/[\\/]/);
         const pluFileName = pathParts[pathParts.length - 1];
         if (!pluFileName) continue;
 
-        const pluFileNameUpper = pluFileName.toUpperCase();
-        const actualFileName = pluFileNames.get(pluFileNameUpper);
-        if (!actualFileName) {
-          console.log(`[DataSync] Menu ${menuId}: .PLU file not found: ${pluFileName}`);
+        console.log(`[DataSync] Menu ${menuId}: Processing row with PLU path: ${pluPath}`);
+        console.log(`[DataSync] Menu ${menuId}: Extracted filename: ${pluFileName}`);
+
+        // Check for BACK.PLU - this indicates the menu should have a close button
+        if (pluFileName.toUpperCase() === 'BACK.PLU') {
+          console.log(`[DataSync] Menu ${menuId}: Found BACK.PLU - menu will have a close button`);
+          hasBackButton = true;
           continue;
         }
 
+        // Find the matching PLU file (case-insensitive)
+        const pluFileNameUpper = pluFileName.toUpperCase();
+        const actualFileName = pluFileNames.get(pluFileNameUpper);
+        if (!actualFileName) {
+          console.log(`[DataSync] Menu ${menuId}: .PLU file not found in PLUDATA: ${pluFileName}`);
+          continue;
+        }
+
+        // Find the full path in files
         let matchingPluPath: string | undefined;
         for (const [fullPath] of files.entries()) {
-          if (fullPath.toUpperCase().endsWith(pluFileNameUpper)) {
+          const upperPath = fullPath.toUpperCase();
+          if (upperPath.startsWith('PLUDATA/') && upperPath.endsWith('/' + pluFileNameUpper)) {
             matchingPluPath = fullPath;
+            console.log(`[DataSync] Menu ${menuId}: Matched PLU file: ${fullPath}`);
             break;
           }
         }
@@ -684,7 +705,10 @@ export class DataSyncService {
         }
 
         const pluContent = files.get(matchingPluPath);
-        if (!pluContent) continue;
+        if (!pluContent) {
+          console.log(`[DataSync] Menu ${menuId}: Could not read content for ${matchingPluPath}`);
+          continue;
+        }
 
         const kv = dataParser.parseKV(pluContent);
         const productName = kv.PRODUCT_DESCRIPTION || pluFileName.replace(/\.PLU$/i, '');
@@ -692,8 +716,12 @@ export class DataSyncService {
         const buttonColor = dataParser.parseColor(kv.BUTTON_COLOUR) || undefined;
         const fontColor = dataParser.parseColor(kv.FONT_COLOUR) || undefined;
 
+        // De-duplicate by product name (case-insensitive)
         const productKey = productName.toUpperCase();
-        if (seenProducts.has(productKey)) continue;
+        if (seenProducts.has(productKey)) {
+          console.log(`[DataSync] Menu ${menuId}: Duplicate product: ${productName}, skipping`);
+          continue;
+        }
         seenProducts.add(productKey);
 
         products.push({
@@ -703,13 +731,29 @@ export class DataSyncService {
           fontColor,
         });
 
-        console.log(`[DataSync] Menu ${menuId} product: ${productName}${hotcode ? ` (hotcode: ${hotcode})` : ''}`);
+        console.log(`[DataSync] Menu ${menuId}: Added product: ${productName}${hotcode ? ` (hotcode: ${hotcode})` : ''}`);
+      }
+
+      console.log(`[DataSync] Menu ${menuId}: Final product count: ${products.length}`);
+      console.log(`[DataSync] Menu ${menuId}: Has back button: ${hasBackButton}`);
+      
+      // If BACK.PLU was found, add a special marker product
+      if (hasBackButton && products.length > 0) {
+        products.push({
+          productName: 'BACK.PLU',
+          hotcode: undefined,
+          buttonColor: undefined,
+          fontColor: undefined,
+        });
       }
 
       menuData[menuId] = products;
     }
 
     console.log(`[DataSync] Parsed ${Object.keys(menuData).length} menus`);
+    for (const [menuId, products] of Object.entries(menuData)) {
+      console.log(`[DataSync] Menu ${menuId}: ${products.length} products`);
+    }
     return menuData;
   }
 
