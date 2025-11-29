@@ -47,6 +47,7 @@ export default function SettingsScreen() {
   const [hasData, setHasData] = useState(false);
   const [colorPickerVisible, setColorPickerVisible] = useState(false);
   const [colorPickerTarget, setColorPickerTarget] = useState<{ type: 'group' | 'department'; id: string } | null>(null);
+  const [customColorInput, setCustomColorInput] = useState('');
 
   useEffect(() => {
     loadSiteInfo();
@@ -147,6 +148,30 @@ export default function SettingsScreen() {
     await dataSyncService.setProductDisplaySettings(newSettings);
     setColorPickerVisible(false);
     setColorPickerTarget(null);
+    setCustomColorInput('');
+  };
+
+  const applyCustomColor = () => {
+    let colorValue = customColorInput.trim();
+    if (!colorValue) return;
+    
+    if (!colorValue.startsWith('#')) {
+      colorValue = '#' + colorValue;
+    }
+    
+    const hexRegex = /^#([0-9A-Fa-f]{3}){1,2}$/;
+    if (hexRegex.test(colorValue)) {
+      setCustomColor(colorValue);
+    } else {
+      Alert.alert('Invalid Color', 'Please enter a valid hex color code (e.g., #FF5733 or #F57)');
+    }
+  };
+
+  const getItemColor = (type: 'group' | 'department', id: string): string | undefined => {
+    if (type === 'group') {
+      return productSettings.groupColors?.[id];
+    }
+    return productSettings.departmentColors?.[id];
   };
 
   const handleTableSelectionToggle = async (value: boolean) => {
@@ -594,7 +619,7 @@ export default function SettingsScreen() {
                               style={styles.colorButton}
                               activeOpacity={0.7}
                             >
-                              <Paintbrush size={18} color={colors.primary} />
+                              <Paintbrush size={18} color={getItemColor('group', group.id) || colors.primary} />
                             </TouchableOpacity>
                             {isHidden ? (
                               <EyeOff size={20} color={colors.textTertiary} />
@@ -638,7 +663,7 @@ export default function SettingsScreen() {
                               style={styles.colorButton}
                               activeOpacity={0.7}
                             >
-                              <Paintbrush size={18} color={colors.primary} />
+                              <Paintbrush size={18} color={getItemColor('department', department.id) || colors.primary} />
                             </TouchableOpacity>
                             {isHidden ? (
                               <EyeOff size={20} color={colors.textTertiary} />
@@ -867,21 +892,80 @@ export default function SettingsScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.colorGrid}>
-                {[
-                  '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
-                  '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
-                  '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#64748b',
-                  '#475569', '#334155', '#1e293b', '#0f172a', '#78716c', '#57534e',
-                ].map((color) => (
-                  <TouchableOpacity
-                    key={color}
-                    style={[styles.colorOption, { backgroundColor: color }]}
-                    onPress={() => setCustomColor(color)}
-                    activeOpacity={0.7}
-                  />
-                ))}
-              </View>
+              <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator>
+                <View style={styles.colorGrid}>
+                  {[
+                    '#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d',
+                    '#f97316', '#ea580c', '#c2410c', '#9a3412', '#7c2d12',
+                    '#f59e0b', '#d97706', '#b45309', '#92400e', '#78350f',
+                    '#eab308', '#ca8a04', '#a16207', '#854d0e', '#713f12',
+                    '#84cc16', '#65a30d', '#4d7c0f', '#3f6212', '#365314',
+                    '#22c55e', '#16a34a', '#15803d', '#166534', '#14532d',
+                    '#10b981', '#059669', '#047857', '#065f46', '#064e3b',
+                    '#14b8a6', '#0d9488', '#0f766e', '#115e59', '#134e4a',
+                    '#06b6d4', '#0891b2', '#0e7490', '#155e75', '#164e63',
+                    '#0ea5e9', '#0284c7', '#0369a1', '#075985', '#0c4a6e',
+                    '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a',
+                    '#6366f1', '#4f46e5', '#4338ca', '#3730a3', '#312e81',
+                    '#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6', '#4c1d95',
+                    '#a855f7', '#9333ea', '#7e22ce', '#6b21a8', '#581c87',
+                    '#d946ef', '#c026d3', '#a21caf', '#86198f', '#701a75',
+                    '#ec4899', '#db2777', '#be185d', '#9f1239', '#831843',
+                    '#f43f5e', '#e11d48', '#be123c', '#9f1239', '#881337',
+                    '#64748b', '#475569', '#334155', '#1e293b', '#0f172a',
+                    '#71717a', '#52525b', '#3f3f46', '#27272a', '#18181b',
+                    '#78716c', '#57534e', '#44403c', '#292524', '#1c1917',
+                    '#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1',
+                    '#94a3b8', '#64748b', '#475569', '#334155', '#1e293b',
+                    '#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626',
+                    '#fed7aa', '#fdba74', '#fb923c', '#f97316', '#ea580c',
+                    '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706',
+                    '#fef08a', '#fde047', '#facc15', '#eab308', '#ca8a04',
+                    '#d9f99d', '#bef264', '#a3e635', '#84cc16', '#65a30d',
+                    '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a',
+                    '#a7f3d0', '#6ee7b7', '#34d399', '#10b981', '#059669',
+                    '#99f6e4', '#5eead4', '#2dd4bf', '#14b8a6', '#0d9488',
+                    '#a5f3fc', '#67e8f9', '#22d3ee', '#06b6d4', '#0891b2',
+                    '#bae6fd', '#7dd3fc', '#38bdf8', '#0ea5e9', '#0284c7',
+                    '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb',
+                    '#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5',
+                    '#ddd6fe', '#c4b5fd', '#a78bfa', '#8b5cf6', '#7c3aed',
+                    '#e9d5ff', '#d8b4fe', '#c084fc', '#a855f7', '#9333ea',
+                    '#f5d0fe', '#f0abfc', '#e879f9', '#d946ef', '#c026d3',
+                    '#fce7f3', '#fbcfe8', '#f9a8d4', '#ec4899', '#db2777',
+                    '#ffe4e6', '#fecdd3', '#fda4af', '#f43f5e', '#e11d48',
+                  ].map((color) => (
+                    <TouchableOpacity
+                      key={color}
+                      style={[styles.colorOption, { backgroundColor: color }]}
+                      onPress={() => setCustomColor(color)}
+                      activeOpacity={0.7}
+                    />
+                  ))}
+                </View>
+
+                <View style={styles.customColorSection}>
+                  <Text style={[styles.customColorLabel, { color: colors.text }]}>Custom Color</Text>
+                  <View style={styles.customColorInputContainer}>
+                    <TextInput
+                      style={[styles.customColorInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                      value={customColorInput}
+                      onChangeText={setCustomColorInput}
+                      placeholder="#FF5733 or FF5733"
+                      placeholderTextColor={colors.textTertiary}
+                      autoCapitalize="characters"
+                      maxLength={7}
+                    />
+                    <TouchableOpacity
+                      style={[styles.applyColorButton, { backgroundColor: colors.primary }]}
+                      onPress={applyCustomColor}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.applyColorText}>Apply</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </ScrollView>
             </View>
           </View>
         </Modal>
@@ -1171,11 +1255,45 @@ const styles = StyleSheet.create({
   colorGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 8,
   },
   colorOption: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+  },
+  customColorSection: {
+    marginTop: 24,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#334155',
+  },
+  customColorLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  customColorInputContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  customColorInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 15,
+  },
+  applyColorButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  applyColorText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });
