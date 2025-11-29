@@ -362,6 +362,27 @@ export default function ProductsScreen() {
     }
 
     const productToCheck = selectedProduct;
+    const customPrice = price;
+    
+    // Check if product requires PRODUCTMSG
+    if (productToCheck.hotcode && productToCheck.hotcode.toUpperCase() === 'PRODUCTMSG') {
+      console.log('[Products] PRODUCTMSG detected after OPEN price entry');
+      setProductMsgProduct(productToCheck);
+      // Store the custom price in a special way - we'll need to pass it through
+      // Create a temporary price option with the custom price
+      const customPriceOption: PriceOption = {
+        ...selectedPriceForManual,
+        price: customPrice,
+      };
+      setProductMsgPrice(customPriceOption);
+      setProductMsgInput('');
+      closeManualPriceModal();
+      // Add small delay to allow manual price modal to close smoothly
+      setTimeout(() => {
+        setProductMsgModalVisible(true);
+      }, 100);
+      return;
+    }
 
     addToBasket(selectedProduct, selectedPriceForManual, 1, price);
     showNotification(`Added ${selectedProduct.name} to basket (£${price.toFixed(2)})`);
@@ -539,8 +560,19 @@ export default function ProductsScreen() {
     
     // Create a modified product with the custom name
     const modifiedProduct = { ...productMsgProduct, name: customName };
-    addToBasket(modifiedProduct, productMsgPrice, 1);
-    showNotification(`Added ${customName} to basket`);
+    
+    // Check if this price option has a custom price (from OPEN price entry)
+    // If the price matches the label price, use normal flow, otherwise use custom price
+    const hasCustomPrice = productMsgPrice.label.toUpperCase() === 'OPEN';
+    
+    if (hasCustomPrice) {
+      // Use the custom price that was set
+      addToBasket(modifiedProduct, productMsgPrice, 1, productMsgPrice.price);
+      showNotification(`Added ${customName} to basket (£${productMsgPrice.price.toFixed(2)})`);
+    } else {
+      addToBasket(modifiedProduct, productMsgPrice, 1);
+      showNotification(`Added ${customName} to basket`);
+    }
     
     setProductMsgModalVisible(false);
     setProductMsgInput('');
