@@ -701,18 +701,30 @@ export default function ReportsScreen() {
                       gratuityByPaymentMethod[payment.tenderName] = { count: 0, total: 0 };
                     }
                   });
-                  if (!gratuityByPaymentMethod['Split Payment']) {
-                    gratuityByPaymentMethod['Split Payment'] = { count: 0, total: 0 };
-                  }
-                  gratuityByPaymentMethod['Split Payment'].total += transaction.gratuity || 0;
                 } else {
                   if (!gratuityByPaymentMethod[transaction.tenderName]) {
                     gratuityByPaymentMethod[transaction.tenderName] = { count: 0, total: 0 };
                   }
                   gratuityByPaymentMethod[transaction.tenderName].count++;
-                  gratuityByPaymentMethod[transaction.tenderName].total += transaction.gratuity || 0;
                 }
               });
+
+              const cashGratuityTotal = transactionsWithGratuity
+                .filter(t => !t.payments || t.payments.length === 0)
+                .filter(t => t.tenderName === 'Cash')
+                .reduce((sum, t) => sum + (t.gratuity || 0), 0);
+              
+              const cardGratuityTotal = transactionsWithGratuity
+                .filter(t => !t.payments || t.payments.length === 0)
+                .filter(t => t.tenderName === 'Card')
+                .reduce((sum, t) => sum + (t.gratuity || 0), 0);
+
+              if (gratuityByPaymentMethod['Cash']) {
+                gratuityByPaymentMethod['Cash'].total = cashGratuityTotal;
+              }
+              if (gratuityByPaymentMethod['Card']) {
+                gratuityByPaymentMethod['Card'].total = cardGratuityTotal;
+              }
 
               return (
                 <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -754,22 +766,32 @@ export default function ReportsScreen() {
 
                   <Text style={[styles.sectionSubtitle, { color: colors.text }]}>By Payment Method</Text>
                   {Object.entries(gratuityByPaymentMethod)
-                    .filter(([method]) => method !== 'Split Payment' || gratuityByPaymentMethod['Split Payment'].total > 0)
+                    .filter(([method]) => method !== 'Split Payment')
                     .map(([method, data]) => (
                     <View key={method} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.breakdownLabel, { color: colors.text }]}>{method}</Text>
-                        {data.count > 0 && (
-                          <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
-                            {data.count} gratuity transaction{data.count !== 1 ? 's' : ''}
-                          </Text>
-                        )}
                       </View>
                       <Text style={[styles.breakdownValue, { color: '#10b981' }]}>
                         £{data.total.toFixed(2)}
                       </Text>
                     </View>
                   ))}
+                  {(() => {
+                    const cashTotal = gratuityByPaymentMethod['Cash']?.total || 0;
+                    const cardTotal = gratuityByPaymentMethod['Card']?.total || 0;
+                    const combinedTotal = cashTotal + cardTotal;
+                    return (
+                      <View style={[styles.breakdownItem, { borderTopWidth: 2, borderTopColor: colors.border, marginTop: 8, paddingTop: 16 }]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.breakdownLabel, { color: colors.text, fontWeight: '700' as const }]}>Combined Total</Text>
+                        </View>
+                        <Text style={[styles.breakdownValue, { color: '#10b981', fontSize: 18 }]}>
+                          £{combinedTotal.toFixed(2)}
+                        </Text>
+                      </View>
+                    );
+                  })()}
 
                   <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Recent Gratuity Transactions</Text>
                   {transactionsWithGratuity.slice(0, 5).map((transaction) => (
@@ -895,7 +917,7 @@ export default function ReportsScreen() {
               });
 
               const topProducts = Object.entries(productSales)
-                .sort((a, b) => b[1].revenue - a[1].revenue)
+                .sort((a, b) => b[1].quantity - a[1].quantity)
                 .slice(0, 10);
 
               if (topProducts.length === 0) return null;
