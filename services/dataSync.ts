@@ -249,11 +249,12 @@ export class DataSyncService {
   private async parseAndStoreData(files: Map<string, string>): Promise<void> {
     const operators = await this.parseOperators(files);
     const { groups, departments } = await this.parseProductStructure(files);
-    const products = await this.parseProducts(files);
+    const menuData = await this.parseMenuData(files);
+    const menuProductFilenames = this.extractMenuProductFilenames(menuData);
+    const products = await this.parseProducts(files, menuProductFilenames);
     const tenders = await this.parseTenders(files);
     const vatRates = await this.parseVAT(files);
     const tables = await this.parseTables(files);
-    const menuData = await this.parseMenuData(files);
 
     await AsyncStorage.setItem(STORAGE_KEYS.OPERATORS, JSON.stringify(operators));
     await AsyncStorage.setItem(STORAGE_KEYS.GROUPS, JSON.stringify(groups));
@@ -377,7 +378,20 @@ export class DataSyncService {
     return { groups, departments };
   }
 
-  private async parseProducts(files: Map<string, string>): Promise<Product[]> {
+  private extractMenuProductFilenames(menuData: MenuData): Set<string> {
+    const filenames = new Set<string>();
+    for (const menuProducts of Object.values(menuData)) {
+      for (const menuProduct of menuProducts) {
+        if (menuProduct.filename && menuProduct.filename.toUpperCase() !== 'BACK.PLU') {
+          filenames.add(menuProduct.filename.toUpperCase());
+        }
+      }
+    }
+    console.log(`[DataSync] Found ${filenames.size} unique products referenced in menus`);
+    return filenames;
+  }
+
+  private async parseProducts(files: Map<string, string>, menuProductFilenames: Set<string>): Promise<Product[]> {
     const products: Product[] = [];
     let productIndex = 0;
 
@@ -402,8 +416,18 @@ export class DataSyncService {
 
       const kv = dataParser.parseKV(content);
       
+      const pluFilename = fileName + '.PLU';
+      const isInMenu = menuProductFilenames.has(pluFilename.toUpperCase());
+      
       const sellable = String(kv['SELLABLE?'] || '').trim().toLowerCase();
-      if (sellable && ['no', 'false', '0', 'n', 'off'].includes(sellable)) continue;
+      if (sellable && ['no', 'false', '0', 'n', 'off'].includes(sellable)) {
+        if (!isInMenu) {
+          console.log(`[DataSync] Skipping non-sellable product: ${fileName} (not in any menu)`);
+          continue;
+        } else {
+          console.log(`[DataSync] Including non-sellable product: ${fileName} (appears in menu)`);
+        }
+      }
 
       const name = kv.PRODUCT_DESCRIPTION || fileName;
       let prices = dataParser.parsePriceOptions(kv);
@@ -867,11 +891,12 @@ export class DataSyncService {
 
     const newOperators = await this.parseOperators(files);
     const { groups: newGroups, departments: newDepartments } = await this.parseProductStructure(files);
-    const newProducts = await this.parseProducts(files);
+    const newMenuData = await this.parseMenuData(files);
+    const menuProductFilenames = this.extractMenuProductFilenames(newMenuData);
+    const newProducts = await this.parseProducts(files, menuProductFilenames);
     const newTenders = await this.parseTenders(files);
     const newVATRates = await this.parseVAT(files);
     const newTables = await this.parseTables(files);
-    const newMenuData = await this.parseMenuData(files);
 
     const mergedOperators = newOperators.length > 0 ? newOperators : existingOperators;
     const mergedGroups = newGroups.length > 0 ? newGroups : existingGroups;
