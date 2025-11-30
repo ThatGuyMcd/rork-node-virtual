@@ -28,7 +28,7 @@ interface POSContextType {
   updateBasketItemMessage: (index: number, message: string) => void;
   removeFromBasket: (index: number) => void;
   clearBasket: () => void;
-  completeSale: (tenderId: string) => Promise<void>;
+  completeSale: (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[]) => Promise<void>;
   calculateTotals: () => { subtotal: number; vatBreakdown: Record<string, number>; total: number };
   selectTable: (table: Table | null) => void;
   saveTableOrder: () => void;
@@ -186,7 +186,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     return { subtotal, vatBreakdown, total: subtotal };
   }, [basket, vatRates]);
 
-  const completeSale = useCallback(async (tenderId: string) => {
+  const completeSale = useCallback(async (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[]) => {
     if (!currentOperator) {
       console.error('[POS] Cannot complete sale: no operator logged in');
       return;
@@ -200,24 +200,66 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
 
     const totals = calculateTotals();
     
-    const transaction: Transaction = {
-      id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date().toISOString(),
-      operatorId: currentOperator.id,
-      operatorName: currentOperator.name,
-      tableId: currentTable?.id,
-      tableName: currentTable?.name,
-      items: [...basket],
-      subtotal: totals.subtotal,
-      vatBreakdown: totals.vatBreakdown,
-      total: totals.total,
-      tenderId: tender.id,
-      tenderName: tender.name,
-      paymentMethod: tender.name,
-    };
-
-    await transactionService.saveTransaction(transaction);
-    console.log('[POS] Transaction recorded:', transaction.id);
+    if (splitPayments && splitPayments.length > 0) {
+      const totalPaidViaSplit = splitPayments.reduce((sum, p) => sum + p.amount, 0);
+      const finalAmount = totals.total - totalPaidViaSplit;
+      
+      for (const payment of splitPayments) {
+        const splitTransaction: Transaction = {
+          id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: new Date().toISOString(),
+          operatorId: currentOperator.id,
+          operatorName: currentOperator.name,
+          tableId: currentTable?.id,
+          tableName: currentTable?.name,
+          items: [...basket],
+          subtotal: payment.amount,
+          vatBreakdown: {},
+          total: payment.amount,
+          tenderId: payment.tenderId,
+          tenderName: payment.tenderName,
+          paymentMethod: payment.tenderName,
+        };
+        await transactionService.saveTransaction(splitTransaction);
+        console.log('[POS] Split transaction recorded:', splitTransaction.id, payment.tenderName, payment.amount);
+      }
+      
+      const finalTransaction: Transaction = {
+        id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date().toISOString(),
+        operatorId: currentOperator.id,
+        operatorName: currentOperator.name,
+        tableId: currentTable?.id,
+        tableName: currentTable?.name,
+        items: [...basket],
+        subtotal: finalAmount,
+        vatBreakdown: totals.vatBreakdown,
+        total: finalAmount,
+        tenderId: tender.id,
+        tenderName: tender.name,
+        paymentMethod: tender.name,
+      };
+      await transactionService.saveTransaction(finalTransaction);
+      console.log('[POS] Final transaction recorded:', finalTransaction.id, tender.name, finalAmount);
+    } else {
+      const transaction: Transaction = {
+        id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date().toISOString(),
+        operatorId: currentOperator.id,
+        operatorName: currentOperator.name,
+        tableId: currentTable?.id,
+        tableName: currentTable?.name,
+        items: [...basket],
+        subtotal: totals.subtotal,
+        vatBreakdown: totals.vatBreakdown,
+        total: totals.total,
+        tenderId: tender.id,
+        tenderName: tender.name,
+        paymentMethod: tender.name,
+      };
+      await transactionService.saveTransaction(transaction);
+      console.log('[POS] Transaction recorded:', transaction.id);
+    }
     
     if (currentTable) {
       await tableDataService.clearTableData(currentTable.id);

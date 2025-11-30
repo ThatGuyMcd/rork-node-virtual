@@ -33,7 +33,7 @@ export default function BasketScreen() {
 
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [splitPaymentAmount, setSplitPaymentAmount] = useState('');
-  const [paidAmount, setPaidAmount] = useState(0);
+  const [splitPayments, setSplitPayments] = useState<{ tenderId: string; tenderName: string; amount: number }[]>([]);
   const [messageModalVisible, setMessageModalVisible] = useState(false);
   const [currentMessageIndex, setCurrentMessageIndex] = useState<number | null>(null);
   const [messageInput, setMessageInput] = useState('');
@@ -41,6 +41,7 @@ export default function BasketScreen() {
   const availableTenders = getAvailableTenders();
 
   const { subtotal, vatBreakdown, total } = calculateTotals();
+  const paidAmount = splitPayments.reduce((sum, payment) => sum + payment.amount, 0);
   const remainingTotal = total - paidAmount;
 
   const openPaymentModal = () => {
@@ -64,17 +65,24 @@ export default function BasketScreen() {
   };
 
   const handlePayment = async (tenderId: string) => {
+    const tender = availableTenders.find(t => t.id === tenderId);
+    if (!tender) return;
+
     if (splitPaymentsEnabled && splitPaymentAmount && parseFloat(splitPaymentAmount) > 0) {
       const amount = parseFloat(splitPaymentAmount);
       if (amount < remainingTotal) {
-        setPaidAmount(paidAmount + amount);
+        setSplitPayments([...splitPayments, {
+          tenderId: tender.id,
+          tenderName: tender.name,
+          amount: amount,
+        }]);
         setSplitPaymentAmount('');
         closePaymentModal();
         return;
       }
     }
-    await completeSale(tenderId);
-    setPaidAmount(0);
+    await completeSale(tenderId, splitPayments);
+    setSplitPayments([]);
     setSplitPaymentAmount('');
     closePaymentModal();
   };
@@ -238,10 +246,16 @@ export default function BasketScreen() {
           </View>
         ))}
 
-        {paidAmount > 0 && (
-          <View style={[styles.summaryRow, { marginTop: 8 }]}>
-            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Paid</Text>
-            <Text style={[styles.summaryValue, { color: colors.success }]}>-£{paidAmount.toFixed(2)}</Text>
+        {splitPayments.length > 0 && (
+          <View style={{ marginTop: 8, gap: 6 }}>
+            {splitPayments.map((payment, index) => (
+              <View key={index} style={styles.summaryRow}>
+                <Text style={[styles.summaryLabelSmall, { color: colors.textSecondary }]}>
+                  {payment.tenderName}
+                </Text>
+                <Text style={[styles.summaryValueSmall, { color: colors.success }]}>-£{payment.amount.toFixed(2)}</Text>
+              </View>
+            ))}
           </View>
         )}
 
