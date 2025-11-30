@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar, RotateCcw } from 'lucide-react-native';
+import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar, RotateCcw, Search } from 'lucide-react-native';
 import { transactionService } from '@/services/transactionService';
 import type { Transaction, TransactionReport } from '@/types/pos';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -65,6 +65,16 @@ export default function ReportsScreen() {
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  const [transactionSearchModalVisible, setTransactionSearchModalVisible] = useState(false);
+  const [refundSearchModalVisible, setRefundSearchModalVisible] = useState(false);
+  const [searchStartDate, setSearchStartDate] = useState<Date>(new Date());
+  const [searchEndDate, setSearchEndDate] = useState<Date>(new Date());
+  const [searchResults, setSearchResults] = useState<Transaction[]>([]);
+  const [searchType, setSearchType] = useState<'transaction' | 'refund'>('transaction');
+  const [showSearchStartDatePicker, setShowSearchStartDatePicker] = useState(false);
+  const [showSearchStartTimePicker, setShowSearchStartTimePicker] = useState(false);
+  const [showSearchEndDatePicker, setShowSearchEndDatePicker] = useState(false);
+  const [showSearchEndTimePicker, setShowSearchEndTimePicker] = useState(false);
 
   useEffect(() => {
     loadOperators();
@@ -188,6 +198,50 @@ export default function ReportsScreen() {
     setDetailModalVisible(true);
   };
 
+  const handleSearchTransactions = async () => {
+    if (searchStartDate > searchEndDate) {
+      Alert.alert('Invalid Date Range', 'Start date must be before end date');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const results = await transactionService.getTransactionsByDateRange(searchStartDate, searchEndDate);
+      const filteredResults = searchType === 'refund' 
+        ? results.filter(t => t.isRefund)
+        : results;
+      setSearchResults(filteredResults.reverse());
+      setTransactionSearchModalVisible(false);
+      setRefundSearchModalVisible(false);
+      if (searchType === 'transaction') {
+        setTransactionSearchModalVisible(true);
+      } else {
+        setRefundSearchModalVisible(true);
+      }
+    } catch (error) {
+      console.error('[Reports] Error searching transactions:', error);
+      Alert.alert('Error', 'Failed to search transactions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openTransactionSearch = () => {
+    setSearchType('transaction');
+    setSearchStartDate(new Date(new Date().setHours(0, 0, 0, 0)));
+    setSearchEndDate(new Date());
+    setSearchResults([]);
+    setTransactionSearchModalVisible(true);
+  };
+
+  const openRefundSearch = () => {
+    setSearchType('refund');
+    setSearchStartDate(new Date(new Date().setHours(0, 0, 0, 0)));
+    setSearchEndDate(new Date());
+    setSearchResults([]);
+    setRefundSearchModalVisible(true);
+  };
+
   const DateRangeButton = ({ range, label }: { range: DateRange; label: string }) => (
     <TouchableOpacity
       style={[
@@ -215,6 +269,26 @@ export default function ReportsScreen() {
       <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+
+        <View style={styles.searchButtonsContainer}>
+          <TouchableOpacity
+            style={[styles.searchButton, { backgroundColor: colors.primary }]}
+            onPress={openTransactionSearch}
+            activeOpacity={0.8}
+          >
+            <Search size={20} color="#fff" />
+            <Text style={styles.searchButtonText}>Find Transaction</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.searchButton, { backgroundColor: '#ef4444' }]}
+            onPress={openRefundSearch}
+            activeOpacity={0.8}
+          >
+            <Search size={20} color="#fff" />
+            <Text style={styles.searchButtonText}>Find Refund</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
@@ -923,6 +997,265 @@ export default function ReportsScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        transparent
+        visible={transactionSearchModalVisible || refundSearchModalVisible}
+        onRequestClose={() => {
+          setTransactionSearchModalVisible(false);
+          setRefundSearchModalVisible(false);
+        }}
+        animationType="fade"
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+          <View style={[styles.searchModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {searchType === 'transaction' ? 'Find Transaction' : 'Find Refund'}
+              </Text>
+              <TouchableOpacity onPress={() => {
+                setTransactionSearchModalVisible(false);
+                setRefundSearchModalVisible(false);
+              }}>
+                <X size={24} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: '80%' }}>
+              {searchResults.length === 0 ? (
+                <View style={{ gap: 16 }}>
+                  <Text style={[styles.searchLabel, { color: colors.text }]}>
+                    Select date range to search {searchType === 'transaction' ? 'transactions' : 'refunds'}
+                  </Text>
+
+                  <View>
+                    <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>Start Date & Time</Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.datePickerButton,
+                        { backgroundColor: colors.background, borderColor: colors.border },
+                      ]}
+                      onPress={() => Platform.OS === 'web' ? null : setShowSearchStartDatePicker(true)}
+                      activeOpacity={0.7}
+                    >
+                      {Platform.OS === 'web' ? (
+                        <input
+                          type="datetime-local"
+                          value={formatDateTimeForInput(searchStartDate)}
+                          onChange={(e) => {
+                            const date = new Date(e.target.value);
+                            if (!isNaN(date.getTime())) {
+                              setSearchStartDate(date);
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: 16,
+                            fontSize: 16,
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            color: colors.text,
+                            fontFamily: 'inherit',
+                          }}
+                        />
+                      ) : (
+                        <Text style={[styles.datePickerButtonText, { color: colors.text }]}>
+                          {formatDateTime(searchStartDate)}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                    {showSearchStartDatePicker && Platform.OS !== 'web' && (
+                      <View>
+                        <DateTimePicker
+                          value={searchStartDate}
+                          mode="date"
+                          display="spinner"
+                          onChange={(event, selectedDate) => {
+                            setShowSearchStartDatePicker(false);
+                            if (selectedDate) {
+                              const newDate = new Date(
+                                selectedDate.getFullYear(),
+                                selectedDate.getMonth(),
+                                selectedDate.getDate(),
+                                searchStartDate.getHours(),
+                                searchStartDate.getMinutes()
+                              );
+                              setSearchStartDate(newDate);
+                              setShowSearchStartTimePicker(true);
+                            }
+                          }}
+                        />
+                      </View>
+                    )}
+                    {showSearchStartTimePicker && Platform.OS !== 'web' && (
+                      <View>
+                        <DateTimePicker
+                          value={searchStartDate}
+                          mode="time"
+                          display="spinner"
+                          onChange={(event, selectedTime) => {
+                            setShowSearchStartTimePicker(false);
+                            if (selectedTime) {
+                              const newDate = new Date(
+                                searchStartDate.getFullYear(),
+                                searchStartDate.getMonth(),
+                                searchStartDate.getDate(),
+                                selectedTime.getHours(),
+                                selectedTime.getMinutes()
+                              );
+                              setSearchStartDate(newDate);
+                            }
+                          }}
+                        />
+                      </View>
+                    )}
+                  </View>
+
+                  <View>
+                    <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>End Date & Time</Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.datePickerButton,
+                        { backgroundColor: colors.background, borderColor: colors.border },
+                      ]}
+                      onPress={() => Platform.OS === 'web' ? null : setShowSearchEndDatePicker(true)}
+                      activeOpacity={0.7}
+                    >
+                      {Platform.OS === 'web' ? (
+                        <input
+                          type="datetime-local"
+                          value={formatDateTimeForInput(searchEndDate)}
+                          onChange={(e) => {
+                            const date = new Date(e.target.value);
+                            if (!isNaN(date.getTime())) {
+                              setSearchEndDate(date);
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: 16,
+                            fontSize: 16,
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            color: colors.text,
+                            fontFamily: 'inherit',
+                          }}
+                        />
+                      ) : (
+                        <Text style={[styles.datePickerButtonText, { color: colors.text }]}>
+                          {formatDateTime(searchEndDate)}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                    {showSearchEndDatePicker && Platform.OS !== 'web' && (
+                      <View>
+                        <DateTimePicker
+                          value={searchEndDate}
+                          mode="date"
+                          display="spinner"
+                          onChange={(event, selectedDate) => {
+                            setShowSearchEndDatePicker(false);
+                            if (selectedDate) {
+                              const newDate = new Date(
+                                selectedDate.getFullYear(),
+                                selectedDate.getMonth(),
+                                selectedDate.getDate(),
+                                searchEndDate.getHours(),
+                                searchEndDate.getMinutes()
+                              );
+                              setSearchEndDate(newDate);
+                              setShowSearchEndTimePicker(true);
+                            }
+                          }}
+                        />
+                      </View>
+                    )}
+                    {showSearchEndTimePicker && Platform.OS !== 'web' && (
+                      <View>
+                        <DateTimePicker
+                          value={searchEndDate}
+                          mode="time"
+                          display="spinner"
+                          onChange={(event, selectedTime) => {
+                            setShowSearchEndTimePicker(false);
+                            if (selectedTime) {
+                              const newDate = new Date(
+                                searchEndDate.getFullYear(),
+                                searchEndDate.getMonth(),
+                                searchEndDate.getDate(),
+                                selectedTime.getHours(),
+                                selectedTime.getMinutes()
+                              );
+                              setSearchEndDate(newDate);
+                            }
+                          }}
+                        />
+                      </View>
+                    )}
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.applyButton, { backgroundColor: colors.primary }]}
+                    onPress={handleSearchTransactions}
+                    activeOpacity={0.8}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.applyButtonText}>Search</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View>
+                  <View style={styles.searchResultsHeader}>
+                    <Text style={[styles.searchResultsTitle, { color: colors.text }]}>
+                      Found {searchResults.length} {searchType === 'transaction' ? 'transaction' : 'refund'}{searchResults.length !== 1 ? 's' : ''}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setSearchResults([])}
+                      style={[styles.newSearchButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.newSearchButtonText, { color: colors.primary }]}>New Search</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {searchResults.map((transaction) => (
+                    <TouchableOpacity
+                      key={transaction.id}
+                      style={[styles.transactionItem, { borderBottomColor: colors.border }]}
+                      onPress={() => {
+                        setTransactionSearchModalVisible(false);
+                        setRefundSearchModalVisible(false);
+                        viewTransactionDetail(transaction);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.transactionId, { color: colors.text }]}>
+                          {new Date(transaction.timestamp).toLocaleString('en-GB')}
+                        </Text>
+                        <Text style={[styles.transactionOperator, { color: colors.textSecondary }]}>
+                          {transaction.operatorName} • {transaction.tenderName}
+                          {transaction.tableName && ` • ${transaction.tableName}`}
+                        </Text>
+                        <Text style={[styles.transactionOperator, { color: colors.textTertiary, fontSize: 12 }]}>
+                          ID: {transaction.id}
+                        </Text>
+                      </View>
+                      <Text style={[styles.transactionTotal, { color: transaction.isRefund ? '#ef4444' : colors.primary }]}>
+                        £{transaction.total.toFixed(2)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1207,5 +1540,58 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700' as const,
     color: '#fff',
+  },
+  searchButtonsContainer: {
+    flexDirection: 'row' as const,
+    gap: 12,
+    marginBottom: 16,
+  },
+  searchButton: {
+    flex: 1,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    padding: 16,
+    borderRadius: 12,
+  },
+  searchButtonText: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#fff',
+  },
+  searchModal: {
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '90%',
+  },
+  searchLabel: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    textAlign: 'center' as const,
+    marginBottom: 8,
+  },
+  searchResultsHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: 16,
+    paddingBottom: 12,
+  },
+  searchResultsTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+  },
+  newSearchButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+  },
+  newSearchButtonText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
   },
 });
