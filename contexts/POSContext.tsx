@@ -236,15 +236,30 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         const loadedBasket: BasketItem[] = [];
 
         for (const row of csvRows) {
-          const product = products.find(p => p.name === row.productName);
+          const baseName = row.productName.split(' - ')[0];
+          let product = products.find(p => p.name === baseName || p.name === row.productName);
+          
+          if (!product && row.pluFile) {
+            product = products.find(p => {
+              if (!p.filename) return false;
+              const productPlu = `${p.groupId}-${p.departmentId}-${p.id.replace('prod_', '').padStart(5, '0')}.PLU`;
+              return productPlu === row.pluFile;
+            });
+          }
+          
           if (product) {
             const selectedPrice = product.prices[0] || { key: 'PRICE_STANDARD', label: 'standard', price: row.price };
+            const productWithMessage = row.productName.includes(' - ') 
+              ? { ...product, name: row.productName }
+              : product;
             loadedBasket.push({
-              product,
+              product: productWithMessage,
               quantity: row.quantity,
               selectedPrice: { ...selectedPrice, price: row.price },
               lineTotal: row.quantity * row.price,
             });
+          } else {
+            console.warn('[POS] Could not find product for row:', row);
           }
         }
 
