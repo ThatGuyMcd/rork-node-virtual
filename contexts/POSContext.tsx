@@ -487,8 +487,14 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       console.log('[POS] Refund mode activated, existing items marked for refund');
       return true;
     } else {
+      const updatedBasket = basket.map(item => ({
+        ...item,
+        quantity: Math.abs(item.quantity),
+        lineTotal: Math.abs(item.lineTotal),
+      }));
+      setBasket(updatedBasket);
       setIsRefundMode(false);
-      console.log('[POS] Refund mode deactivated');
+      console.log('[POS] Refund mode deactivated, items unmarked for refund');
       return true;
     }
   }, [isRefundMode, basket]);
