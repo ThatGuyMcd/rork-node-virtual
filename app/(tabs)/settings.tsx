@@ -31,7 +31,7 @@ export default function SettingsScreen() {
   const [tableSelectionRequired, setTableSelectionRequired] = useState(false);
   const [productViewLayout, setProductViewLayout] = useState<'compact' | 'standard' | 'large'>('standard');
   const [productViewMode, setProductViewMode] = useState<'group-department' | 'all-departments' | 'all-items'>('group-department');
-  const { updateTableSelectionRequired, updateProductViewLayout, updateProductViewMode, isInitialSetupComplete, completeInitialSetup, cardPaymentEnabled, cashPaymentEnabled, cardMachineProvider, splitPaymentsEnabled, updateCardPaymentEnabled, updateCashPaymentEnabled, updateCardMachineProvider, updateSplitPaymentsEnabled, discountSettings, updateDiscountSettings, gratuitySettings, updateGratuitySettings } = usePOS();
+  const { updateTableSelectionRequired, updateProductViewLayout, updateProductViewMode, isInitialSetupComplete, completeInitialSetup, cardPaymentEnabled, cashPaymentEnabled, cardMachineProvider, splitPaymentsEnabled, updateCardPaymentEnabled, updateCashPaymentEnabled, updateCardMachineProvider, updateSplitPaymentsEnabled, refundButtonEnabled, updateRefundButtonEnabled, discountSettings, updateDiscountSettings, gratuitySettings, updateGratuitySettings } = usePOS();
   const router = useRouter();
   const { theme, themePreference, colors, setTheme } = useTheme();
 
@@ -938,6 +938,21 @@ export default function SettingsScreen() {
               <Switch
                 value={tableSelectionRequired}
                 onValueChange={handleTableSelectionToggle}
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor="#ffffff"
+              />
+            </View>
+          </View>
+
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View style={styles.settingRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Refund Button</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Show refund button in basket for managers</Text>
+              </View>
+              <Switch
+                value={refundButtonEnabled}
+                onValueChange={updateRefundButtonEnabled}
                 trackColor={{ false: colors.border, true: colors.accent }}
                 thumbColor="#ffffff"
               />

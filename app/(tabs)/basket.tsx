@@ -32,6 +32,7 @@ export default function BasketScreen() {
     splitPaymentsEnabled,
     isRefundMode,
     toggleRefundMode,
+    refundButtonEnabled,
     discountSettings,
     basketDiscount,
     applyDiscount,
@@ -223,7 +224,7 @@ export default function BasketScreen() {
           )}
         </View>
         <View style={styles.headerActions}>
-          {currentOperator?.isManager && (
+          {currentOperator?.isManager && refundButtonEnabled && (
             <TouchableOpacity
               style={[
                 styles.refundButton,

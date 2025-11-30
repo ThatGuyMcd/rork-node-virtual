@@ -22,6 +22,7 @@ interface POSContextType {
   cardMachineProvider: 'Teya' | 'None';
   splitPaymentsEnabled: boolean;
   isRefundMode: boolean;
+  refundButtonEnabled: boolean;
   discountSettings: DiscountSettings;
   basketDiscount: number;
   gratuitySettings: GratuitySettings;
@@ -49,6 +50,7 @@ interface POSContextType {
   updateSplitPaymentsEnabled: (enabled: boolean) => Promise<void>;
   getAvailableTenders: () => Tender[];
   toggleRefundMode: () => boolean;
+  updateRefundButtonEnabled: (enabled: boolean) => Promise<void>;
   updateDiscountSettings: (settings: DiscountSettings) => Promise<void>;
   applyDiscount: (percentage: number) => void;
   updateGratuitySettings: (settings: GratuitySettings) => Promise<void>;
@@ -68,6 +70,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   const [cardMachineProvider, setCardMachineProvider] = useState<'Teya' | 'None'>('None');
   const [splitPaymentsEnabled, setSplitPaymentsEnabled] = useState(false);
   const [isRefundMode, setIsRefundMode] = useState(false);
+  const [refundButtonEnabled, setRefundButtonEnabled] = useState(true);
   const [discountSettings, setDiscountSettings] = useState<DiscountSettings>({ presetPercentages: [5, 10, 15, 20, 25, 50] });
   const [basketDiscount, setBasketDiscount] = useState(0);
   const [gratuitySettings, setGratuitySettings] = useState<GratuitySettings>({ enabled: false, presetPercentages: [10, 15, 20] });
@@ -128,6 +131,9 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       if (data) {
         setGratuitySettings(JSON.parse(data));
       }
+    });
+    AsyncStorage.getItem('refundButtonEnabled').then((data) => {
+      setRefundButtonEnabled(data !== 'false');
     });
     dataSyncService.getStoredVATRates().then((rates) => {
       if (rates && rates.length > 0) {
@@ -529,6 +535,12 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     console.log('[POS] Gratuity settings updated:', settings);
   }, []);
 
+  const updateRefundButtonEnabled = useCallback(async (enabled: boolean) => {
+    setRefundButtonEnabled(enabled);
+    await AsyncStorage.setItem('refundButtonEnabled', enabled.toString());
+    console.log('[POS] Refund button enabled updated:', enabled);
+  }, []);
+
   return {
     currentOperator,
     basket,
@@ -569,6 +581,8 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     getAvailableTenders,
     isRefundMode,
     toggleRefundMode,
+    refundButtonEnabled,
+    updateRefundButtonEnabled,
     discountSettings,
     basketDiscount,
     updateDiscountSettings,
