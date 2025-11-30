@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 
 import { useRouter } from 'expo-router';
-import { Lock, RefreshCw } from 'lucide-react-native';
+import { Lock, RefreshCw, Crown } from 'lucide-react-native';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
@@ -181,17 +181,17 @@ export default function LoginScreen() {
                 onPress={() => handleOperatorSelect(operator)}
                 activeOpacity={0.7}
               >
+                {operator.isManager && (
+                  <View style={styles.crownBadge}>
+                    <Crown size={18} color="#FFD700" fill="#FFD700" />
+                  </View>
+                )}
                 <View style={[styles.operatorAvatar, { backgroundColor: colors.primary }]}>
                   <Text style={styles.operatorInitial}>
                     {operator.name.charAt(0)}
                   </Text>
                 </View>
                 <Text style={[styles.operatorName, { color: colors.text }]}>{operator.name}</Text>
-                {operator.isManager && (
-                  <View style={[styles.managerBadge, { backgroundColor: colors.warning }]}>
-                    <Text style={styles.managerText}>Manager</Text>
-                  </View>
-                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -355,16 +355,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  managerBadge: {
-    marginTop: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  managerText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#fff',
+  crownBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 1,
   },
   backButton: {
     marginTop: 40,
