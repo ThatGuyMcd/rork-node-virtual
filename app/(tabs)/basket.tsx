@@ -335,7 +335,7 @@ export default function BasketScreen() {
             onPress={() => setDiscountModalVisible(true)}
             activeOpacity={0.7}
           >
-            <Percent size={18} color={basketDiscount > 0 ? '#fff' : colors.accent} />
+            <Percent size={14} color={basketDiscount > 0 ? '#fff' : colors.accent} />
             <Text style={[
               styles.discountButtonBottomText,
               { color: basketDiscount > 0 ? '#fff' : colors.text }
@@ -571,7 +571,6 @@ export default function BasketScreen() {
                   onPress={() => handleDiscountSelect(percentage)}
                   activeOpacity={0.7}
                 >
-                  <Percent size={20} color={basketDiscount === percentage ? colors.accent : colors.text} />
                   <Text style={[
                     styles.discountOptionText,
                     { color: basketDiscount === percentage ? colors.accent : colors.text }
@@ -636,16 +635,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 2,
+    gap: 6,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1.5,
     marginTop: 12,
     marginBottom: 8,
   },
   discountButtonBottomText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
   },
   refundButton: {
     flexDirection: 'row',
@@ -1017,18 +1016,18 @@ const styles = StyleSheet.create({
   discountGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap' as const,
-    gap: 12,
+    gap: 10,
     marginBottom: 20,
   },
   discountOption: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
-    minWidth: 100,
+    width: '30%',
   },
   discountOptionText: {
     fontSize: 18,
