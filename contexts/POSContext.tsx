@@ -1,9 +1,10 @@
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { BasketItem, Operator, Product, Tender, VATRate, Table, TableOrder } from '@/types/pos';
+import type { BasketItem, Operator, Product, Tender, VATRate, Table, TableOrder, Transaction } from '@/types/pos';
 import { dataSyncService } from '@/services/dataSync';
 import { tableDataService } from '@/services/tableDataService';
+import { transactionService } from '@/services/transactionService';
 
 interface POSContextType {
   currentOperator: Operator | null;
@@ -170,17 +171,6 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     setBasket([]);
   }, []);
 
-  const completeSale = useCallback(async (tenderId: string) => {
-    console.log('Sale completed with tender:', tenderId);
-    
-    if (currentTable) {
-      await tableDataService.clearTableData(currentTable.id);
-      console.log('[POS] Cleared table data from CSV for table:', currentTable.id);
-    }
-    
-    clearBasket();
-  }, [clearBasket, currentTable]);
-
   const calculateTotals = useCallback(() => {
     const subtotal = basket.reduce((sum, item) => sum + item.lineTotal, 0);
     const vatBreakdown: Record<string, number> = {};
@@ -195,6 +185,47 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
 
     return { subtotal, vatBreakdown, total: subtotal };
   }, [basket, vatRates]);
+
+  const completeSale = useCallback(async (tenderId: string) => {
+    if (!currentOperator) {
+      console.error('[POS] Cannot complete sale: no operator logged in');
+      return;
+    }
+
+    const tender = tenders.find(t => t.id === tenderId);
+    if (!tender) {
+      console.error('[POS] Cannot complete sale: invalid tender');
+      return;
+    }
+
+    const totals = calculateTotals();
+    
+    const transaction: Transaction = {
+      id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date().toISOString(),
+      operatorId: currentOperator.id,
+      operatorName: currentOperator.name,
+      tableId: currentTable?.id,
+      tableName: currentTable?.name,
+      items: [...basket],
+      subtotal: totals.subtotal,
+      vatBreakdown: totals.vatBreakdown,
+      total: totals.total,
+      tenderId: tender.id,
+      tenderName: tender.name,
+      paymentMethod: tender.name,
+    };
+
+    await transactionService.saveTransaction(transaction);
+    console.log('[POS] Transaction recorded:', transaction.id);
+    
+    if (currentTable) {
+      await tableDataService.clearTableData(currentTable.id);
+      console.log('[POS] Cleared table data from CSV for table:', currentTable.id);
+    }
+    
+    clearBasket();
+  }, [clearBasket, currentTable, currentOperator, tenders, basket, calculateTotals]);
 
   const saveTableOrder = useCallback(() => {
     if (!currentTable || !currentOperator || basket.length === 0) return;

@@ -95,3 +95,31 @@ export interface MenuProduct {
   buttonColor?: string;
   fontColor?: string;
 }
+
+export interface Transaction {
+  id: string;
+  timestamp: string;
+  operatorId: string;
+  operatorName: string;
+  tableId?: string;
+  tableName?: string;
+  items: BasketItem[];
+  subtotal: number;
+  vatBreakdown: Record<string, number>;
+  total: number;
+  tenderId: string;
+  tenderName: string;
+  paymentMethod: string;
+}
+
+export interface TransactionReport {
+  startDate: string;
+  endDate: string;
+  totalTransactions: number;
+  totalRevenue: number;
+  totalVAT: number;
+  transactionsByOperator: Record<string, { count: number; revenue: number }>;
+  transactionsByTender: Record<string, { count: number; revenue: number }>;
+  transactionsByTable?: Record<string, { count: number; revenue: number }>;
+  itemsSold: Record<string, { quantity: number; revenue: number }>;
+}
