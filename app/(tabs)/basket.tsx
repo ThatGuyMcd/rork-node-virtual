@@ -71,13 +71,6 @@ export default function BasketScreen() {
     const gratuityValue = (total * percentage) / 100;
     setGratuityAmount(gratuityValue);
     setGratuityModalVisible(false);
-    setPaymentModalVisible(true);
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 50,
-      friction: 7,
-    }).start();
   };
 
   const handleCustomGratuity = () => {
@@ -89,25 +82,11 @@ export default function BasketScreen() {
     setGratuityAmount(amount);
     setCustomGratuityInput('');
     setGratuityModalVisible(false);
-    setPaymentModalVisible(true);
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 50,
-      friction: 7,
-    }).start();
   };
 
   const handleSkipGratuity = () => {
     setGratuityAmount(0);
     setGratuityModalVisible(false);
-    setPaymentModalVisible(true);
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 50,
-      friction: 7,
-    }).start();
   };
 
   const closePaymentModal = () => {
@@ -1248,7 +1227,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   customGratuityInput: {
-    flex: 1,
+    minWidth: 100,
+    maxWidth: 150,
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
