@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar } from 'lucide-react-native';
+import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar, RotateCcw } from 'lucide-react-native';
 import { transactionService } from '@/services/transactionService';
 import type { Transaction, TransactionReport } from '@/types/pos';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -368,6 +368,122 @@ export default function ReportsScreen() {
                 );
               })()}
             </View>
+
+            {(() => {
+              const refundTransactions = filteredTransactions.filter(t => t.isRefund);
+              const refundTotal = refundTransactions.reduce((sum, t) => sum + t.total, 0);
+              const refundCount = refundTransactions.length;
+
+              if (refundCount === 0) return null;
+
+              const refundsByOperator: Record<string, { count: number; total: number }> = {};
+              const refundsByPaymentMethod: Record<string, { count: number; total: number }> = {};
+
+              refundTransactions.forEach(transaction => {
+                if (!refundsByOperator[transaction.operatorId]) {
+                  refundsByOperator[transaction.operatorId] = { count: 0, total: 0 };
+                }
+                refundsByOperator[transaction.operatorId].count++;
+                refundsByOperator[transaction.operatorId].total += transaction.total;
+
+                if (transaction.payments && transaction.payments.length > 0) {
+                  transaction.payments.forEach(payment => {
+                    if (!refundsByPaymentMethod[payment.tenderName]) {
+                      refundsByPaymentMethod[payment.tenderName] = { count: 0, total: 0 };
+                    }
+                    refundsByPaymentMethod[payment.tenderName].total += payment.amount;
+                  });
+                } else {
+                  if (!refundsByPaymentMethod[transaction.tenderName]) {
+                    refundsByPaymentMethod[transaction.tenderName] = { count: 0, total: 0 };
+                  }
+                  refundsByPaymentMethod[transaction.tenderName].count++;
+                  refundsByPaymentMethod[transaction.tenderName].total += transaction.total;
+                }
+              });
+
+              return (
+                <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <View style={styles.cardHeader}>
+                    <RotateCcw size={20} color="#ef4444" />
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>Refunds</Text>
+                  </View>
+
+                  <View style={styles.summaryGrid}>
+                    <View style={[styles.summaryItem, { backgroundColor: colors.background }]}>
+                      <FileText size={24} color="#ef4444" />
+                      <Text style={[styles.summaryValue, { color: colors.text }]}>{refundCount}</Text>
+                      <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Refunds</Text>
+                    </View>
+
+                    <View style={[styles.summaryItem, { backgroundColor: colors.background }]}>
+                      <TrendingUp size={24} color="#ef4444" />
+                      <Text style={[styles.summaryValue, { color: '#ef4444' }]}>£{refundTotal.toFixed(2)}</Text>
+                      <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total Refunded</Text>
+                    </View>
+                  </View>
+
+                  <Text style={[styles.sectionSubtitle, { color: colors.text }]}>By Operator</Text>
+                  {Object.entries(refundsByOperator).map(([operatorId, data]) => (
+                    <View key={operatorId} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.breakdownLabel, { color: colors.text }]}>
+                          {operators[operatorId] || operatorId}
+                        </Text>
+                        <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
+                          {data.count} refund{data.count !== 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                      <Text style={[styles.breakdownValue, { color: '#ef4444' }]}>
+                        £{data.total.toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+
+                  <Text style={[styles.sectionSubtitle, { color: colors.text }]}>By Payment Method</Text>
+                  {Object.entries(refundsByPaymentMethod)
+                    .filter(([method]) => method !== 'Split Payment')
+                    .map(([method, data]) => (
+                    <View key={method} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.breakdownLabel, { color: colors.text }]}>{method}</Text>
+                        {data.count > 0 && (
+                          <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
+                            {data.count} refund{data.count !== 1 ? 's' : ''}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={[styles.breakdownValue, { color: '#ef4444' }]}>
+                        £{data.total.toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+
+                  <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Recent Refund Transactions</Text>
+                  {refundTransactions.slice(0, 5).map((transaction) => (
+                    <TouchableOpacity
+                      key={transaction.id}
+                      style={[styles.transactionItem, { borderBottomColor: colors.border }]}
+                      onPress={() => viewTransactionDetail(transaction)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.transactionId, { color: colors.text }]}>
+                          {new Date(transaction.timestamp).toLocaleString('en-GB')}
+                        </Text>
+                        <Text style={[styles.transactionOperator, { color: colors.textSecondary }]}>
+                          {transaction.operatorName} • {transaction.tenderName}
+                          {transaction.tableName && ` • ${transaction.tableName}`}
+                        </Text>
+                      </View>
+                      <Text style={[styles.transactionTotal, { color: '#ef4444' }]}>
+                        £{transaction.total.toFixed(2)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              );
+            })()}
 
             <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
               <View style={styles.cardHeader}>
@@ -871,6 +987,12 @@ const styles = StyleSheet.create({
   summaryLabel: {
     fontSize: 12,
     textAlign: 'center' as const,
+  },
+  sectionSubtitle: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    marginTop: 16,
+    marginBottom: 8,
   },
   breakdownItem: {
     flexDirection: 'row' as const,
