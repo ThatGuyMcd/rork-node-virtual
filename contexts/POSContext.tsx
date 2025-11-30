@@ -241,9 +241,10 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     }
 
     const totals = calculateTotals();
+    const finalTotal = totals.total + (gratuity || 0);
     
     if (splitPayments && splitPayments.length > 0) {
-      const remainingAmount = totals.total - splitPayments.reduce((sum, p) => sum + p.amount, 0);
+      const remainingAmount = finalTotal - splitPayments.reduce((sum, p) => sum + p.amount, 0);
       const finalPayment = Math.abs(remainingAmount) >= 0.01 
         ? [{ tenderId: tender.id, tenderName: tender.name, amount: remainingAmount }]
         : [];
@@ -264,7 +265,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         items: [...basket],
         subtotal: totals.subtotal,
         vatBreakdown: totals.vatBreakdown,
-        total: totals.total,
+        total: finalTotal,
         tenderId: tender.id,
         tenderName: `Split Payment`,
         paymentMethod: `Split Payment`,
@@ -287,7 +288,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         items: [...basket],
         subtotal: totals.subtotal,
         vatBreakdown: totals.vatBreakdown,
-        total: totals.total,
+        total: finalTotal,
         tenderId: tender.id,
         tenderName: tender.name,
         paymentMethod: tender.name,
