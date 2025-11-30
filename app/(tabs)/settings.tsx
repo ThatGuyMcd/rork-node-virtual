@@ -536,10 +536,7 @@ export default function SettingsScreen() {
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Sun size={16} color={themePreference === 'light' ? colors.primary : colors.textSecondary} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Light Mode</Text>
-                      <Text style={[styles.layoutOptionDesc, { color: colors.textTertiary }]}>Bright and clean interface</Text>
-                    </View>
+                    <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Light Mode</Text>
                   </View>
                 </TouchableOpacity>
 
@@ -554,10 +551,7 @@ export default function SettingsScreen() {
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Moon size={16} color={themePreference === 'dark' ? colors.primary : colors.textSecondary} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Dark Mode</Text>
-                      <Text style={[styles.layoutOptionDesc, { color: colors.textTertiary }]}>Easy on the eyes</Text>
-                    </View>
+                    <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Dark Mode</Text>
                   </View>
                 </TouchableOpacity>
 
@@ -572,10 +566,7 @@ export default function SettingsScreen() {
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <MonitorSmartphone size={16} color={themePreference === 'system' ? colors.primary : colors.textSecondary} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>System</Text>
-                      <Text style={[styles.layoutOptionDesc, { color: colors.textTertiary }]}>Use device settings</Text>
-                    </View>
+                    <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>System</Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -605,7 +596,6 @@ export default function SettingsScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Group → Department View</Text>
-                  <Text style={[styles.layoutOptionDesc, { color: colors.textSecondary }]}>Navigate: Groups → Departments → Products</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -618,7 +608,6 @@ export default function SettingsScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>All Departments View</Text>
-                  <Text style={[styles.layoutOptionDesc, { color: colors.textSecondary }]}>Navigate: All Departments → Products</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -631,7 +620,6 @@ export default function SettingsScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Item View</Text>
-                  <Text style={[styles.layoutOptionDesc, { color: colors.textSecondary }]}>Show all products at once</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -660,7 +648,6 @@ export default function SettingsScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Compact</Text>
-                  <Text style={[styles.layoutOptionDesc, { color: colors.textSecondary }]}>3 columns, small cards</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -673,7 +660,6 @@ export default function SettingsScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Standard</Text>
-                  <Text style={[styles.layoutOptionDesc, { color: colors.textSecondary }]}>2 columns, medium cards</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -686,7 +672,6 @@ export default function SettingsScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Large</Text>
-                  <Text style={[styles.layoutOptionDesc, { color: colors.textSecondary }]}>1 column, large cards</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -806,7 +791,6 @@ export default function SettingsScreen() {
                         activeOpacity={0.7}
                       >
                         <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Filename Order</Text>
-                        <Text style={[styles.layoutOptionDesc, { color: colors.textSecondary }]}>Products sorted by their file names</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -819,7 +803,6 @@ export default function SettingsScreen() {
                         activeOpacity={0.7}
                       >
                         <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Alphabetical</Text>
-                        <Text style={[styles.layoutOptionDesc, { color: colors.textSecondary }]}>Products sorted A-Z by description</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
