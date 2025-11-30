@@ -11,8 +11,8 @@ import {
   ActivityIndicator,
   Share,
   Platform,
-  TextInput,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar } from 'lucide-react-native';
 import { transactionService } from '@/services/transactionService';
 import type { Transaction, TransactionReport } from '@/types/pos';
@@ -20,6 +20,31 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
 
 type DateRange = 'today' | 'week' | 'month' | 'all' | 'custom';
+
+const formatDate = (date: Date): string => {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}${month}${year}`;
+};
+
+const formatDateTime = (date: Date): string => {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+};
+
+const formatDateTimeForInput = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 export default function ReportsScreen() {
   const { colors, theme } = useTheme();
@@ -32,9 +57,13 @@ export default function ReportsScreen() {
   const [operators, setOperators] = useState<Record<string, string>>({});
   const [groups, setGroups] = useState<Record<string, string>>({});
   const [departments, setDepartments] = useState<Record<string, string>>({});
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
+  const [customStartDate, setCustomStartDate] = useState<Date>(new Date());
+  const [customEndDate, setCustomEndDate] = useState<Date>(new Date());
   const [datePickerModalVisible, setDatePickerModalVisible] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
   useEffect(() => {
     loadOperators();
@@ -91,13 +120,8 @@ export default function ReportsScreen() {
           startDate = new Date(0);
           break;
         case 'custom':
-          if (customStartDate && customEndDate) {
-            startDate = new Date(customStartDate);
-            endDate = new Date(customEndDate);
-            endDate.setHours(23, 59, 59, 999);
-          } else {
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-          }
+          startDate = new Date(customStartDate);
+          endDate = new Date(customEndDate);
           break;
         default:
           startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
@@ -212,8 +236,8 @@ export default function ReportsScreen() {
                 dateRange === 'custom' && { color: colors.primary, fontWeight: '700' as const },
               ]}
             >
-              {dateRange === 'custom' && customStartDate && customEndDate
-                ? `${new Date(customStartDate).toLocaleDateString('en-GB')} - ${new Date(customEndDate).toLocaleDateString('en-GB')}`
+              {dateRange === 'custom'
+                ? `${formatDate(customStartDate)} - ${formatDate(customEndDate)}`
                 : 'Custom Range'}
             </Text>
           </TouchableOpacity>
@@ -546,50 +570,190 @@ export default function ReportsScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={{ gap: 16 }}>
-              <View>
-                <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>Start Date</Text>
-                <TextInput
-                  style={[
-                    styles.dateInput,
-                    { backgroundColor: colors.background, borderColor: colors.border, color: colors.text },
-                  ]}
-                  value={customStartDate}
-                  onChangeText={setCustomStartDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textTertiary}
-                />
-              </View>
+            <ScrollView style={{ maxHeight: 400 }}>
+              <View style={{ gap: 16 }}>
+                <View>
+                  <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>Start Date & Time</Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.datePickerButton,
+                      { backgroundColor: colors.background, borderColor: colors.border },
+                    ]}
+                    onPress={() => Platform.OS === 'web' ? null : setShowStartDatePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    {Platform.OS === 'web' ? (
+                      <input
+                        type="datetime-local"
+                        value={formatDateTimeForInput(customStartDate)}
+                        onChange={(e) => {
+                          const date = new Date(e.target.value);
+                          if (!isNaN(date.getTime())) {
+                            setCustomStartDate(date);
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: 16,
+                          fontSize: 16,
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: colors.text,
+                          fontFamily: 'inherit',
+                        }}
+                      />
+                    ) : (
+                      <Text style={[styles.datePickerButtonText, { color: colors.text }]}>
+                        {formatDateTime(customStartDate)}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                  {showStartDatePicker && Platform.OS !== 'web' && (
+                    <View>
+                      <DateTimePicker
+                        value={customStartDate}
+                        mode="date"
+                        display="spinner"
+                        onChange={(event, selectedDate) => {
+                          setShowStartDatePicker(false);
+                          if (selectedDate) {
+                            const newDate = new Date(
+                              selectedDate.getFullYear(),
+                              selectedDate.getMonth(),
+                              selectedDate.getDate(),
+                              customStartDate.getHours(),
+                              customStartDate.getMinutes()
+                            );
+                            setCustomStartDate(newDate);
+                            setShowStartTimePicker(true);
+                          }
+                        }}
+                      />
+                    </View>
+                  )}
+                  {showStartTimePicker && Platform.OS !== 'web' && (
+                    <View>
+                      <DateTimePicker
+                        value={customStartDate}
+                        mode="time"
+                        display="spinner"
+                        onChange={(event, selectedTime) => {
+                          setShowStartTimePicker(false);
+                          if (selectedTime) {
+                            const newDate = new Date(
+                              customStartDate.getFullYear(),
+                              customStartDate.getMonth(),
+                              customStartDate.getDate(),
+                              selectedTime.getHours(),
+                              selectedTime.getMinutes()
+                            );
+                            setCustomStartDate(newDate);
+                          }
+                        }}
+                      />
+                    </View>
+                  )}
+                </View>
 
-              <View>
-                <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>End Date</Text>
-                <TextInput
-                  style={[
-                    styles.dateInput,
-                    { backgroundColor: colors.background, borderColor: colors.border, color: colors.text },
-                  ]}
-                  value={customEndDate}
-                  onChangeText={setCustomEndDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textTertiary}
-                />
-              </View>
+                <View>
+                  <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>End Date & Time</Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.datePickerButton,
+                      { backgroundColor: colors.background, borderColor: colors.border },
+                    ]}
+                    onPress={() => Platform.OS === 'web' ? null : setShowEndDatePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    {Platform.OS === 'web' ? (
+                      <input
+                        type="datetime-local"
+                        value={formatDateTimeForInput(customEndDate)}
+                        onChange={(e) => {
+                          const date = new Date(e.target.value);
+                          if (!isNaN(date.getTime())) {
+                            setCustomEndDate(date);
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: 16,
+                          fontSize: 16,
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: colors.text,
+                          fontFamily: 'inherit',
+                        }}
+                      />
+                    ) : (
+                      <Text style={[styles.datePickerButtonText, { color: colors.text }]}>
+                        {formatDateTime(customEndDate)}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                  {showEndDatePicker && Platform.OS !== 'web' && (
+                    <View>
+                      <DateTimePicker
+                        value={customEndDate}
+                        mode="date"
+                        display="spinner"
+                        onChange={(event, selectedDate) => {
+                          setShowEndDatePicker(false);
+                          if (selectedDate) {
+                            const newDate = new Date(
+                              selectedDate.getFullYear(),
+                              selectedDate.getMonth(),
+                              selectedDate.getDate(),
+                              customEndDate.getHours(),
+                              customEndDate.getMinutes()
+                            );
+                            setCustomEndDate(newDate);
+                            setShowEndTimePicker(true);
+                          }
+                        }}
+                      />
+                    </View>
+                  )}
+                  {showEndTimePicker && Platform.OS !== 'web' && (
+                    <View>
+                      <DateTimePicker
+                        value={customEndDate}
+                        mode="time"
+                        display="spinner"
+                        onChange={(event, selectedTime) => {
+                          setShowEndTimePicker(false);
+                          if (selectedTime) {
+                            const newDate = new Date(
+                              customEndDate.getFullYear(),
+                              customEndDate.getMonth(),
+                              customEndDate.getDate(),
+                              selectedTime.getHours(),
+                              selectedTime.getMinutes()
+                            );
+                            setCustomEndDate(newDate);
+                          }
+                        }}
+                      />
+                    </View>
+                  )}
+                </View>
 
-              <TouchableOpacity
-                style={[styles.applyButton, { backgroundColor: colors.primary }]}
-                onPress={() => {
-                  if (customStartDate && customEndDate) {
+                <TouchableOpacity
+                  style={[styles.applyButton, { backgroundColor: colors.primary }]}
+                  onPress={() => {
+                    if (customStartDate > customEndDate) {
+                      Alert.alert('Invalid Date Range', 'Start date must be before end date');
+                      return;
+                    }
                     setDateRange('custom');
                     setDatePickerModalVisible(false);
-                  } else {
-                    Alert.alert('Invalid Dates', 'Please enter both start and end dates in YYYY-MM-DD format');
-                  }
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.applyButtonText}>Apply Date Range</Text>
-              </TouchableOpacity>
-            </View>
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.applyButtonText}>Apply Date Range</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -852,11 +1016,14 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     marginBottom: 8,
   },
-  dateInput: {
+  datePickerButton: {
     borderRadius: 12,
+    borderWidth: 2,
+    overflow: 'hidden' as const,
+  },
+  datePickerButtonText: {
     padding: 16,
     fontSize: 16,
-    borderWidth: 2,
   },
   applyButton: {
     borderRadius: 12,
