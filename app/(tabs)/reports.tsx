@@ -170,14 +170,6 @@ export default function ReportsScreen() {
       <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <View>
-            <Text style={[styles.title, { color: colors.text }]}>Reports & Consolidation</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Transaction history and analytics
-            </Text>
-          </View>
-        </View>
 
         <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
@@ -501,17 +493,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 100,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700' as const,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 15,
   },
   card: {
     borderRadius: 12,
