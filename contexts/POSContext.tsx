@@ -159,7 +159,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   }, [basket, isRefundMode]);
 
   const updateBasketItemQuantity = useCallback((index: number, quantity: number) => {
-    if (quantity <= 0) {
+    if (quantity === 0 || (quantity > 0 && basket[index].quantity < 0) || (quantity < 0 && basket[index].quantity > 0)) {
       setBasket(basket.filter((_, i) => i !== index));
       return;
     }
