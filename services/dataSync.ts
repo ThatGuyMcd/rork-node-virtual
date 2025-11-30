@@ -419,14 +419,16 @@ export class DataSyncService {
       const pluFilename = fileName + '.PLU';
       const isInMenu = menuProductFilenames.has(pluFilename.toUpperCase());
       
-      const sellable = String(kv['SELLABLE?'] || '').trim().toLowerCase();
-      if (sellable && ['no', 'false', '0', 'n', 'off'].includes(sellable)) {
-        if (!isInMenu) {
-          console.log(`[DataSync] Skipping non-sellable product: ${fileName} (not in any menu)`);
-          continue;
-        } else {
-          console.log(`[DataSync] Including non-sellable product: ${fileName} (appears in menu)`);
-        }
+      const sellableRaw = String(kv['SELLABLE?'] || '').trim().toLowerCase();
+      const isSellable = !sellableRaw || !['no', 'false', '0', 'n', 'off'].includes(sellableRaw);
+      
+      if (!isSellable && !isInMenu) {
+        console.log(`[DataSync] Skipping non-sellable product: ${fileName} (not in any menu)`);
+        continue;
+      }
+      
+      if (!isSellable && isInMenu) {
+        console.log(`[DataSync] Including non-sellable product: ${fileName} (appears in menu)`);
       }
 
       const name = kv.PRODUCT_DESCRIPTION || fileName;
@@ -460,6 +462,7 @@ export class DataSyncService {
         hotcode,
         barcode,
         filename: fileName + '.PLU',
+        sellable: isSellable,
       });
     }
 

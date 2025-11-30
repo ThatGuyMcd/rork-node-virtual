@@ -31,6 +31,7 @@ export interface Product {
   hotcode?: string;
   barcode?: string;
   filename?: string;
+  sellable?: boolean;
 }
 
 export interface PriceOption {

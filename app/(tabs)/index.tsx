@@ -142,6 +142,9 @@ export default function ProductsScreen() {
   const filteredDepartments = visibleDepartments.filter((d) => d.groupId === selectedGroup);
   
   const filteredProducts = products.filter((p) => {
+    if (p.sellable === false) {
+      return false;
+    }
     const matchingDept = departments.find(d => d.name === p.departmentId);
     if (!matchingDept || displaySettings.hiddenDepartmentIds.includes(matchingDept.id)) {
       return false;
@@ -150,6 +153,9 @@ export default function ProductsScreen() {
   });
   
   const allVisibleProducts = products.filter((p) => {
+    if (p.sellable === false) {
+      return false;
+    }
     const matchingDept = departments.find(d => d.name === p.departmentId);
     if (!matchingDept || displaySettings.hiddenDepartmentIds.includes(matchingDept.id)) {
       return false;
