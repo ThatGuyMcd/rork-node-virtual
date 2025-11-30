@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar, RotateCcw, Search, Percent, Gift } from 'lucide-react-native';
+import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar, RotateCcw, Search, Percent, Gift, Trophy, Clock, Zap, Star, DollarSign } from 'lucide-react-native';
 import { transactionService } from '@/services/transactionService';
 import type { Transaction, TransactionReport } from '@/types/pos';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -392,21 +392,59 @@ export default function ReportsScreen() {
                 <Users size={20} color={colors.primary} />
                 <Text style={[styles.cardTitle, { color: colors.text }]}>By Operator</Text>
               </View>
-              {Object.entries(report.transactionsByOperator).map(([operatorId, data]) => (
-                <View key={operatorId} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.breakdownLabel, { color: colors.text }]}>
-                      {operators[operatorId] || operatorId}
-                    </Text>
-                    <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
-                      {data.count} transaction{data.count !== 1 ? 's' : ''}
-                    </Text>
-                  </View>
-                  <Text style={[styles.breakdownValue, { color: colors.primary }]}>
-                    £{data.revenue.toFixed(2)}
-                  </Text>
-                </View>
-              ))}
+              {(() => {
+                const operatorStats = Object.entries(report.transactionsByOperator).map(([operatorId, data]) => ({
+                  operatorId,
+                  operatorName: operators[operatorId] || operatorId,
+                  count: data.count,
+                  revenue: data.revenue,
+                  avgTransaction: data.revenue / data.count,
+                }));
+                
+                const topOperator = operatorStats.sort((a, b) => b.revenue - a.revenue)[0];
+                const mostTransactions = operatorStats.sort((a, b) => b.count - a.count)[0];
+                const highestAverage = operatorStats.sort((a, b) => b.avgTransaction - a.avgTransaction)[0];
+                
+                return (
+                  <>
+                    {operatorStats.length > 1 && (
+                      <View style={[styles.operatorStatsContainer, { backgroundColor: colors.background }]}>
+                        <View style={styles.operatorStatCard}>
+                          <Star size={18} color="#f59e0b" />
+                          <Text style={[styles.operatorStatLabel, { color: colors.textSecondary }]}>Top Seller</Text>
+                          <Text style={[styles.operatorStatValue, { color: colors.text }]}>{topOperator.operatorName}</Text>
+                          <Text style={[styles.operatorStatSubtext, { color: colors.textTertiary }]}>£{topOperator.revenue.toFixed(2)}</Text>
+                        </View>
+                        <View style={styles.operatorStatCard}>
+                          <Zap size={18} color="#10b981" />
+                          <Text style={[styles.operatorStatLabel, { color: colors.textSecondary }]}>Most Active</Text>
+                          <Text style={[styles.operatorStatValue, { color: colors.text }]}>{mostTransactions.operatorName}</Text>
+                          <Text style={[styles.operatorStatSubtext, { color: colors.textTertiary }]}>{mostTransactions.count} txns</Text>
+                        </View>
+                        <View style={styles.operatorStatCard}>
+                          <DollarSign size={18} color="#3b82f6" />
+                          <Text style={[styles.operatorStatLabel, { color: colors.textSecondary }]}>Highest Avg</Text>
+                          <Text style={[styles.operatorStatValue, { color: colors.text }]}>{highestAverage.operatorName}</Text>
+                          <Text style={[styles.operatorStatSubtext, { color: colors.textTertiary }]}>£{highestAverage.avgTransaction.toFixed(2)}</Text>
+                        </View>
+                      </View>
+                    )}
+                    
+                    <Text style={[styles.sectionSubtitle, { color: colors.text, marginTop: operatorStats.length > 1 ? 16 : 0 }]}>All Operators</Text>
+                    {operatorStats.sort((a, b) => b.revenue - a.revenue).map(({ operatorId, operatorName, count, revenue, avgTransaction }) => (
+                      <View key={operatorId} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.breakdownLabel, { color: colors.text }]}>{operatorName}</Text>
+                          <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
+                            {count} transaction{count !== 1 ? 's' : ''} • Avg: £{avgTransaction.toFixed(2)}
+                          </Text>
+                        </View>
+                        <Text style={[styles.breakdownValue, { color: colors.primary }]}>£{revenue.toFixed(2)}</Text>
+                      </View>
+                    ))}
+                  </>
+                );
+              })()}
             </View>
 
             <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -842,6 +880,128 @@ export default function ReportsScreen() {
                 );
               })()}
             </View>
+
+            {(() => {
+              const productSales: Record<string, { quantity: number; revenue: number; productName: string }> = {};
+              filteredTransactions.forEach(transaction => {
+                transaction.items.forEach(item => {
+                  const productId = item.product.id;
+                  if (!productSales[productId]) {
+                    productSales[productId] = { quantity: 0, revenue: 0, productName: item.product.name };
+                  }
+                  productSales[productId].quantity += Math.abs(item.quantity);
+                  productSales[productId].revenue += Math.abs(item.lineTotal);
+                });
+              });
+
+              const topProducts = Object.entries(productSales)
+                .sort((a, b) => b[1].revenue - a[1].revenue)
+                .slice(0, 10);
+
+              if (topProducts.length === 0) return null;
+
+              return (
+                <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <View style={styles.cardHeader}>
+                    <Trophy size={20} color="#f59e0b" />
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>Top Selling Products</Text>
+                  </View>
+                  {topProducts.map(([productId, data], index) => (
+                    <View key={productId} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                      <View style={{ flex: 1, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12 }}>
+                        <View style={[styles.rankBadge, { backgroundColor: index === 0 ? '#f59e0b' : index === 1 ? '#94a3b8' : index === 2 ? '#d97706' : colors.background }]}>
+                          <Text style={[styles.rankText, { color: index < 3 ? '#fff' : colors.textSecondary }]}>#{index + 1}</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.breakdownLabel, { color: colors.text }]}>{data.productName}</Text>
+                          <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
+                            {data.quantity} sold
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.breakdownValue, { color: colors.primary }]}>£{data.revenue.toFixed(2)}</Text>
+                    </View>
+                  ))}
+                </View>
+              );
+            })()}
+
+            {(() => {
+              const hourlyData: Record<number, { count: number; revenue: number }> = {};
+              for (let i = 0; i < 24; i++) {
+                hourlyData[i] = { count: 0, revenue: 0 };
+              }
+
+              filteredTransactions.forEach(transaction => {
+                const hour = new Date(transaction.timestamp).getHours();
+                hourlyData[hour].count++;
+                hourlyData[hour].revenue += transaction.total;
+              });
+
+              const maxCount = Math.max(...Object.values(hourlyData).map(d => d.count), 1);
+              const maxRevenue = Math.max(...Object.values(hourlyData).map(d => d.revenue), 1);
+
+              if (filteredTransactions.length === 0) return null;
+
+              return (
+                <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <View style={styles.cardHeader}>
+                    <Clock size={20} color="#8b5cf6" />
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>Hourly Activity Heat Map</Text>
+                  </View>
+                  <Text style={[styles.heatMapSubtitle, { color: colors.textSecondary }]}>
+                    Transaction volume and revenue by hour
+                  </Text>
+                  <View style={styles.heatMapContainer}>
+                    {Object.entries(hourlyData).map(([hour, data]) => {
+                      const intensity = data.count / maxCount;
+                      const revenueIntensity = data.revenue / maxRevenue;
+                      const averageIntensity = (intensity + revenueIntensity) / 2;
+                      
+                      return (
+                        <View key={hour} style={styles.heatMapItem}>
+                          <View 
+                            style={[
+                              styles.heatMapBar,
+                              {
+                                height: 60,
+                                backgroundColor: data.count === 0 
+                                  ? colors.background 
+                                  : `rgba(139, 92, 246, ${0.2 + averageIntensity * 0.8})`,
+                                borderColor: data.count > 0 ? '#8b5cf6' : colors.border,
+                              }
+                            ]}
+                          >
+                            {data.count > 0 && (
+                              <Text style={[styles.heatMapBarText, { color: averageIntensity > 0.5 ? '#fff' : colors.text }]}>
+                                {data.count}
+                              </Text>
+                            )}
+                          </View>
+                          <Text style={[styles.heatMapLabel, { color: colors.textSecondary }]}>
+                            {hour.toString().padStart(2, '0')}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                  <View style={styles.heatMapLegend}>
+                    <View style={styles.heatMapLegendItem}>
+                      <View style={[styles.heatMapLegendBox, { backgroundColor: 'rgba(139, 92, 246, 0.3)' }]} />
+                      <Text style={[styles.heatMapLegendText, { color: colors.textSecondary }]}>Low Activity</Text>
+                    </View>
+                    <View style={styles.heatMapLegendItem}>
+                      <View style={[styles.heatMapLegendBox, { backgroundColor: 'rgba(139, 92, 246, 0.6)' }]} />
+                      <Text style={[styles.heatMapLegendText, { color: colors.textSecondary }]}>Medium Activity</Text>
+                    </View>
+                    <View style={styles.heatMapLegendItem}>
+                      <View style={[styles.heatMapLegendBox, { backgroundColor: 'rgba(139, 92, 246, 1)' }]} />
+                      <Text style={[styles.heatMapLegendText, { color: colors.textSecondary }]}>High Activity</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })()}
 
             <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
               <View style={styles.cardHeader}>
@@ -1805,5 +1965,90 @@ const styles = StyleSheet.create({
   newSearchButtonText: {
     fontSize: 14,
     fontWeight: '700' as const,
+  },
+  rankBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  rankText: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+  },
+  heatMapContainer: {
+    flexDirection: 'row' as const,
+    gap: 4,
+    marginTop: 12,
+  },
+  heatMapItem: {
+    flex: 1,
+    alignItems: 'center' as const,
+    gap: 4,
+  },
+  heatMapBar: {
+    width: '100%',
+    borderRadius: 4,
+    borderWidth: 1,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  heatMapBarText: {
+    fontSize: 10,
+    fontWeight: '700' as const,
+  },
+  heatMapLabel: {
+    fontSize: 9,
+    fontWeight: '600' as const,
+  },
+  heatMapSubtitle: {
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  heatMapLegend: {
+    flexDirection: 'row' as const,
+    justifyContent: 'center' as const,
+    gap: 16,
+    marginTop: 12,
+    paddingTop: 12,
+  },
+  heatMapLegendItem: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+  },
+  heatMapLegendBox: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+  },
+  heatMapLegendText: {
+    fontSize: 11,
+  },
+  operatorStatsContainer: {
+    flexDirection: 'row' as const,
+    gap: 12,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  operatorStatCard: {
+    flex: 1,
+    alignItems: 'center' as const,
+    gap: 4,
+  },
+  operatorStatLabel: {
+    fontSize: 11,
+    textAlign: 'center' as const,
+  },
+  operatorStatValue: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    textAlign: 'center' as const,
+  },
+  operatorStatSubtext: {
+    fontSize: 11,
+    textAlign: 'center' as const,
   },
 });
