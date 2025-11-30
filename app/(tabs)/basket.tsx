@@ -122,14 +122,6 @@ export default function BasketScreen() {
     }
   };
 
-  const handleMessageKeyPress = (char: string) => {
-    setMessageInput(prev => prev + char);
-  };
-
-  const handleMessageBackspace = () => {
-    setMessageInput(prev => prev.slice(0, -1));
-  };
-
   if (basket.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -393,64 +385,15 @@ export default function BasketScreen() {
               </Text>
             )}
 
-            <View style={[styles.messageInputDisplay, { backgroundColor: colors.background, borderColor: colors.primary }]}>
-              <Text style={[styles.messageInputText, { color: colors.text }]}>
-                {messageInput || 'Type your message...'}
-              </Text>
-            </View>
-
-            <View style={styles.keyboardContainer}>
-              {['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'].map((char) => (
-                <TouchableOpacity
-                  key={char}
-                  style={[styles.keyboardButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-                  onPress={() => handleMessageKeyPress(char)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.keyboardButtonText, { color: colors.text }]}>{char}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.keyboardContainer}>
-              {['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'].map((char) => (
-                <TouchableOpacity
-                  key={char}
-                  style={[styles.keyboardButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-                  onPress={() => handleMessageKeyPress(char)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.keyboardButtonText, { color: colors.text }]}>{char}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.keyboardContainer}>
-              {['Z', 'X', 'C', 'V', 'B', 'N', 'M'].map((char) => (
-                <TouchableOpacity
-                  key={char}
-                  style={[styles.keyboardButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-                  onPress={() => handleMessageKeyPress(char)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.keyboardButtonText, { color: colors.text }]}>{char}</Text>
-                </TouchableOpacity>
-              ))}
-              <TouchableOpacity
-                style={[styles.keyboardButton, styles.keyboardButtonWide, { backgroundColor: colors.background, borderColor: colors.border }]}
-                onPress={handleMessageBackspace}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.keyboardButtonText, { color: colors.text }]}>⌫</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.keyboardContainer}>
-              <TouchableOpacity
-                style={[styles.keyboardButton, styles.keyboardButtonSpace, { backgroundColor: colors.background, borderColor: colors.border }]}
-                onPress={() => handleMessageKeyPress(' ')}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.keyboardButtonText, { color: colors.text }]}>SPACE</Text>
-              </TouchableOpacity>
-            </View>
+            <TextInput
+              style={[styles.messageTextInput, { backgroundColor: colors.background, borderColor: colors.primary, color: colors.text }]}
+              value={messageInput}
+              onChangeText={setMessageInput}
+              placeholder="Type your message..."
+              placeholderTextColor={colors.textTertiary}
+              multiline
+              autoFocus
+            />
 
             <TouchableOpacity
               style={[styles.submitMessageButton, { backgroundColor: colors.primary, marginTop: 16 }]}
@@ -757,6 +700,14 @@ const styles = StyleSheet.create({
   messageInputText: {
     fontSize: 18,
     textAlign: 'center',
+  },
+  messageTextInput: {
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    borderWidth: 2,
+    minHeight: 80,
+    textAlignVertical: 'top' as const,
   },
   keyboardContainer: {
     flexDirection: 'row' as const,

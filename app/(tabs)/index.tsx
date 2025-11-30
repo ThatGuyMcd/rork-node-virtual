@@ -10,6 +10,7 @@ import {
   Animated,
   StatusBar,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 
 import { ChevronLeft, X, RefreshCw, Grid3x3, Save } from 'lucide-react-native';
@@ -521,7 +522,18 @@ export default function ProductsScreen() {
         console.log('[Products] Available menus:', Object.keys(menuData));
         
         if (menuData[menuId] && menuData[menuId].length > 0) {
-          console.log('[Products] Menu found, navigating to it');
+          console.log('[Products] Menu found, adding product to basket first, then navigating to nested menu');
+          // Add to basket before navigating to nested menu
+          if (product.prices.length > 0) {
+            const validPrices = product.prices.filter(p => {
+              const label = p.label.toUpperCase();
+              return label !== 'NOT SET';
+            });
+            if (validPrices.length > 0) {
+              addToBasket(product, validPrices[0], 1);
+              showNotification(`Added ${product.name} to basket`);
+            }
+          }
           setCurrentMenuId(menuId);
           setMenuStack(prev => [...prev, menuId]);
           return;
@@ -602,14 +614,6 @@ export default function ProductsScreen() {
     }, 250);
   };
 
-  const handleProductMsgKeyPress = (char: string) => {
-    setProductMsgInput(prev => prev + char);
-  };
-
-  const handleProductMsgBackspace = () => {
-    setProductMsgInput(prev => prev.slice(0, -1));
-  };
-
   const closeProductMsgModal = () => {
     setProductMsgModalVisible(false);
     setProductMsgInput('');
@@ -618,11 +622,19 @@ export default function ProductsScreen() {
   };
 
   const currentMenu = currentMenuId ? menuData[currentMenuId] : null;
-  const hasBackButton = currentMenu ? currentMenu.some(item => item.productName.toUpperCase() === 'BACK.PLU' || item.productName.toUpperCase() === 'BACK') : false;
+  const hasBackButton = currentMenu ? currentMenu.some(item => {
+    const name = item.productName.toUpperCase();
+    const filename = item.filename?.toUpperCase() || '';
+    return name === 'BACK.PLU' || name === 'BACK' || filename.startsWith('LOAD_');
+  }) : false;
   
   const uniqueMenuProducts = currentMenu ? currentMenu.filter((item, index, self) => {
     const name = item.productName.toUpperCase();
-    if (name === 'BACK.PLU' || name === 'BACK') return false;
+    const filename = item.filename?.toUpperCase() || '';
+    // Filter out BACK.PLU, BACK, and LOAD_ files
+    if (name === 'BACK.PLU' || name === 'BACK' || filename.startsWith('LOAD_')) return false;
+    // Filter out size modifiers that don't match the xxx-xxx- pattern
+    if (!filename.match(/^\d+-\d+-/)) return false;
     return index === self.findIndex(t => t.productName.toUpperCase() === name);
   }) : [];
 
@@ -1260,64 +1272,15 @@ export default function ProductsScreen() {
               {productMsgProduct?.name}
             </Text>
 
-            <View style={[styles.priceInputDisplay, { backgroundColor: colors.background, borderColor: colors.primary }]}>
-              <Text style={[styles.priceInputText, { color: colors.text, fontSize: 18 }]}>
-                {productMsgInput || 'Type your message...'}
-              </Text>
-            </View>
-
-            <View style={styles.keyboardContainer}>
-              {['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'].map((char) => (
-                <TouchableOpacity
-                  key={char}
-                  style={[styles.keyboardButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-                  onPress={() => handleProductMsgKeyPress(char)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.keyboardButtonText, { color: colors.text }]}>{char}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.keyboardContainer}>
-              {['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'].map((char) => (
-                <TouchableOpacity
-                  key={char}
-                  style={[styles.keyboardButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-                  onPress={() => handleProductMsgKeyPress(char)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.keyboardButtonText, { color: colors.text }]}>{char}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.keyboardContainer}>
-              {['Z', 'X', 'C', 'V', 'B', 'N', 'M'].map((char) => (
-                <TouchableOpacity
-                  key={char}
-                  style={[styles.keyboardButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-                  onPress={() => handleProductMsgKeyPress(char)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.keyboardButtonText, { color: colors.text }]}>{char}</Text>
-                </TouchableOpacity>
-              ))}
-              <TouchableOpacity
-                style={[styles.keyboardButton, styles.keyboardButtonWide, { backgroundColor: colors.background, borderColor: colors.border }]}
-                onPress={handleProductMsgBackspace}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.keyboardButtonText, { color: colors.text }]}>⌫</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.keyboardContainer}>
-              <TouchableOpacity
-                style={[styles.keyboardButton, styles.keyboardButtonSpace, { backgroundColor: colors.background, borderColor: colors.border }]}
-                onPress={() => handleProductMsgKeyPress(' ')}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.keyboardButtonText, { color: colors.text }]}>SPACE</Text>
-              </TouchableOpacity>
-            </View>
+            <TextInput
+              style={[styles.messageTextInput, { backgroundColor: colors.background, borderColor: colors.primary, color: colors.text }]}
+              value={productMsgInput}
+              onChangeText={setProductMsgInput}
+              placeholder="Type your message..."
+              placeholderTextColor={colors.textTertiary}
+              multiline
+              autoFocus
+            />
 
             <TouchableOpacity
               style={[styles.submitPriceButton, { backgroundColor: colors.primary, marginTop: 16 }]}
@@ -1739,5 +1702,13 @@ const styles = StyleSheet.create({
   keyboardButtonText: {
     fontSize: 16,
     fontWeight: '600' as const,
+  },
+  messageTextInput: {
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    borderWidth: 2,
+    minHeight: 80,
+    textAlignVertical: 'top' as const,
   },
 });
