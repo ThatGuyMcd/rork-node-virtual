@@ -26,6 +26,7 @@ export interface Product {
   groupId: string;
   prices: PriceOption[];
   vatCode: string;
+  vatPercentage: number;
   buttonColor: string;
   fontColor: string;
   hotcode?: string;

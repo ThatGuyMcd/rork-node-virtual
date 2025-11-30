@@ -188,15 +188,17 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     const vatBreakdown: Record<string, number> = {};
 
     basket.forEach((item) => {
-      const vatRate = vatRates.find((v) => v.code === item.product.vatCode);
-      if (vatRate) {
-        const vatAmount = item.lineTotal * (vatRate.percentage / (100 + vatRate.percentage));
-        vatBreakdown[vatRate.code] = (vatBreakdown[vatRate.code] || 0) + vatAmount;
+      const vatPercentage = item.product.vatPercentage;
+      const vatCode = item.product.vatCode;
+      
+      if (vatPercentage > 0) {
+        const vatAmount = item.lineTotal * (vatPercentage / (100 + vatPercentage));
+        vatBreakdown[vatCode] = (vatBreakdown[vatCode] || 0) + vatAmount;
       }
     });
 
     return { subtotal, vatBreakdown, total: subtotal };
-  }, [basket, vatRates]);
+  }, [basket]);
 
   const completeSale = useCallback(async (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[]) => {
     if (!currentOperator) {

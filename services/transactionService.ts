@@ -42,9 +42,6 @@ class TransactionService {
   async generateReport(startDate: Date, endDate: Date): Promise<TransactionReport> {
     try {
       const transactions = await this.getTransactionsByDateRange(startDate, endDate);
-      const { dataSyncService } = await import('@/services/dataSync');
-      const vatRates = await dataSyncService.getStoredVATRates();
-      const vatRateMap = new Map(vatRates.map(rate => [rate.code, rate.percentage]));
       
       const report: TransactionReport = {
         startDate: startDate.toISOString(),
@@ -66,7 +63,8 @@ class TransactionService {
           report.totalVAT += vatAmount;
           
           if (!report.vatBreakdownByRate[vatCode]) {
-            const percentage = vatRateMap.get(vatCode) || 0;
+            const itemsWithThisVatCode = transaction.items.filter(item => item.product.vatCode === vatCode);
+            const percentage = itemsWithThisVatCode.length > 0 ? itemsWithThisVatCode[0].product.vatPercentage : 0;
             report.vatBreakdownByRate[vatCode] = {
               totalVAT: 0,
               totalNet: 0,

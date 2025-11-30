@@ -434,10 +434,13 @@ export class DataSyncService {
       const name = kv.PRODUCT_DESCRIPTION || fileName;
       let prices = dataParser.parsePriceOptions(kv);
       const vatCode = (kv.VAT_CODE || 'S').trim();
+      const vatPercentage = parseFloat(kv.VAT_PERCENTAGE || kv.VAT_RATE || kv.VAT || '20') || 20;
       const buttonColor = dataParser.parseColor(kv.BUTTON_COLOUR) || '#1e293b';
       const fontColor = dataParser.parseColor(kv.FONT_COLOUR) || '#ffffff';
       const hotcode = kv.HOTCODE || undefined;
       const barcode = kv.BARCODE || undefined;
+      
+      console.log(`[DataSync] Product ${fileName}: VAT Code=${vatCode}, VAT Percentage=${vatPercentage}%`);
 
       if (prices.length === 0) {
         const std = String(kv.PRICE_STANDARD || '').trim().toUpperCase();
@@ -457,6 +460,7 @@ export class DataSyncService {
         groupId: groupName,
         prices,
         vatCode,
+        vatPercentage,
         buttonColor,
         fontColor,
         hotcode,
