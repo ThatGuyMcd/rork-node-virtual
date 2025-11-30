@@ -332,13 +332,12 @@ export default function ReportsScreen() {
                 <CreditCard size={20} color={colors.primary} />
                 <Text style={[styles.cardTitle, { color: colors.text }]}>By Payment Method</Text>
               </View>
-              {Object.entries(report.transactionsByTender).map(([tender, data]) => (
+              {Object.entries(report.transactionsByTender)
+                .filter(([tender]) => tender !== 'Split Payment')
+                .map(([tender, data]) => (
                 <View key={tender} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.breakdownLabel, { color: colors.text }]}>{tender}</Text>
-                    <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
-                      {data.count} transaction{data.count !== 1 ? 's' : ''}
-                    </Text>
                   </View>
                   <Text style={[styles.breakdownValue, { color: colors.primary }]}>
                     £{data.revenue.toFixed(2)}
