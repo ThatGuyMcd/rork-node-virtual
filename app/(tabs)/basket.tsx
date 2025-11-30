@@ -195,57 +195,34 @@ export default function BasketScreen() {
         </View>
         <View style={styles.headerActions}>
           {currentOperator?.isManager && (
-            <>
-              <TouchableOpacity
-                style={[
-                  styles.discountButton,
-                  { 
-                    backgroundColor: basketDiscount > 0 ? colors.accent : colors.cardBackground,
-                    borderColor: colors.accent,
-                  }
-                ]}
-                onPress={() => setDiscountModalVisible(true)}
-                activeOpacity={0.7}
-              >
-                <Percent size={18} color={basketDiscount > 0 ? '#fff' : colors.accent} />
-                {basketDiscount > 0 && (
-                  <Text style={[
-                    styles.discountButtonText,
-                    { color: '#fff' }
-                  ]}>
-                    {basketDiscount}%
-                  </Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.refundButton,
-                  { 
-                    backgroundColor: isRefundMode ? colors.error : colors.cardBackground,
-                    borderColor: colors.error,
-                  }
-                ]}
-                onPress={() => {
-                  const success = toggleRefundMode();
-                  if (!success && !isRefundMode) {
-                    Alert.alert(
-                      'Cannot Activate Refund Mode',
-                      'Please add at least one item to the basket before activating refund mode.',
-                      [{ text: 'OK' }]
-                    );
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <RotateCcw size={20} color={isRefundMode ? '#fff' : colors.error} />
-                <Text style={[
-                  styles.refundButtonText,
-                  { color: isRefundMode ? '#fff' : colors.error }
-                ]}>
-                  {isRefundMode ? 'Exit' : 'Refund'}
-                </Text>
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity
+              style={[
+                styles.refundButton,
+                { 
+                  backgroundColor: isRefundMode ? colors.error : colors.cardBackground,
+                  borderColor: colors.error,
+                }
+              ]}
+              onPress={() => {
+                const success = toggleRefundMode();
+                if (!success && !isRefundMode) {
+                  Alert.alert(
+                    'Cannot Activate Refund Mode',
+                    'Please add at least one item to the basket before activating refund mode.',
+                    [{ text: 'OK' }]
+                  );
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <RotateCcw size={20} color={isRefundMode ? '#fff' : colors.error} />
+              <Text style={[
+                styles.refundButtonText,
+                { color: isRefundMode ? '#fff' : colors.error }
+              ]}>
+                {isRefundMode ? 'Exit' : 'Refund'}
+              </Text>
+            </TouchableOpacity>
           )}
           <TouchableOpacity
             style={[styles.clearButton, { backgroundColor: colors.cardBackground }]}
@@ -345,6 +322,28 @@ export default function BasketScreen() {
           <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Subtotal</Text>
           <Text style={[styles.summaryValue, { color: colors.text }]}>£{subtotal.toFixed(2)}</Text>
         </View>
+
+        {currentOperator?.isManager && (
+          <TouchableOpacity
+            style={[
+              styles.discountButtonBottom,
+              { 
+                backgroundColor: basketDiscount > 0 ? colors.accent : colors.background,
+                borderColor: basketDiscount > 0 ? colors.accent : colors.border,
+              }
+            ]}
+            onPress={() => setDiscountModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Percent size={18} color={basketDiscount > 0 ? '#fff' : colors.accent} />
+            <Text style={[
+              styles.discountButtonBottomText,
+              { color: basketDiscount > 0 ? '#fff' : colors.text }
+            ]}>
+              {basketDiscount > 0 ? `Discount (${basketDiscount}%)` : 'Discount'}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {basketDiscount > 0 && (
           <View style={styles.summaryRow}>
@@ -633,16 +632,19 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     overflow: 'hidden' as const,
   },
-  discountButton: {
+  discountButtonBottom: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    padding: 8,
-    borderRadius: 8,
+    justifyContent: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 2,
+    marginTop: 12,
+    marginBottom: 8,
   },
-  discountButtonText: {
-    fontSize: 14,
+  discountButtonBottomText: {
+    fontSize: 16,
     fontWeight: '700',
   },
   refundButton: {
