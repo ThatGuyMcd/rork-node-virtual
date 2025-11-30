@@ -822,10 +822,8 @@ export default function SettingsScreen() {
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.settingRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.settingTitle, { color: colors.text }]}>Card Payments</Text>
-                <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                  Enable or disable card payment option
-                </Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Card Payments</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Enable or disable card payment option</Text>
               </View>
               <Switch
                 value={cardPaymentEnabled}
@@ -839,10 +837,8 @@ export default function SettingsScreen() {
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.settingRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.settingTitle, { color: colors.text }]}>Cash Payments</Text>
-                <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                  Enable or disable cash payment option
-                </Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Cash Payments</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Enable or disable cash payment option</Text>
               </View>
               <Switch
                 value={cashPaymentEnabled}
@@ -855,7 +851,7 @@ export default function SettingsScreen() {
 
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.settingTitle, { color: colors.text }]}>Card Machine Provider</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Card Machine Provider</Text>
               <Text style={[styles.settingDescription, { color: colors.textSecondary, marginBottom: 12 }]}>
                 Select your card machine provider
               </Text>
@@ -899,10 +895,8 @@ export default function SettingsScreen() {
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.settingRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.settingTitle, { color: colors.text }]}>Split Payments</Text>
-                <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                  Allow customers to split payment across multiple methods
-                </Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Split Payments</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Allow customers to split payment across multiple methods</Text>
               </View>
               <Switch
                 value={splitPaymentsEnabled}
@@ -924,10 +918,8 @@ export default function SettingsScreen() {
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.settingRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.settingTitle, { color: colors.text }]}>Require Table Selection</Text>
-                <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                  Force operators to select a table before adding items to basket
-                </Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Require Table Selection</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Force operators to select a table before adding items to basket</Text>
               </View>
               <Switch
                 value={tableSelectionRequired}
