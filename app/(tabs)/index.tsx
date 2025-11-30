@@ -1182,7 +1182,7 @@ export default function ProductsScreen() {
                                   </View>
                                 )}
                               </View>
-                              <Text style={[styles.tableOptionCode, { color: colors.textSecondary }]}>Code: {table.tabCode}</Text>
+                              <Text style={[styles.tableOptionCode, { color: colors.textSecondary }]}>{table.tabCode}</Text>
                               {hasData && (
                                 <Text style={[styles.tableSubtotal, { color: colors.primary }]}>Subtotal: £{subtotal.toFixed(2)}</Text>
                               )}
