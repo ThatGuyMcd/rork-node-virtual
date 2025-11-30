@@ -976,12 +976,24 @@ export default function ReportsScreen() {
                       £{selectedTransaction.subtotal.toFixed(2)}
                     </Text>
                   </View>
+                  {selectedTransaction.discount && selectedTransaction.discount > 0 && (
+                    <View style={styles.totalRow}>
+                      <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>Discount</Text>
+                      <Text style={[styles.totalValue, { color: '#f59e0b' }]}>-£{selectedTransaction.discount.toFixed(2)}</Text>
+                    </View>
+                  )}
                   {Object.entries(selectedTransaction.vatBreakdown).map(([code, amount]) => (
                     <View key={code} style={styles.totalRow}>
                       <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>VAT ({code})</Text>
                       <Text style={[styles.totalValue, { color: colors.text }]}>£{amount.toFixed(2)}</Text>
                     </View>
                   ))}
+                  {selectedTransaction.gratuity && selectedTransaction.gratuity > 0 && (
+                    <View style={styles.totalRow}>
+                      <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>Gratuity</Text>
+                      <Text style={[styles.totalValue, { color: '#10b981' }]}>+£{selectedTransaction.gratuity.toFixed(2)}</Text>
+                    </View>
+                  )}
                   <View style={[styles.totalRow, { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }]}>
                     <Text style={[styles.totalLabelBold, { color: colors.text }]}>Total</Text>
                     <Text style={[styles.totalValueBold, { color: colors.primary }]}>
