@@ -1119,7 +1119,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 18,
@@ -1428,7 +1427,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
