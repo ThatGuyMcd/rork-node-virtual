@@ -1777,5 +1777,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
     borderWidth: 1,
+    minHeight: 80,
   },
 });
