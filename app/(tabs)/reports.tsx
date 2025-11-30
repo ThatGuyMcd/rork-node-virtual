@@ -279,6 +279,34 @@ export default function ReportsScreen() {
 
             <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
               <View style={styles.cardHeader}>
+                <CreditCard size={20} color={colors.primary} />
+                <Text style={[styles.cardTitle, { color: colors.text }]}>VAT Breakdown</Text>
+              </View>
+              {Object.entries(report.vatBreakdownByRate).length > 0 ? (
+                Object.entries(report.vatBreakdownByRate)
+                  .sort((a, b) => b[1].totalVAT - a[1].totalVAT)
+                  .map(([vatCode, data]) => (
+                    <View key={vatCode} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.breakdownLabel, { color: colors.text }]}>VAT Rate {vatCode}</Text>
+                        <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>  
+                          {data.percentage}% • Net: £{data.totalNet.toFixed(2)}
+                        </Text>
+                      </View>
+                      <Text style={[styles.breakdownValue, { color: colors.primary }]}>
+                        £{data.totalVAT.toFixed(2)}
+                      </Text>
+                    </View>
+                  ))
+              ) : (
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  No VAT data available
+                </Text>
+              )}
+            </View>
+
+            <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View style={styles.cardHeader}>
                 <Users size={20} color={colors.primary} />
                 <Text style={[styles.cardTitle, { color: colors.text }]}>By Operator</Text>
               </View>

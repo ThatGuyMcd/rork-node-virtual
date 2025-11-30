@@ -125,6 +125,7 @@ export interface TransactionReport {
   totalTransactions: number;
   totalRevenue: number;
   totalVAT: number;
+  vatBreakdownByRate: Record<string, { totalVAT: number; totalNet: number; percentage: number }>;
   transactionsByOperator: Record<string, { count: number; revenue: number }>;
   transactionsByTender: Record<string, { count: number; revenue: number }>;
   transactionsByTable?: Record<string, { count: number; revenue: number }>;

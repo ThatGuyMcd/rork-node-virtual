@@ -42,6 +42,9 @@ class TransactionService {
   async generateReport(startDate: Date, endDate: Date): Promise<TransactionReport> {
     try {
       const transactions = await this.getTransactionsByDateRange(startDate, endDate);
+      const { dataSyncService } = await import('@/services/dataSync');
+      const vatRates = await dataSyncService.getStoredVATRates();
+      const vatRateMap = new Map(vatRates.map(rate => [rate.code, rate.percentage]));
       
       const report: TransactionReport = {
         startDate: startDate.toISOString(),
@@ -49,6 +52,7 @@ class TransactionService {
         totalTransactions: transactions.length,
         totalRevenue: 0,
         totalVAT: 0,
+        vatBreakdownByRate: {},
         transactionsByOperator: {},
         transactionsByTender: {},
         transactionsByTable: {},
@@ -58,8 +62,23 @@ class TransactionService {
       transactions.forEach(transaction => {
         report.totalRevenue += transaction.total;
         
-        Object.values(transaction.vatBreakdown).forEach(vatAmount => {
+        Object.entries(transaction.vatBreakdown).forEach(([vatCode, vatAmount]) => {
           report.totalVAT += vatAmount;
+          
+          if (!report.vatBreakdownByRate[vatCode]) {
+            const percentage = vatRateMap.get(vatCode) || 0;
+            report.vatBreakdownByRate[vatCode] = {
+              totalVAT: 0,
+              totalNet: 0,
+              percentage,
+            };
+          }
+          report.vatBreakdownByRate[vatCode].totalVAT += vatAmount;
+          
+          const netAmount = transaction.items
+            .filter(item => item.product.vatCode === vatCode)
+            .reduce((sum, item) => sum + item.lineTotal, 0);
+          report.vatBreakdownByRate[vatCode].totalNet += (netAmount - vatAmount);
         });
 
         if (!report.transactionsByOperator[transaction.operatorId]) {

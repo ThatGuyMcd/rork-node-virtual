@@ -1,6 +1,6 @@
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { BasketItem, Operator, Product, Tender, VATRate, Table, TableOrder, Transaction } from '@/types/pos';
 import { dataSyncService } from '@/services/dataSync';
 import { tableDataService } from '@/services/tableDataService';
@@ -60,15 +60,15 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   const [cardMachineProvider, setCardMachineProvider] = useState<'Teya' | 'None'>('None');
   const [splitPaymentsEnabled, setSplitPaymentsEnabled] = useState(false);
 
-  const tenders: Tender[] = useMemo(() => [
+  const [tenders, setTenders] = useState<Tender[]>([
     { id: '1', name: 'Cash', color: '#10b981' },
     { id: '2', name: 'Card', color: '#3b82f6' },
-  ], []);
+  ]);
 
-  const vatRates: VATRate[] = useMemo(() => [
+  const [vatRates, setVatRates] = useState<VATRate[]>([
     { code: 'S', percentage: 20 },
     { code: 'Z', percentage: 0 },
-  ], []);
+  ]);
 
   useEffect(() => {
     AsyncStorage.getItem('currentOperator').then((data) => {
@@ -106,6 +106,18 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     });
     AsyncStorage.getItem('splitPaymentsEnabled').then((data) => {
       setSplitPaymentsEnabled(data === 'true');
+    });
+    dataSyncService.getStoredVATRates().then((rates) => {
+      if (rates && rates.length > 0) {
+        setVatRates(rates);
+        console.log('[POS] Loaded VAT rates from storage:', rates);
+      }
+    });
+    dataSyncService.getStoredTenders().then((loadedTenders) => {
+      if (loadedTenders && loadedTenders.length > 0) {
+        setTenders(loadedTenders);
+        console.log('[POS] Loaded tenders from storage:', loadedTenders);
+      }
     });
   }, []);
 
