@@ -170,7 +170,9 @@ class TransactionService {
       'Table',
       'Items',
       'Subtotal',
+      'Discount',
       'VAT',
+      'Gratuity',
       'Total',
       'Payment Method',
     ];
@@ -187,7 +189,9 @@ class TransactionService {
         transaction.tableName || 'N/A',
         transaction.items.length.toString(),
         `£${transaction.subtotal.toFixed(2)}`,
+        transaction.discount ? `£${transaction.discount.toFixed(2)}` : '£0.00',
         `£${totalVAT.toFixed(2)}`,
+        transaction.gratuity ? `£${transaction.gratuity.toFixed(2)}` : '£0.00',
         `£${transaction.total.toFixed(2)}`,
         transaction.tenderName,
       ].join(',');

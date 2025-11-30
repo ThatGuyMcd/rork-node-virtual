@@ -58,17 +58,13 @@ export default function BasketScreen() {
   const remainingTotal = totalWithGratuity - paidAmount;
 
   const openPaymentModal = () => {
-    if (gratuitySettings.enabled && !isRefundMode) {
-      setGratuityModalVisible(true);
-    } else {
-      setPaymentModalVisible(true);
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        tension: 50,
-        friction: 7,
-      }).start();
-    }
+    setPaymentModalVisible(true);
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
   };
 
   const handleGratuitySelection = (percentage: number) => {
@@ -377,25 +373,49 @@ export default function BasketScreen() {
         </View>
 
         {currentOperator?.isManager && (
-          <TouchableOpacity
-            style={[
-              styles.discountButtonBottom,
-              { 
-                backgroundColor: basketDiscount > 0 ? colors.accent : colors.background,
-                borderColor: basketDiscount > 0 ? colors.accent : colors.border,
-              }
-            ]}
-            onPress={() => setDiscountModalVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Percent size={14} color={basketDiscount > 0 ? '#fff' : colors.accent} />
-            <Text style={[
-              styles.discountButtonBottomText,
-              { color: basketDiscount > 0 ? '#fff' : colors.text }
-            ]}>
-              {basketDiscount > 0 ? `Discount (${basketDiscount}%)` : 'Discount'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.discountGratuityRow}>
+            <TouchableOpacity
+              style={[
+                styles.discountButtonBottom,
+                { 
+                  backgroundColor: basketDiscount > 0 ? colors.accent : colors.background,
+                  borderColor: basketDiscount > 0 ? colors.accent : colors.border,
+                }
+              ]}
+              onPress={() => setDiscountModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Percent size={14} color={basketDiscount > 0 ? '#fff' : colors.accent} />
+              <Text style={[
+                styles.discountButtonBottomText,
+                { color: basketDiscount > 0 ? '#fff' : colors.text }
+              ]}>
+                {basketDiscount > 0 ? `Discount (${basketDiscount}%)` : 'Discount'}
+              </Text>
+            </TouchableOpacity>
+            
+            {gratuitySettings.enabled && !isRefundMode && (
+              <TouchableOpacity
+                style={[
+                  styles.gratuityButtonBottom,
+                  { 
+                    backgroundColor: gratuityAmount > 0 ? colors.success : colors.background,
+                    borderColor: gratuityAmount > 0 ? colors.success : colors.border,
+                  }
+                ]}
+                onPress={() => setGratuityModalVisible(true)}
+                activeOpacity={0.7}
+              >
+                <DollarSign size={14} color={gratuityAmount > 0 ? '#fff' : colors.success} />
+                <Text style={[
+                  styles.gratuityButtonBottomText,
+                  { color: gratuityAmount > 0 ? '#fff' : colors.text }
+                ]}>
+                  {gratuityAmount > 0 ? `Gratuity (£${gratuityAmount.toFixed(2)})` : 'Gratuity'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
 
         {basketDiscount > 0 && (
@@ -768,7 +788,14 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     overflow: 'hidden' as const,
   },
+  discountGratuityRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    marginBottom: 8,
+  },
   discountButtonBottom: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -776,10 +803,22 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 8,
     borderWidth: 1.5,
-    marginTop: 12,
-    marginBottom: 8,
   },
   discountButtonBottomText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  gratuityButtonBottom: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1.5,
+  },
+  gratuityButtonBottomText: {
     fontSize: 14,
     fontWeight: '600',
   },
