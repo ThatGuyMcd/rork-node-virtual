@@ -13,10 +13,10 @@ import {
   Modal,
 } from 'react-native';
 
-import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent } from 'lucide-react-native';
+import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, DollarSign } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
 import { useRouter } from 'expo-router';
-import type { ProductDisplaySettings, ProductGroup, Department, DiscountSettings } from '@/types/pos';
+import type { ProductDisplaySettings, ProductGroup, Department, DiscountSettings, GratuitySettings } from '@/types/pos';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -31,7 +31,7 @@ export default function SettingsScreen() {
   const [tableSelectionRequired, setTableSelectionRequired] = useState(false);
   const [productViewLayout, setProductViewLayout] = useState<'compact' | 'standard' | 'large'>('standard');
   const [productViewMode, setProductViewMode] = useState<'group-department' | 'all-departments' | 'all-items'>('group-department');
-  const { updateTableSelectionRequired, updateProductViewLayout, updateProductViewMode, isInitialSetupComplete, completeInitialSetup, cardPaymentEnabled, cashPaymentEnabled, cardMachineProvider, splitPaymentsEnabled, updateCardPaymentEnabled, updateCashPaymentEnabled, updateCardMachineProvider, updateSplitPaymentsEnabled, discountSettings, updateDiscountSettings } = usePOS();
+  const { updateTableSelectionRequired, updateProductViewLayout, updateProductViewMode, isInitialSetupComplete, completeInitialSetup, cardPaymentEnabled, cashPaymentEnabled, cardMachineProvider, splitPaymentsEnabled, updateCardPaymentEnabled, updateCashPaymentEnabled, updateCardMachineProvider, updateSplitPaymentsEnabled, discountSettings, updateDiscountSettings, gratuitySettings, updateGratuitySettings } = usePOS();
   const router = useRouter();
   const { theme, themePreference, colors, setTheme } = useTheme();
 
@@ -55,6 +55,10 @@ export default function SettingsScreen() {
   const [discountModalVisible, setDiscountModalVisible] = useState(false);
   const [editingDiscountIndex, setEditingDiscountIndex] = useState<number | null>(null);
   const [discountInputValue, setDiscountInputValue] = useState('');
+  const [gratuityPercentages, setGratuityPercentages] = useState<string[]>([]);
+  const [gratuityModalVisible, setGratuityModalVisible] = useState(false);
+  const [editingGratuityIndex, setEditingGratuityIndex] = useState<number | null>(null);
+  const [gratuityInputValue, setGratuityInputValue] = useState('');
   
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     account: true,
@@ -63,6 +67,7 @@ export default function SettingsScreen() {
     payment: false,
     pos: false,
     discount: false,
+    gratuity: false,
     initialSetup: false,
     danger: false,
   });
@@ -77,7 +82,8 @@ export default function SettingsScreen() {
     loadProductData();
     loadLastSyncTime();
     setDiscountPercentages(discountSettings.presetPercentages.map(String));
-  }, [discountSettings]);
+    setGratuityPercentages(gratuitySettings.presetPercentages.map(String));
+  }, [discountSettings, gratuitySettings]);
 
   const loadSiteInfo = async () => {
     const info = await dataSyncService.getSiteInfo();
@@ -986,6 +992,69 @@ export default function SettingsScreen() {
         </CollapsibleSection>
 
         <CollapsibleSection 
+          id="gratuity" 
+          icon={DollarSign} 
+          title="Gratuity Settings" 
+          iconColor={colors.success}
+        >
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View style={styles.settingRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Enable Gratuities</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Prompt for gratuity when payment is processed</Text>
+              </View>
+              <Switch
+                value={gratuitySettings.enabled}
+                onValueChange={(enabled) => {
+                  updateGratuitySettings({ ...gratuitySettings, enabled });
+                }}
+                trackColor={{ false: colors.border, true: colors.success }}
+                thumbColor="#ffffff"
+              />
+            </View>
+          </View>
+
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>Configure up to 3 preset gratuity percentages that will be offered to customers</Text>
+            
+            <View style={styles.discountList}>
+              {gratuityPercentages.map((percentage, index) => (
+                <View key={index} style={[styles.discountItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <DollarSign size={16} color={colors.success} />
+                    <Text style={[styles.discountItemText, { color: colors.text }]}>{percentage}%</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setEditingGratuityIndex(index);
+                      setGratuityInputValue(percentage);
+                      setGratuityModalVisible(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.editButton, { color: colors.primary }]}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+
+            {gratuityPercentages.length < 3 && (
+              <TouchableOpacity
+                style={[styles.addDiscountButton, { backgroundColor: colors.success }]}
+                onPress={() => {
+                  setEditingGratuityIndex(null);
+                  setGratuityInputValue('');
+                  setGratuityModalVisible(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.addDiscountText}>Add Gratuity Percentage</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </CollapsibleSection>
+
+        <CollapsibleSection 
           id="reports" 
           icon={FileText} 
           title="Reports & Consolidation" 
@@ -1222,6 +1291,94 @@ export default function SettingsScreen() {
                 >
                   <Trash2 size={18} color={colors.error} />
                   <Text style={[styles.deleteDiscountText, { color: colors.error }]}>Delete Discount</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </Modal>
+
+        <Modal
+          transparent
+          visible={gratuityModalVisible}
+          onRequestClose={() => setGratuityModalVisible(false)}
+          animationType="fade"
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.colorPickerModal, { backgroundColor: colors.cardBackground }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>{editingGratuityIndex !== null ? 'Edit' : 'Add'} Gratuity</Text>
+                <TouchableOpacity onPress={() => setGratuityModalVisible(false)}>
+                  <X size={24} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>Enter a gratuity percentage (0-100)</Text>
+
+              <View style={styles.customColorInputContainer}>
+                <TextInput
+                  style={[styles.customColorInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                  value={gratuityInputValue}
+                  onChangeText={setGratuityInputValue}
+                  placeholder="e.g., 15"
+                  placeholderTextColor={colors.textTertiary}
+                  keyboardType="numeric"
+                  autoFocus
+                />
+                <TouchableOpacity
+                  style={[styles.applyColorButton, { backgroundColor: colors.success }]}
+                  onPress={() => {
+                    const value = parseFloat(gratuityInputValue);
+                    if (isNaN(value) || value < 0 || value > 100) {
+                      Alert.alert('Invalid Input', 'Please enter a number between 0 and 100');
+                      return;
+                    }
+                    
+                    const newPercentages = [...gratuityPercentages];
+                    if (editingGratuityIndex !== null) {
+                      newPercentages[editingGratuityIndex] = gratuityInputValue;
+                    } else {
+                      if (newPercentages.length >= 3) {
+                        Alert.alert('Maximum Reached', 'You can only have up to 3 gratuity percentages');
+                        return;
+                      }
+                      newPercentages.push(gratuityInputValue);
+                    }
+                    
+                    const settings: GratuitySettings = {
+                      enabled: gratuitySettings.enabled,
+                      presetPercentages: newPercentages.map(p => parseFloat(p)).sort((a, b) => a - b)
+                    };
+                    updateGratuitySettings(settings);
+                    setGratuityPercentages(settings.presetPercentages.map(String));
+                    setGratuityModalVisible(false);
+                    setGratuityInputValue('');
+                    setEditingGratuityIndex(null);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.applyColorText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+
+              {editingGratuityIndex !== null && (
+                <TouchableOpacity
+                  style={[styles.deleteDiscountButton, { backgroundColor: colors.error + '20', borderColor: colors.error, marginTop: 16 }]}
+                  onPress={() => {
+                    const newPercentages = gratuityPercentages.filter((_, i) => i !== editingGratuityIndex);
+                    const settings: GratuitySettings = {
+                      enabled: gratuitySettings.enabled,
+                      presetPercentages: newPercentages.map(p => parseFloat(p)).sort((a, b) => a - b)
+                    };
+                    updateGratuitySettings(settings);
+                    setGratuityPercentages(settings.presetPercentages.map(String));
+                    setGratuityModalVisible(false);
+                    setGratuityInputValue('');
+                    setEditingGratuityIndex(null);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Trash2 size={18} color={colors.error} />
+                  <Text style={[styles.deleteDiscountText, { color: colors.error }]}>Delete Gratuity</Text>
                 </TouchableOpacity>
               )}
             </View>

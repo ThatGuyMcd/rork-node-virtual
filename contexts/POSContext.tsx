@@ -1,7 +1,7 @@
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
-import type { BasketItem, Operator, Product, Tender, VATRate, Table, TableOrder, Transaction, DiscountSettings } from '@/types/pos';
+import type { BasketItem, Operator, Product, Tender, VATRate, Table, TableOrder, Transaction, DiscountSettings, GratuitySettings } from '@/types/pos';
 import { dataSyncService } from '@/services/dataSync';
 import { tableDataService } from '@/services/tableDataService';
 import { transactionService } from '@/services/transactionService';
@@ -24,6 +24,7 @@ interface POSContextType {
   isRefundMode: boolean;
   discountSettings: DiscountSettings;
   basketDiscount: number;
+  gratuitySettings: GratuitySettings;
   login: (operator: Operator) => Promise<void>;
   logout: () => Promise<void>;
   addToBasket: (product: Product, selectedPrice: any, quantity?: number, manualPrice?: number) => void;
@@ -31,7 +32,7 @@ interface POSContextType {
   updateBasketItemMessage: (index: number, message: string) => void;
   removeFromBasket: (index: number) => void;
   clearBasket: () => void;
-  completeSale: (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[]) => Promise<void>;
+  completeSale: (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[], gratuity?: number) => Promise<void>;
   calculateTotals: () => { subtotal: number; vatBreakdown: Record<string, number>; total: number; discount: number };
   selectTable: (table: Table | null) => void;
   saveTableOrder: () => void;
@@ -50,6 +51,7 @@ interface POSContextType {
   toggleRefundMode: () => boolean;
   updateDiscountSettings: (settings: DiscountSettings) => Promise<void>;
   applyDiscount: (percentage: number) => void;
+  updateGratuitySettings: (settings: GratuitySettings) => Promise<void>;
 }
 
 export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
@@ -68,6 +70,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   const [isRefundMode, setIsRefundMode] = useState(false);
   const [discountSettings, setDiscountSettings] = useState<DiscountSettings>({ presetPercentages: [5, 10, 15, 20, 25, 50] });
   const [basketDiscount, setBasketDiscount] = useState(0);
+  const [gratuitySettings, setGratuitySettings] = useState<GratuitySettings>({ enabled: false, presetPercentages: [10, 15, 20] });
 
   const [tenders, setTenders] = useState<Tender[]>([
     { id: '1', name: 'Cash', color: '#10b981' },
@@ -119,6 +122,11 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     AsyncStorage.getItem('discountSettings').then((data) => {
       if (data) {
         setDiscountSettings(JSON.parse(data));
+      }
+    });
+    AsyncStorage.getItem('gratuitySettings').then((data) => {
+      if (data) {
+        setGratuitySettings(JSON.parse(data));
       }
     });
     dataSyncService.getStoredVATRates().then((rates) => {
@@ -220,7 +228,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     return { subtotal, discount, vatBreakdown, total: subtotalAfterDiscount };
   }, [basket, basketDiscount]);
 
-  const completeSale = useCallback(async (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[]) => {
+  const completeSale = useCallback(async (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[], gratuity?: number) => {
     if (!currentOperator) {
       console.error('[POS] Cannot complete sale: no operator logged in');
       return;
@@ -262,6 +270,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         paymentMethod: `Split Payment`,
         payments: allPayments,
         isRefund,
+        gratuity,
       };
       await transactionService.saveTransaction(transaction);
       console.log('[POS] Split payment transaction recorded:', transaction.id, allPayments);
@@ -282,6 +291,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         tenderName: tender.name,
         paymentMethod: tender.name,
         isRefund,
+        gratuity,
       };
       await transactionService.saveTransaction(transaction);
       console.log('[POS] Transaction recorded:', transaction.id);
@@ -510,6 +520,12 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     console.log('[POS] Discount applied:', percentage + '%');
   }, []);
 
+  const updateGratuitySettings = useCallback(async (settings: GratuitySettings) => {
+    setGratuitySettings(settings);
+    await AsyncStorage.setItem('gratuitySettings', JSON.stringify(settings));
+    console.log('[POS] Gratuity settings updated:', settings);
+  }, []);
+
   return {
     currentOperator,
     basket,
@@ -554,5 +570,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     basketDiscount,
     updateDiscountSettings,
     applyDiscount,
+    gratuitySettings,
+    updateGratuitySettings,
   };
 });

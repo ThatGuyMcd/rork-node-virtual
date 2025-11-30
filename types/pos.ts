@@ -119,6 +119,7 @@ export interface Transaction {
   paymentMethod: string;
   payments?: PaymentRecord[];
   isRefund?: boolean;
+  gratuity?: number;
 }
 
 export interface TransactionReport {
@@ -135,5 +136,10 @@ export interface TransactionReport {
 }
 
 export interface DiscountSettings {
+  presetPercentages: number[];
+}
+
+export interface GratuitySettings {
+  enabled: boolean;
   presetPercentages: number[];
 }

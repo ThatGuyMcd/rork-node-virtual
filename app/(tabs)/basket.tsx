@@ -35,6 +35,7 @@ export default function BasketScreen() {
     discountSettings,
     basketDiscount,
     applyDiscount,
+    gratuitySettings,
   } = usePOS();
   const { colors, theme } = useTheme();
 
@@ -45,14 +46,65 @@ export default function BasketScreen() {
   const [currentMessageIndex, setCurrentMessageIndex] = useState<number | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [discountModalVisible, setDiscountModalVisible] = useState(false);
+  const [gratuityModalVisible, setGratuityModalVisible] = useState(false);
+  const [gratuityAmount, setGratuityAmount] = useState<number>(0);
+  const [customGratuityInput, setCustomGratuityInput] = useState('');
   const scaleAnim = useState(new Animated.Value(0))[0];
   const availableTenders = getAvailableTenders();
 
   const { subtotal, discount, vatBreakdown, total } = calculateTotals();
   const paidAmount = splitPayments.reduce((sum, payment) => sum + payment.amount, 0);
-  const remainingTotal = total - paidAmount;
+  const totalWithGratuity = total + gratuityAmount;
+  const remainingTotal = totalWithGratuity - paidAmount;
 
   const openPaymentModal = () => {
+    if (gratuitySettings.enabled && !isRefundMode) {
+      setGratuityModalVisible(true);
+    } else {
+      setPaymentModalVisible(true);
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 50,
+        friction: 7,
+      }).start();
+    }
+  };
+
+  const handleGratuitySelection = (percentage: number) => {
+    const gratuityValue = (total * percentage) / 100;
+    setGratuityAmount(gratuityValue);
+    setGratuityModalVisible(false);
+    setPaymentModalVisible(true);
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
+  };
+
+  const handleCustomGratuity = () => {
+    const amount = parseFloat(customGratuityInput);
+    if (isNaN(amount) || amount < 0) {
+      Alert.alert('Invalid Amount', 'Please enter a valid amount');
+      return;
+    }
+    setGratuityAmount(amount);
+    setCustomGratuityInput('');
+    setGratuityModalVisible(false);
+    setPaymentModalVisible(true);
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
+  };
+
+  const handleSkipGratuity = () => {
+    setGratuityAmount(0);
+    setGratuityModalVisible(false);
     setPaymentModalVisible(true);
     Animated.spring(scaleAnim, {
       toValue: 1,
@@ -101,9 +153,10 @@ export default function BasketScreen() {
         return;
       }
     }
-    await completeSale(tenderId, splitPayments);
+    await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined);
     setSplitPayments([]);
     setSplitPaymentAmount('');
+    setGratuityAmount(0);
     closePaymentModal();
   };
 
@@ -361,6 +414,13 @@ export default function BasketScreen() {
           </View>
         ))}
 
+        {gratuityAmount > 0 && (
+          <View style={styles.summaryRow}>
+            <Text style={[styles.summaryLabel, { color: colors.success }]}>Gratuity</Text>
+            <Text style={[styles.summaryValue, { color: colors.success }]}>£{gratuityAmount.toFixed(2)}</Text>
+          </View>
+        )}
+
         {splitPayments.length > 0 && (
           <View style={{ marginTop: 8, gap: 6 }}>
             {splitPayments.map((payment, index) => (
@@ -591,6 +651,83 @@ export default function BasketScreen() {
                 <Text style={[styles.removeDiscountText, { color: colors.error }]}>Remove Discount</Text>
               </TouchableOpacity>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        transparent
+        visible={gratuityModalVisible}
+        onRequestClose={() => setGratuityModalVisible(false)}
+        animationType="fade"
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+          <View style={[styles.discountModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Add Gratuity?</Text>
+              <TouchableOpacity onPress={() => setGratuityModalVisible(false)}>
+                <X size={24} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.discountModalSubtitle, { color: colors.textSecondary }]}>Would you like to add a gratuity to this order?</Text>
+
+            <View style={styles.discountGrid}>
+              {gratuitySettings.presetPercentages.map((percentage) => (
+                <TouchableOpacity
+                  key={percentage}
+                  style={[
+                    styles.discountOption,
+                    { backgroundColor: colors.background, borderColor: colors.border },
+                  ]}
+                  onPress={() => handleGratuitySelection(percentage)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.discountOptionText,
+                    { color: colors.text }
+                  ]}>
+                    {percentage}%
+                  </Text>
+                  <Text style={[
+                    styles.gratuityAmountText,
+                    { color: colors.textSecondary }
+                  ]}>
+                    £{((total * percentage) / 100).toFixed(2)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={[styles.customGratuitySection, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={[styles.customGratuityLabel, { color: colors.textSecondary }]}>Custom Amount</Text>
+              <View style={styles.customGratuityInputContainer}>
+                <Text style={[styles.currencySymbol, { color: colors.textTertiary }]}>£</Text>
+                <TextInput
+                  style={[styles.customGratuityInput, { backgroundColor: colors.cardBackground, borderColor: colors.border, color: colors.text }]}
+                  value={customGratuityInput}
+                  onChangeText={setCustomGratuityInput}
+                  placeholder="0.00"
+                  placeholderTextColor={colors.textTertiary}
+                  keyboardType="decimal-pad"
+                />
+                <TouchableOpacity
+                  style={[styles.applyGratuityButton, { backgroundColor: colors.success }]}
+                  onPress={handleCustomGratuity}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.applyGratuityText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.skipGratuityButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+              onPress={handleSkipGratuity}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.skipGratuityText, { color: colors.textSecondary }]}>Skip Gratuity</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1043,6 +1180,58 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   removeDiscountText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  gratuityAmountText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  customGratuitySection: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  customGratuityLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  customGratuityInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  currencySymbol: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  customGratuityInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+  },
+  applyGratuityButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  applyGratuityText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  skipGratuityButton: {
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+  },
+  skipGratuityText: {
     fontSize: 15,
     fontWeight: '600',
   },
