@@ -220,19 +220,21 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     const subtotalAfterDiscount = subtotal - discount;
     const vatBreakdown: Record<string, number> = {};
 
-    basket.forEach((item) => {
-      const vatPercentage = item.product.vatPercentage;
-      const vatCode = item.product.vatCode;
-      
-      if (vatPercentage > 0) {
-        const lineTotalAfterDiscount = item.lineTotal * (1 - basketDiscount / 100);
-        const vatAmount = lineTotalAfterDiscount * (vatPercentage / (100 + vatPercentage));
-        vatBreakdown[vatCode] = (vatBreakdown[vatCode] || 0) + vatAmount;
-      }
-    });
+    if (!isRefundMode) {
+      basket.forEach((item) => {
+        const vatPercentage = item.product.vatPercentage;
+        const vatCode = item.product.vatCode;
+        
+        if (vatPercentage > 0) {
+          const lineTotalAfterDiscount = item.lineTotal * (1 - basketDiscount / 100);
+          const vatAmount = lineTotalAfterDiscount * (vatPercentage / (100 + vatPercentage));
+          vatBreakdown[vatCode] = (vatBreakdown[vatCode] || 0) + vatAmount;
+        }
+      });
+    }
 
     return { subtotal, discount, vatBreakdown, total: subtotalAfterDiscount };
-  }, [basket, basketDiscount]);
+  }, [basket, basketDiscount, isRefundMode]);
 
   const completeSale = useCallback(async (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[], gratuity?: number) => {
     if (!currentOperator) {
