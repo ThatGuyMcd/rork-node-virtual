@@ -308,6 +308,37 @@ class TableDataService {
     return 'KITCHEN_PRINTER_1';
   }
 
+  async getTableStatus(tableId: string): Promise<{ hasData: boolean; subtotal: number }> {
+    console.log('[TableDataService] Getting status for table ID:', tableId);
+    
+    try {
+      const rows = await this.loadTableData(tableId);
+      const hasData = rows.length > 0;
+      const subtotal = rows.reduce((sum, row) => sum + (row.quantity * row.price), 0);
+      
+      console.log(`[TableDataService] Table ${tableId} - hasData: ${hasData}, subtotal: ${subtotal.toFixed(2)}`);
+      return { hasData, subtotal };
+    } catch (error) {
+      console.error('[TableDataService] Error getting table status:', error);
+      return { hasData: false, subtotal: 0 };
+    }
+  }
+
+  async getAllTableStatuses(tableIds: string[]): Promise<Map<string, { hasData: boolean; subtotal: number }>> {
+    console.log('[TableDataService] Getting statuses for all tables');
+    
+    const statusMap = new Map<string, { hasData: boolean; subtotal: number }>();
+    
+    await Promise.all(
+      tableIds.map(async (tableId) => {
+        const status = await this.getTableStatus(tableId);
+        statusMap.set(tableId, status);
+      })
+    );
+    
+    return statusMap;
+  }
+
   async exportCSV(): Promise<string | null> {
     try {
       if (!this.isFileSystemAvailable()) {

@@ -18,6 +18,7 @@ import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
+import { tableDataService } from '@/services/tableDataService';
 import { getMostCommonColor } from '@/utils/colorUtils';
 import type { Product, PriceOption, ProductGroup, Department, Table, ProductDisplaySettings, MenuData, MenuProduct } from '@/types/pos';
 
@@ -70,6 +71,7 @@ export default function ProductsScreen() {
   const [tables, setTables] = useState<Table[]>([]);
   const [tableModalVisible, setTableModalVisible] = useState(false);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [tableStatuses, setTableStatuses] = useState<Map<string, { hasData: boolean; subtotal: number }>>(new Map());
   const [loading, setLoading] = useState(true);
   const [displaySettings, setDisplaySettings] = useState<ProductDisplaySettings>({
     hiddenGroupIds: [],
@@ -95,6 +97,13 @@ export default function ProductsScreen() {
     loadData();
     loadDisplaySettings();
   }, []);
+
+  useEffect(() => {
+    if (tableModalVisible && tables.length > 0) {
+      loadTableStatuses();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tableModalVisible, tables]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -130,6 +139,14 @@ export default function ProductsScreen() {
     const settings = await dataSyncService.getProductDisplaySettings();
     setDisplaySettings(settings);
     console.log('[Products] Display settings updated:', settings);
+  };
+
+  const loadTableStatuses = async () => {
+    console.log('[Products] Loading table statuses...');
+    const tableIds = tables.map(t => t.id);
+    const statuses = await tableDataService.getAllTableStatuses(tableIds);
+    setTableStatuses(statuses);
+    console.log('[Products] Table statuses loaded:', statuses.size);
   };
 
 
@@ -1132,32 +1149,48 @@ export default function ProductsScreen() {
 
                   {tables
                     .filter(table => table.area === selectedArea)
-                    .map((table) => (
-                      <TouchableOpacity
-                        key={table.id}
-                        style={[
-                          styles.tableOption,
-                          { backgroundColor: colors.background, borderColor: colors.border },
-                          { borderLeftWidth: 4, borderLeftColor: table.color },
-                          currentTable?.id === table.id && styles.tableOptionSelected,
-                        ]}
-                        onPress={() => {
-                          selectTable(table);
-                          setTableModalVisible(false);
-                          setSelectedArea(null);
-                          showNotification(`Selected table: ${table.name} (${selectedArea})`);
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <View>
-                          <Text style={[styles.tableOptionText, { color: colors.text }]}>{table.name}</Text>
-                          <Text style={[styles.tableOptionCode, { color: colors.textSecondary }]}>Code: {table.tabCode}</Text>
-                        </View>
-                        {currentTable?.id === table.id && (
-                          <View style={[styles.selectedIndicator, { backgroundColor: colors.primary }]} />
-                        )}
-                      </TouchableOpacity>
-                    ))}
+                    .map((table) => {
+                      const status = tableStatuses.get(table.id);
+                      const hasData = status?.hasData || false;
+                      const subtotal = status?.subtotal || 0;
+
+                      return (
+                        <TouchableOpacity
+                          key={table.id}
+                          style={[
+                            styles.tableOption,
+                            { backgroundColor: colors.background, borderColor: colors.border },
+                            { borderLeftWidth: 4, borderLeftColor: table.color },
+                            currentTable?.id === table.id && styles.tableOptionSelected,
+                          ]}
+                          onPress={() => {
+                            selectTable(table);
+                            setTableModalVisible(false);
+                            setSelectedArea(null);
+                            showNotification(`Selected table: ${table.name} (${selectedArea})`);
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <View style={{ flex: 1 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <Text style={[styles.tableOptionText, { color: colors.text }]}>{table.name}</Text>
+                              {hasData && (
+                                <View style={[styles.tableInUseIndicator, { backgroundColor: colors.warning }]}>
+                                  <Text style={styles.tableInUseText}>IN USE</Text>
+                                </View>
+                              )}
+                            </View>
+                            <Text style={[styles.tableOptionCode, { color: colors.textSecondary }]}>Code: {table.tabCode}</Text>
+                            {hasData && (
+                              <Text style={[styles.tableSubtotal, { color: colors.primary }]}>Subtotal: £{subtotal.toFixed(2)}</Text>
+                            )}
+                          </View>
+                          {currentTable?.id === table.id && (
+                            <View style={[styles.selectedIndicator, { backgroundColor: colors.primary }]} />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
                 </>
               )}
             </ScrollView>
@@ -1710,5 +1743,20 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     minHeight: 80,
     textAlignVertical: 'top' as const,
+  },
+  tableInUseIndicator: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  tableInUseText: {
+    fontSize: 9,
+    fontWeight: '700' as const,
+    color: '#fff',
+  },
+  tableSubtotal: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    marginTop: 4,
   },
 });
