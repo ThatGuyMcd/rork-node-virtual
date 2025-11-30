@@ -13,7 +13,7 @@ import {
   Modal,
 } from 'react-native';
 
-import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X } from 'lucide-react-native';
+import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
 import type { ProductDisplaySettings, ProductGroup, Department } from '@/types/pos';
 import { usePOS } from '@/contexts/POSContext';
@@ -49,6 +49,16 @@ export default function SettingsScreen() {
   const [colorPickerTarget, setColorPickerTarget] = useState<{ type: 'group' | 'department'; id: string } | null>(null);
   const [customColorInput, setCustomColorInput] = useState('');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    account: true,
+    dataSync: false,
+    appearance: false,
+    payment: false,
+    pos: false,
+    initialSetup: false,
+    danger: false,
+  });
 
   useEffect(() => {
     loadSiteInfo();
@@ -180,6 +190,54 @@ export default function SettingsScreen() {
     setCustomColorInput('');
   };
 
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
+  const CollapsibleSection = ({ 
+    id, 
+    icon: Icon, 
+    title, 
+    iconColor, 
+    children 
+  }: { 
+    id: string; 
+    icon: any; 
+    title: string; 
+    iconColor: string; 
+    children: React.ReactNode;
+  }) => {
+    const isExpanded = expandedSections[id];
+    
+    return (
+      <View style={styles.section}>
+        <TouchableOpacity
+          style={[styles.collapsibleHeader, { borderColor: colors.border }]}
+          onPress={() => toggleSection(id)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.sectionHeader}>
+            <Icon size={20} color={iconColor} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+          </View>
+          {isExpanded ? (
+            <ChevronUp size={20} color={colors.textSecondary} />
+          ) : (
+            <ChevronDown size={20} color={colors.textSecondary} />
+          )}
+        </TouchableOpacity>
+        {isExpanded && (
+          <View style={styles.collapsibleContent}>
+            {children}
+          </View>
+        )}
+      </View>
+    );
+  };
+
   const applyCustomColor = () => {
     let colorValue = customColorInput.trim();
     if (!colorValue) return;
@@ -300,12 +358,12 @@ export default function SettingsScreen() {
       >
         <Text style={[styles.heading, { color: colors.text }]}>Settings</Text>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <LogIn size={20} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
-          </View>
-
+        <CollapsibleSection 
+          id="account" 
+          icon={LogIn} 
+          title="Account" 
+          iconColor={colors.primary}
+        >
           {siteInfo ? (
             <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Linked Site</Text>
@@ -365,14 +423,15 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </>
           )}
-        </View>
+        </CollapsibleSection>
 
         {siteInfo && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Database size={20} color="#10b981" />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Data Sync</Text>
-            </View>
+          <CollapsibleSection 
+            id="dataSync" 
+            icon={Database} 
+            title="Data Sync" 
+            iconColor="#10b981"
+          >
 
             <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
               <Text style={[styles.infoText, { color: colors.textSecondary }]}>
@@ -443,14 +502,15 @@ export default function SettingsScreen() {
                 )}
               </TouchableOpacity>
             )}
-          </View>
+          </CollapsibleSection>
         )}
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Palette size={20} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Appearance</Text>
-          </View>
+        <CollapsibleSection 
+          id="appearance" 
+          icon={Palette} 
+          title="Appearance" 
+          iconColor={colors.primary}
+        >
 
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.settingRowColumn}>
@@ -767,13 +827,14 @@ export default function SettingsScreen() {
               )}
             </View>
           </View>
-        </View>
+        </CollapsibleSection>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <CreditCard size={20} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment Settings</Text>
-          </View>
+        <CollapsibleSection 
+          id="payment" 
+          icon={CreditCard} 
+          title="Payment Settings" 
+          iconColor={colors.primary}
+        >
 
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.settingRow}>
@@ -868,13 +929,14 @@ export default function SettingsScreen() {
               />
             </View>
           </View>
-        </View>
+        </CollapsibleSection>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <SettingsIcon size={20} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>POS Settings</Text>
-          </View>
+        <CollapsibleSection 
+          id="pos" 
+          icon={SettingsIcon} 
+          title="POS Settings" 
+          iconColor={colors.primary}
+        >
 
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.settingRow}>
@@ -892,14 +954,15 @@ export default function SettingsScreen() {
               />
             </View>
           </View>
-        </View>
+        </CollapsibleSection>
 
         {!isInitialSetupComplete && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <CheckCircle size={20} color="#10b981" />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Initial Setup</Text>
-            </View>
+          <CollapsibleSection 
+            id="initialSetup" 
+            icon={CheckCircle} 
+            title="Initial Setup" 
+            iconColor="#10b981"
+          >
 
             <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
               <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>
@@ -916,14 +979,15 @@ export default function SettingsScreen() {
                 <Text style={styles.buttonText}>Complete Initial Setup</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </CollapsibleSection>
         )}
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Trash2 size={20} color="#ef4444" />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Danger Zone</Text>
-          </View>
+        <CollapsibleSection 
+          id="danger" 
+          icon={Trash2} 
+          title="Danger Zone" 
+          iconColor="#ef4444"
+        >
 
           <TouchableOpacity
             style={[styles.button, styles.buttonDanger]}
@@ -932,7 +996,7 @@ export default function SettingsScreen() {
             <Trash2 size={20} color="#ffffff" />
             <Text style={styles.buttonText}>Clear All Data</Text>
           </TouchableOpacity>
-        </View>
+        </CollapsibleSection>
 
         <Modal
           transparent
@@ -1359,5 +1423,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  collapsibleContent: {
+    marginTop: -12,
   },
 });
