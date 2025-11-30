@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   CREDENTIALS: 'pos_credentials',
   LAST_SYNC: 'pos_last_sync',
   LAST_MANIFEST: 'pos_last_manifest',
+  FILE_HASHES: 'pos_file_hashes',
   OPERATORS: 'pos_operators',
   GROUPS: 'pos_groups',
   DEPARTMENTS: 'pos_departments',
@@ -67,8 +68,8 @@ export class DataSyncService {
     return { siteId, siteName };
   }
 
-  async syncData(onProgress?: (progress: SyncProgress) => void): Promise<void> {
-    console.log('[DataSync] ========== STARTING DATA SYNC ==========');
+  async syncData(onProgress?: (progress: SyncProgress) => void, isIncremental: boolean = false): Promise<void> {
+    console.log(`[DataSync] ========== STARTING ${isIncremental ? 'INCREMENTAL' : 'FULL'} DATA SYNC ==========`);
     
     const siteInfo = await this.getSiteInfo();
     if (!siteInfo) {
@@ -84,12 +85,36 @@ export class DataSyncService {
     console.log(`[DataSync] Manifest loaded: ${manifest.length} total files`);
 
     const filteredManifest = this.filterManifest(manifest);
-    console.log(`[DataSync] Will download: ${filteredManifest.length} files after filtering`);
+    console.log(`[DataSync] Will check: ${filteredManifest.length} files after filtering`);
     console.log(`[DataSync] Skipped: ${manifest.length - filteredManifest.length} files`);
+
+    let filesToDownload = filteredManifest;
+    
+    if (isIncremental) {
+      const previousHashes = await this.getFileHashes();
+      filesToDownload = [];
+      
+      console.log('[DataSync] Checking for changed files...');
+      
+      for (const path of filteredManifest) {
+        const fileHash = await this.computeFileHash(path);
+        if (previousHashes[path] !== fileHash) {
+          filesToDownload.push(path);
+        }
+      }
+      
+      console.log(`[DataSync] Found ${filesToDownload.length} changed files`);
+      
+      if (filesToDownload.length === 0) {
+        console.log('[DataSync] No changes detected');
+        onProgress?.({ phase: 'complete', current: 1, total: 1, message: 'No changes detected' });
+        return;
+      }
+    }
 
     const files: Map<string, string> = new Map();
 
-    onProgress?.({ phase: 'downloading', current: 0, total: filteredManifest.length, message: 'Downloading files...' });
+    onProgress?.({ phase: 'downloading', current: 0, total: filesToDownload.length, message: 'Downloading files...' });
 
     const getFriendlyName = (folder: string): string => {
       const folderUpper = folder.toUpperCase();
@@ -109,11 +134,11 @@ export class DataSyncService {
       }
     };
 
-    for (let i = 0; i < filteredManifest.length; i++) {
-      const path = filteredManifest[i];
+    for (let i = 0; i < filesToDownload.length; i++) {
+      const path = filesToDownload[i];
       const currentNum = i + 1;
       
-      console.log(`[DataSync] Downloading file ${currentNum} of ${filteredManifest.length}: ${path}`);
+      console.log(`[DataSync] Downloading file ${currentNum} of ${filesToDownload.length}: ${path}`);
       
       try {
         const text = await apiClient.getFile(siteInfo.siteId, path);
@@ -125,13 +150,13 @@ export class DataSyncService {
         const progressUpdate = {
           phase: 'downloading' as const,
           current: currentNum,
-          total: filteredManifest.length,
+          total: filesToDownload.length,
           message: getFriendlyName(folder),
         };
         
         onProgress?.(progressUpdate);
         
-        if (currentNum % 5 === 0 || currentNum === filteredManifest.length) {
+        if (currentNum % 5 === 0 || currentNum === filesToDownload.length) {
           await new Promise(resolve => setTimeout(resolve, 10));
         }
       } catch (error) {
@@ -140,7 +165,7 @@ export class DataSyncService {
         const progressUpdate = {
           phase: 'downloading' as const,
           current: currentNum,
-          total: filteredManifest.length,
+          total: filesToDownload.length,
           message: `Error: ${getFriendlyName(folder)}`,
         };
         onProgress?.(progressUpdate);
@@ -151,8 +176,13 @@ export class DataSyncService {
     
     onProgress?.({ phase: 'parsing', current: 0, total: 1, message: 'Processing data...' });
 
-    await this.parseAndStoreData(files);
+    if (isIncremental) {
+      await this.parseAndMergeData(files);
+    } else {
+      await this.parseAndStoreData(files);
+    }
 
+    await this.saveFileHashes(filteredManifest);
     await AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
 
     onProgress?.({ phase: 'complete', current: 1, total: 1, message: 'Sync complete!' });
@@ -802,10 +832,108 @@ export class DataSyncService {
     return await AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC);
   }
 
+  private async computeFileHash(filePath: string): Promise<string> {
+    let hash = 0;
+    for (let i = 0; i < filePath.length; i++) {
+      const char = filePath.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return hash.toString();
+  }
+
+  private async getFileHashes(): Promise<Record<string, string>> {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.FILE_HASHES);
+    return data ? JSON.parse(data) : {};
+  }
+
+  private async saveFileHashes(manifest: string[]): Promise<void> {
+    const hashes: Record<string, string> = {};
+    for (const path of manifest) {
+      hashes[path] = await this.computeFileHash(path);
+    }
+    await AsyncStorage.setItem(STORAGE_KEYS.FILE_HASHES, JSON.stringify(hashes));
+  }
+
+  private async parseAndMergeData(files: Map<string, string>): Promise<void> {
+    const existingOperators = await this.getStoredOperators();
+    const existingGroups = await this.getStoredGroups();
+    const existingDepartments = await this.getStoredDepartments();
+    const existingProducts = await this.getStoredProducts();
+    const existingTenders = await this.getStoredTenders();
+    const existingVATRates = await this.getStoredVATRates();
+    const existingTables = await this.getStoredTables();
+    const existingMenuData = await this.getStoredMenuData();
+
+    const newOperators = await this.parseOperators(files);
+    const { groups: newGroups, departments: newDepartments } = await this.parseProductStructure(files);
+    const newProducts = await this.parseProducts(files);
+    const newTenders = await this.parseTenders(files);
+    const newVATRates = await this.parseVAT(files);
+    const newTables = await this.parseTables(files);
+    const newMenuData = await this.parseMenuData(files);
+
+    const mergedOperators = newOperators.length > 0 ? newOperators : existingOperators;
+    const mergedGroups = newGroups.length > 0 ? newGroups : existingGroups;
+    const mergedDepartments = newDepartments.length > 0 ? newDepartments : existingDepartments;
+    const mergedProducts = newProducts.length > 0 ? newProducts : existingProducts;
+    const mergedTenders = newTenders.length > 0 ? newTenders : existingTenders;
+    const mergedVATRates = newVATRates.length > 0 ? newVATRates : existingVATRates;
+    const mergedTables = newTables.length > 0 ? newTables : existingTables;
+    const mergedMenuData = Object.keys(newMenuData).length > 0 ? newMenuData : existingMenuData;
+
+    await AsyncStorage.setItem(STORAGE_KEYS.OPERATORS, JSON.stringify(mergedOperators));
+    await AsyncStorage.setItem(STORAGE_KEYS.GROUPS, JSON.stringify(mergedGroups));
+    await AsyncStorage.setItem(STORAGE_KEYS.DEPARTMENTS, JSON.stringify(mergedDepartments));
+    await AsyncStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(mergedProducts));
+    await AsyncStorage.setItem(STORAGE_KEYS.TENDERS, JSON.stringify(mergedTenders));
+    await AsyncStorage.setItem(STORAGE_KEYS.VAT_RATES, JSON.stringify(mergedVATRates));
+    await AsyncStorage.setItem(STORAGE_KEYS.TABLES, JSON.stringify(mergedTables));
+    await AsyncStorage.setItem(STORAGE_KEYS.MENU_DATA, JSON.stringify(mergedMenuData));
+
+    console.log('[DataSync] Merged:', {
+      operators: mergedOperators.length,
+      groups: mergedGroups.length,
+      departments: mergedDepartments.length,
+      products: mergedProducts.length,
+      tenders: mergedTenders.length,
+      vatRates: mergedVATRates.length,
+      tables: mergedTables.length,
+      menus: Object.keys(mergedMenuData).length,
+    });
+  }
+
+  async startBackgroundSync(intervalMinutes: number = 15): Promise<void> {
+    console.log(`[DataSync] Starting background sync every ${intervalMinutes} minutes`);
+    const intervalMs = intervalMinutes * 60 * 1000;
+    
+    const syncInterval = setInterval(async () => {
+      try {
+        const lastSync = await this.getLastSyncTime();
+        if (!lastSync) {
+          console.log('[DataSync] No previous sync found, skipping background sync');
+          return;
+        }
+        
+        console.log('[DataSync] Running background incremental sync...');
+        await this.syncData(undefined, true);
+      } catch (error) {
+        console.error('[DataSync] Background sync failed:', error);
+      }
+    }, intervalMs);
+
+    return syncInterval as any;
+  }
+
   async clearAllData(): Promise<void> {
     const keys = Object.values(STORAGE_KEYS).filter(key => key !== STORAGE_KEYS.THEME && key !== STORAGE_KEYS.THEME_PREFERENCE);
     await AsyncStorage.multiRemove(keys);
     console.log('[DataSync] All data cleared');
+  }
+
+  async hasInitialSyncCompleted(): Promise<boolean> {
+    const lastSync = await this.getLastSyncTime();
+    return lastSync !== null;
   }
 }
 

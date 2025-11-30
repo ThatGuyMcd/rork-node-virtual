@@ -532,6 +532,7 @@ export default function ProductsScreen() {
     }
 
     console.log('[Products] Processing product press (will handle prices, PRODUCTMSG, etc.)');
+    closeMenuModal();
     handleProductPress(product);
   };
 

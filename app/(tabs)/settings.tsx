@@ -238,7 +238,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleSync = async () => {
+  const handleSync = async (incremental: boolean = false) => {
     if (!siteInfo) {
       Alert.alert('Error', 'Please link your account first');
       return;
@@ -250,11 +250,16 @@ export default function SettingsScreen() {
     try {
       await dataSyncService.syncData((progress) => {
         setSyncProgress(progress);
-      });
+      }, incremental);
 
       await loadProductData();
       await loadLastSyncTime();
-      Alert.alert('Success', 'Data synchronized successfully!');
+      
+      if (incremental) {
+        Alert.alert('Success', 'Incremental sync completed!');
+      } else {
+        Alert.alert('Success', 'Full sync completed!');
+      }
     } catch (error) {
       console.error('Sync error:', error);
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to sync data');
@@ -409,7 +414,7 @@ export default function SettingsScreen() {
 
             <TouchableOpacity
               style={[styles.button, styles.buttonSuccess]}
-              onPress={handleSync}
+              onPress={() => handleSync(false)}
               disabled={isSyncing}
             >
               {isSyncing ? (
@@ -417,10 +422,27 @@ export default function SettingsScreen() {
               ) : (
                 <>
                   <RefreshCw size={20} color="#ffffff" />
-                  <Text style={styles.buttonText}>Sync Data</Text>
+                  <Text style={styles.buttonText}>{lastSyncTime ? 'Full Sync' : 'Sync Data'}</Text>
                 </>
               )}
             </TouchableOpacity>
+
+            {lastSyncTime && (
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.accent, marginBottom: 12 }]}
+                onPress={() => handleSync(true)}
+                disabled={isSyncing}
+              >
+                {isSyncing ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <>
+                    <RefreshCw size={20} color="#ffffff" />
+                    <Text style={styles.buttonText}>Quick Sync (Incremental)</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
