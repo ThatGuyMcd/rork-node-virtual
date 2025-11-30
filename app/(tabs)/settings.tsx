@@ -13,10 +13,10 @@ import {
   Modal,
 } from 'react-native';
 
-import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText } from 'lucide-react-native';
+import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
 import { useRouter } from 'expo-router';
-import type { ProductDisplaySettings, ProductGroup, Department } from '@/types/pos';
+import type { ProductDisplaySettings, ProductGroup, Department, DiscountSettings } from '@/types/pos';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -31,7 +31,7 @@ export default function SettingsScreen() {
   const [tableSelectionRequired, setTableSelectionRequired] = useState(false);
   const [productViewLayout, setProductViewLayout] = useState<'compact' | 'standard' | 'large'>('standard');
   const [productViewMode, setProductViewMode] = useState<'group-department' | 'all-departments' | 'all-items'>('group-department');
-  const { updateTableSelectionRequired, updateProductViewLayout, updateProductViewMode, isInitialSetupComplete, completeInitialSetup, cardPaymentEnabled, cashPaymentEnabled, cardMachineProvider, splitPaymentsEnabled, updateCardPaymentEnabled, updateCashPaymentEnabled, updateCardMachineProvider, updateSplitPaymentsEnabled } = usePOS();
+  const { updateTableSelectionRequired, updateProductViewLayout, updateProductViewMode, isInitialSetupComplete, completeInitialSetup, cardPaymentEnabled, cashPaymentEnabled, cardMachineProvider, splitPaymentsEnabled, updateCardPaymentEnabled, updateCashPaymentEnabled, updateCardMachineProvider, updateSplitPaymentsEnabled, discountSettings, updateDiscountSettings } = usePOS();
   const router = useRouter();
   const { theme, themePreference, colors, setTheme } = useTheme();
 
@@ -51,6 +51,10 @@ export default function SettingsScreen() {
   const [colorPickerTarget, setColorPickerTarget] = useState<{ type: 'group' | 'department'; id: string } | null>(null);
   const [customColorInput, setCustomColorInput] = useState('');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [discountPercentages, setDiscountPercentages] = useState<string[]>([]);
+  const [discountModalVisible, setDiscountModalVisible] = useState(false);
+  const [editingDiscountIndex, setEditingDiscountIndex] = useState<number | null>(null);
+  const [discountInputValue, setDiscountInputValue] = useState('');
   
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     account: true,
@@ -58,6 +62,7 @@ export default function SettingsScreen() {
     appearance: false,
     payment: false,
     pos: false,
+    discount: false,
     initialSetup: false,
     danger: false,
   });
@@ -71,7 +76,8 @@ export default function SettingsScreen() {
     loadProductSettings();
     loadProductData();
     loadLastSyncTime();
-  }, []);
+    setDiscountPercentages(discountSettings.presetPercentages.map(String));
+  }, [discountSettings]);
 
   const loadSiteInfo = async () => {
     const info = await dataSyncService.getSiteInfo();
@@ -934,6 +940,52 @@ export default function SettingsScreen() {
         </CollapsibleSection>
 
         <CollapsibleSection 
+          id="discount" 
+          icon={Percent} 
+          title="Discount Settings" 
+          iconColor={colors.accent}
+        >
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>Configure up to 6 preset discount percentages that managers can apply to baskets</Text>
+            
+            <View style={styles.discountList}>
+              {discountPercentages.map((percentage, index) => (
+                <View key={index} style={[styles.discountItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Percent size={16} color={colors.accent} />
+                    <Text style={[styles.discountItemText, { color: colors.text }]}>{percentage}%</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setEditingDiscountIndex(index);
+                      setDiscountInputValue(percentage);
+                      setDiscountModalVisible(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.editButton, { color: colors.primary }]}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+
+            {discountPercentages.length < 6 && (
+              <TouchableOpacity
+                style={[styles.addDiscountButton, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  setEditingDiscountIndex(null);
+                  setDiscountInputValue('');
+                  setDiscountModalVisible(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.addDiscountText}>Add Discount Percentage</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </CollapsibleSection>
+
+        <CollapsibleSection 
           id="reports" 
           icon={FileText} 
           title="Reports & Consolidation" 
@@ -1086,6 +1138,92 @@ export default function SettingsScreen() {
                   </View>
                 </View>
               </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        <Modal
+          transparent
+          visible={discountModalVisible}
+          onRequestClose={() => setDiscountModalVisible(false)}
+          animationType="fade"
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.colorPickerModal, { backgroundColor: colors.cardBackground }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>{editingDiscountIndex !== null ? 'Edit' : 'Add'} Discount</Text>
+                <TouchableOpacity onPress={() => setDiscountModalVisible(false)}>
+                  <X size={24} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>Enter a discount percentage (0-100)</Text>
+
+              <View style={styles.customColorInputContainer}>
+                <TextInput
+                  style={[styles.customColorInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                  value={discountInputValue}
+                  onChangeText={setDiscountInputValue}
+                  placeholder="e.g., 10"
+                  placeholderTextColor={colors.textTertiary}
+                  keyboardType="numeric"
+                  autoFocus
+                />
+                <TouchableOpacity
+                  style={[styles.applyColorButton, { backgroundColor: colors.primary }]}
+                  onPress={() => {
+                    const value = parseFloat(discountInputValue);
+                    if (isNaN(value) || value < 0 || value > 100) {
+                      Alert.alert('Invalid Input', 'Please enter a number between 0 and 100');
+                      return;
+                    }
+                    
+                    const newPercentages = [...discountPercentages];
+                    if (editingDiscountIndex !== null) {
+                      newPercentages[editingDiscountIndex] = discountInputValue;
+                    } else {
+                      if (newPercentages.length >= 6) {
+                        Alert.alert('Maximum Reached', 'You can only have up to 6 discount percentages');
+                        return;
+                      }
+                      newPercentages.push(discountInputValue);
+                    }
+                    
+                    const settings: DiscountSettings = {
+                      presetPercentages: newPercentages.map(p => parseFloat(p)).sort((a, b) => a - b)
+                    };
+                    updateDiscountSettings(settings);
+                    setDiscountPercentages(settings.presetPercentages.map(String));
+                    setDiscountModalVisible(false);
+                    setDiscountInputValue('');
+                    setEditingDiscountIndex(null);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.applyColorText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+
+              {editingDiscountIndex !== null && (
+                <TouchableOpacity
+                  style={[styles.deleteDiscountButton, { backgroundColor: colors.error + '20', borderColor: colors.error, marginTop: 16 }]}
+                  onPress={() => {
+                    const newPercentages = discountPercentages.filter((_, i) => i !== editingDiscountIndex);
+                    const settings: DiscountSettings = {
+                      presetPercentages: newPercentages.map(p => parseFloat(p)).sort((a, b) => a - b)
+                    };
+                    updateDiscountSettings(settings);
+                    setDiscountPercentages(settings.presetPercentages.map(String));
+                    setDiscountModalVisible(false);
+                    setDiscountInputValue('');
+                    setEditingDiscountIndex(null);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Trash2 size={18} color={colors.error} />
+                  <Text style={[styles.deleteDiscountText, { color: colors.error }]}>Delete Discount</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </Modal>
@@ -1418,6 +1556,49 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  discountList: {
+    gap: 10,
+    marginBottom: 16,
+  },
+  discountItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  discountItemText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  editButton: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  addDiscountButton: {
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  addDiscountText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  deleteDiscountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  deleteDiscountText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   collapsibleHeader: {
     flexDirection: 'row',

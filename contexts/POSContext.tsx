@@ -1,7 +1,7 @@
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
-import type { BasketItem, Operator, Product, Tender, VATRate, Table, TableOrder, Transaction } from '@/types/pos';
+import type { BasketItem, Operator, Product, Tender, VATRate, Table, TableOrder, Transaction, DiscountSettings } from '@/types/pos';
 import { dataSyncService } from '@/services/dataSync';
 import { tableDataService } from '@/services/tableDataService';
 import { transactionService } from '@/services/transactionService';
@@ -22,6 +22,8 @@ interface POSContextType {
   cardMachineProvider: 'Teya' | 'None';
   splitPaymentsEnabled: boolean;
   isRefundMode: boolean;
+  discountSettings: DiscountSettings;
+  basketDiscount: number;
   login: (operator: Operator) => Promise<void>;
   logout: () => Promise<void>;
   addToBasket: (product: Product, selectedPrice: any, quantity?: number, manualPrice?: number) => void;
@@ -30,7 +32,7 @@ interface POSContextType {
   removeFromBasket: (index: number) => void;
   clearBasket: () => void;
   completeSale: (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[]) => Promise<void>;
-  calculateTotals: () => { subtotal: number; vatBreakdown: Record<string, number>; total: number };
+  calculateTotals: () => { subtotal: number; vatBreakdown: Record<string, number>; total: number; discount: number };
   selectTable: (table: Table | null) => void;
   saveTableOrder: () => void;
   saveTableTab: () => Promise<void>;
@@ -46,6 +48,8 @@ interface POSContextType {
   updateSplitPaymentsEnabled: (enabled: boolean) => Promise<void>;
   getAvailableTenders: () => Tender[];
   toggleRefundMode: () => boolean;
+  updateDiscountSettings: (settings: DiscountSettings) => Promise<void>;
+  applyDiscount: (percentage: number) => void;
 }
 
 export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
@@ -62,6 +66,8 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   const [cardMachineProvider, setCardMachineProvider] = useState<'Teya' | 'None'>('None');
   const [splitPaymentsEnabled, setSplitPaymentsEnabled] = useState(false);
   const [isRefundMode, setIsRefundMode] = useState(false);
+  const [discountSettings, setDiscountSettings] = useState<DiscountSettings>({ presetPercentages: [5, 10, 15, 20, 25, 50] });
+  const [basketDiscount, setBasketDiscount] = useState(0);
 
   const [tenders, setTenders] = useState<Tender[]>([
     { id: '1', name: 'Cash', color: '#10b981' },
@@ -109,6 +115,11 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     });
     AsyncStorage.getItem('splitPaymentsEnabled').then((data) => {
       setSplitPaymentsEnabled(data === 'true');
+    });
+    AsyncStorage.getItem('discountSettings').then((data) => {
+      if (data) {
+        setDiscountSettings(JSON.parse(data));
+      }
     });
     dataSyncService.getStoredVATRates().then((rates) => {
       if (rates && rates.length > 0) {
@@ -186,10 +197,13 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
 
   const clearBasket = useCallback(() => {
     setBasket([]);
+    setBasketDiscount(0);
   }, []);
 
   const calculateTotals = useCallback(() => {
     const subtotal = basket.reduce((sum, item) => sum + item.lineTotal, 0);
+    const discount = (subtotal * basketDiscount) / 100;
+    const subtotalAfterDiscount = subtotal - discount;
     const vatBreakdown: Record<string, number> = {};
 
     basket.forEach((item) => {
@@ -197,13 +211,14 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       const vatCode = item.product.vatCode;
       
       if (vatPercentage > 0) {
-        const vatAmount = item.lineTotal * (vatPercentage / (100 + vatPercentage));
+        const lineTotalAfterDiscount = item.lineTotal * (1 - basketDiscount / 100);
+        const vatAmount = lineTotalAfterDiscount * (vatPercentage / (100 + vatPercentage));
         vatBreakdown[vatCode] = (vatBreakdown[vatCode] || 0) + vatAmount;
       }
     });
 
-    return { subtotal, vatBreakdown, total: subtotal };
-  }, [basket]);
+    return { subtotal, discount, vatBreakdown, total: subtotalAfterDiscount };
+  }, [basket, basketDiscount]);
 
   const completeSale = useCallback(async (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[]) => {
     if (!currentOperator) {
@@ -282,6 +297,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       console.log('[POS] Cleared table data from CSV for table:', currentTable.id);
     }
     
+    setBasketDiscount(0);
     clearBasket();
   }, [clearBasket, currentTable, currentOperator, tenders, basket, calculateTotals]);
 
@@ -477,6 +493,17 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     }
   }, [isRefundMode, basket]);
 
+  const updateDiscountSettings = useCallback(async (settings: DiscountSettings) => {
+    setDiscountSettings(settings);
+    await AsyncStorage.setItem('discountSettings', JSON.stringify(settings));
+    console.log('[POS] Discount settings updated:', settings);
+  }, []);
+
+  const applyDiscount = useCallback((percentage: number) => {
+    setBasketDiscount(percentage);
+    console.log('[POS] Discount applied:', percentage + '%');
+  }, []);
+
   return {
     currentOperator,
     basket,
@@ -517,5 +544,9 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     getAvailableTenders,
     isRefundMode,
     toggleRefundMode,
+    discountSettings,
+    basketDiscount,
+    updateDiscountSettings,
+    applyDiscount,
   };
 });

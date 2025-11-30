@@ -133,3 +133,7 @@ export interface TransactionReport {
   transactionsByTable?: Record<string, { count: number; revenue: number }>;
   itemsSold: Record<string, { quantity: number; revenue: number }>;
 }
+
+export interface DiscountSettings {
+  presetPercentages: number[];
+}
