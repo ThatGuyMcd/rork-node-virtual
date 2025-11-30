@@ -201,30 +201,12 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     const totals = calculateTotals();
     
     if (splitPayments && splitPayments.length > 0) {
-      const totalPaidViaSplit = splitPayments.reduce((sum, p) => sum + p.amount, 0);
-      const finalAmount = totals.total - totalPaidViaSplit;
+      const allPayments = [
+        ...splitPayments,
+        { tenderId: tender.id, tenderName: tender.name, amount: totals.total - splitPayments.reduce((sum, p) => sum + p.amount, 0) }
+      ];
       
-      for (const payment of splitPayments) {
-        const splitTransaction: Transaction = {
-          id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          timestamp: new Date().toISOString(),
-          operatorId: currentOperator.id,
-          operatorName: currentOperator.name,
-          tableId: currentTable?.id,
-          tableName: currentTable?.name,
-          items: [...basket],
-          subtotal: payment.amount,
-          vatBreakdown: {},
-          total: payment.amount,
-          tenderId: payment.tenderId,
-          tenderName: payment.tenderName,
-          paymentMethod: payment.tenderName,
-        };
-        await transactionService.saveTransaction(splitTransaction);
-        console.log('[POS] Split transaction recorded:', splitTransaction.id, payment.tenderName, payment.amount);
-      }
-      
-      const finalTransaction: Transaction = {
+      const transaction: Transaction = {
         id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: new Date().toISOString(),
         operatorId: currentOperator.id,
@@ -232,15 +214,16 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         tableId: currentTable?.id,
         tableName: currentTable?.name,
         items: [...basket],
-        subtotal: finalAmount,
+        subtotal: totals.subtotal,
         vatBreakdown: totals.vatBreakdown,
-        total: finalAmount,
+        total: totals.total,
         tenderId: tender.id,
-        tenderName: tender.name,
-        paymentMethod: tender.name,
+        tenderName: `Split Payment`,
+        paymentMethod: `Split Payment`,
+        payments: allPayments,
       };
-      await transactionService.saveTransaction(finalTransaction);
-      console.log('[POS] Final transaction recorded:', finalTransaction.id, tender.name, finalAmount);
+      await transactionService.saveTransaction(transaction);
+      console.log('[POS] Split payment transaction recorded:', transaction.id, allPayments);
     } else {
       const transaction: Transaction = {
         id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,

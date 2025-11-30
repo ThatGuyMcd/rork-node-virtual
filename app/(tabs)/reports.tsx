@@ -439,10 +439,23 @@ export default function ReportsScreen() {
                   </View>
                 )}
 
-                <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Payment Method</Text>
-                  <Text style={[styles.detailValue, { color: colors.text }]}>{selectedTransaction.tenderName}</Text>
-                </View>
+                {selectedTransaction.payments && selectedTransaction.payments.length > 0 ? (
+                  <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Payment Methods</Text>
+                    <View style={{ gap: 4 }}>
+                      {selectedTransaction.payments.map((payment, idx) => (
+                        <Text key={idx} style={[styles.detailValue, { color: colors.text }]}>
+                          {payment.tenderName}: £{payment.amount.toFixed(2)}
+                        </Text>
+                      ))}
+                    </View>
+                  </View>
+                ) : (
+                  <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Payment Method</Text>
+                    <Text style={[styles.detailValue, { color: colors.text }]}>{selectedTransaction.tenderName}</Text>
+                  </View>
+                )}
 
                 <Text style={[styles.itemsHeader, { color: colors.text }]}>Items ({selectedTransaction.items.length})</Text>
                 {selectedTransaction.items.map((item, index) => (

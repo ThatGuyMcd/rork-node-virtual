@@ -96,6 +96,12 @@ export interface MenuProduct {
   fontColor?: string;
 }
 
+export interface PaymentRecord {
+  tenderId: string;
+  tenderName: string;
+  amount: number;
+}
+
 export interface Transaction {
   id: string;
   timestamp: string;
@@ -110,6 +116,7 @@ export interface Transaction {
   tenderId: string;
   tenderName: string;
   paymentMethod: string;
+  payments?: PaymentRecord[];
 }
 
 export interface TransactionReport {
