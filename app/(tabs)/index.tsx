@@ -1147,50 +1147,53 @@ export default function ProductsScreen() {
 
                   <Text style={[styles.areaTitle, { color: colors.text }]}>{selectedArea} Tables</Text>
 
-                  {tables
-                    .filter(table => table.area === selectedArea)
-                    .map((table) => {
-                      const status = tableStatuses.get(table.id);
-                      const hasData = status?.hasData || false;
-                      const subtotal = status?.subtotal || 0;
+                  <View style={styles.tableGrid}>
+                    {tables
+                      .filter(table => table.area === selectedArea)
+                      .map((table) => {
+                        const status = tableStatuses.get(table.id);
+                        const hasData = status?.hasData || false;
+                        const subtotal = status?.subtotal || 0;
+                        const statusColor = hasData ? '#ef4444' : '#10b981';
 
-                      return (
-                        <TouchableOpacity
-                          key={table.id}
-                          style={[
-                            styles.tableOption,
-                            { backgroundColor: colors.background, borderColor: colors.border },
-                            { borderLeftWidth: 4, borderLeftColor: table.color },
-                            currentTable?.id === table.id && styles.tableOptionSelected,
-                          ]}
-                          onPress={() => {
-                            selectTable(table);
-                            setTableModalVisible(false);
-                            setSelectedArea(null);
-                            showNotification(`Selected table: ${table.name} (${selectedArea})`);
-                          }}
-                          activeOpacity={0.7}
-                        >
-                          <View style={{ flex: 1 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <Text style={[styles.tableOptionText, { color: colors.text }]}>{table.name}</Text>
+                        return (
+                          <TouchableOpacity
+                            key={table.id}
+                            style={[
+                              styles.tableGridItem,
+                              { backgroundColor: colors.background, borderColor: colors.border },
+                              { borderLeftWidth: 4, borderLeftColor: statusColor },
+                              currentTable?.id === table.id && styles.tableOptionSelected,
+                            ]}
+                            onPress={() => {
+                              selectTable(table);
+                              setTableModalVisible(false);
+                              setSelectedArea(null);
+                              showNotification(`Selected table: ${table.name} (${selectedArea})`);
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <Text style={[styles.tableOptionText, { color: colors.text }]}>{table.name}</Text>
+                                {hasData && (
+                                  <View style={[styles.tableInUseIndicator, { backgroundColor: colors.warning }]}>
+                                    <Text style={styles.tableInUseText}>IN USE</Text>
+                                  </View>
+                                )}
+                              </View>
+                              <Text style={[styles.tableOptionCode, { color: colors.textSecondary }]}>Code: {table.tabCode}</Text>
                               {hasData && (
-                                <View style={[styles.tableInUseIndicator, { backgroundColor: colors.warning }]}>
-                                  <Text style={styles.tableInUseText}>IN USE</Text>
-                                </View>
+                                <Text style={[styles.tableSubtotal, { color: colors.primary }]}>Subtotal: £{subtotal.toFixed(2)}</Text>
                               )}
                             </View>
-                            <Text style={[styles.tableOptionCode, { color: colors.textSecondary }]}>Code: {table.tabCode}</Text>
-                            {hasData && (
-                              <Text style={[styles.tableSubtotal, { color: colors.primary }]}>Subtotal: £{subtotal.toFixed(2)}</Text>
+                            {currentTable?.id === table.id && (
+                              <View style={[styles.selectedIndicator, { backgroundColor: colors.primary }]} />
                             )}
-                          </View>
-                          {currentTable?.id === table.id && (
-                            <View style={[styles.selectedIndicator, { backgroundColor: colors.primary }]} />
-                          )}
-                        </TouchableOpacity>
-                      );
-                    })}
+                          </TouchableOpacity>
+                        );
+                      })}
+                  </View>
                 </>
               )}
             </ScrollView>
@@ -1758,5 +1761,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700' as const,
     marginTop: 4,
+  },
+  tableGrid: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 12,
+    marginTop: 8,
+  },
+  tableGridItem: {
+    width: '48%',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    borderWidth: 1,
   },
 });

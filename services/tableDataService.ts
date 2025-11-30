@@ -2,6 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import type { BasketItem, Operator, Table } from '@/types/pos';
 import { dataParser } from './dataParser';
+import { trpcClient } from '@/lib/trpc';
 
 export interface TableDataRow {
   quantity: number;
@@ -49,49 +50,6 @@ class TableDataService {
   ): Promise<void> {
     console.log('[TableDataService] Saving table data for table:', table.name);
 
-    if (!this.isFileSystemAvailable()) {
-      console.log('[TableDataService] Using in-memory storage');
-      const rows: TableDataRow[] = [];
-      const now = new Date();
-      const timeString = now.toLocaleTimeString('en-GB', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const dateString = now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-      const timeDate = `${timeString} - ${dateString}`;
-
-      for (const item of basket) {
-        const vatRate = vatRates.find(v => v.code === item.product.vatCode);
-        const vatPercentage = vatRate?.percentage || 0;
-        const priceExVat = item.selectedPrice.price / (1 + vatPercentage / 100);
-        const vatAmount = item.selectedPrice.price - priceExVat;
-
-        const pluFile = `${item.product.groupId}-${item.product.departmentId}-${item.product.id.replace('prod_', '').padStart(5, '0')}.PLU`;
-
-        rows.push({
-          quantity: item.quantity,
-          productName: item.product.name,
-          price: item.selectedPrice.price,
-          pluFile,
-          group: item.product.groupId,
-          department: item.product.departmentId,
-          vatCode: item.product.vatCode,
-          vatPercentage,
-          vatAmount,
-          addedBy: operator.name,
-          timeDate,
-          printer1: this.determinePrinter(item.product.groupId),
-          printer2: 'NOT SET',
-          printer3: 'NOT SET',
-          itemPrinted: 'YES',
-          tableId: table.id,
-        });
-      }
-
-      this.data.set(table.id, rows);
-      console.log('[TableDataService] Successfully saved table data to memory');
-      return;
-    }
-
-    await this.clearTableData(table.id);
-
     const rows: TableDataRow[] = [];
     const now = new Date();
     const timeString = now.toLocaleTimeString('en-GB', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -126,8 +84,26 @@ class TableDataService {
       });
     }
 
-    await this.appendRowsToCSV(rows);
-    console.log('[TableDataService] Successfully saved table data');
+    if (!this.isFileSystemAvailable()) {
+      console.log('[TableDataService] Using in-memory storage');
+      this.data.set(table.id, rows);
+      console.log('[TableDataService] Successfully saved table data to memory');
+    } else {
+      await this.clearTableData(table.id);
+      await this.appendRowsToCSV(rows);
+      console.log('[TableDataService] Successfully saved table data to CSV');
+    }
+
+    try {
+      console.log('[TableDataService] Syncing table data to server...');
+      const result = await trpcClient.tabledata.sync.mutate({
+        tableId: table.id,
+        tableData: rows,
+      });
+      console.log('[TableDataService] Server sync successful:', result);
+    } catch (error) {
+      console.error('[TableDataService] Server sync failed:', error);
+    }
   }
 
   async loadTableData(tableId: string): Promise<TableDataRow[]> {
