@@ -1,5 +1,5 @@
 import { Tabs, Redirect } from 'expo-router';
-import { ShoppingCart, Store, Settings, Search, LogOut, FileText } from 'lucide-react-native';
+import { ShoppingCart, Store, Settings, Search, LogOut } from 'lucide-react-native';
 import React from 'react';
 import { TouchableOpacity, View, Text, Image } from 'react-native';
 import { usePOS } from '@/contexts/POSContext';
@@ -133,24 +133,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="reports"
-        options={{
-          title: 'Reports',
-          tabBarIcon: ({ color, size }) => <FileText size={size} color={color} />,
-          href: showSettings ? '/reports' : null,
-          headerTitle: () => (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Image
-                source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/aks991iz9extc1dtz2zq4' }}
-                style={{ width: 24, height: 24 }}
-                resizeMode="contain"
-              />
-              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>NODE Virtual</Text>
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
@@ -166,6 +148,12 @@ export default function TabLayout() {
               <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>NODE Virtual</Text>
             </View>
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="reports"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

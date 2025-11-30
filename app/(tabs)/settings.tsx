@@ -13,8 +13,9 @@ import {
   Modal,
 } from 'react-native';
 
-import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X } from 'lucide-react-native';
+import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
+import { useRouter } from 'expo-router';
 import type { ProductDisplaySettings, ProductGroup, Department } from '@/types/pos';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -31,6 +32,7 @@ export default function SettingsScreen() {
   const [productViewLayout, setProductViewLayout] = useState<'compact' | 'standard' | 'large'>('standard');
   const [productViewMode, setProductViewMode] = useState<'group-department' | 'all-departments' | 'all-items'>('group-department');
   const { updateTableSelectionRequired, updateProductViewLayout, updateProductViewMode, isInitialSetupComplete, completeInitialSetup, cardPaymentEnabled, cashPaymentEnabled, cardMachineProvider, splitPaymentsEnabled, updateCardPaymentEnabled, updateCashPaymentEnabled, updateCardMachineProvider, updateSplitPaymentsEnabled } = usePOS();
+  const router = useRouter();
   const { theme, themePreference, colors, setTheme } = useTheme();
 
 
@@ -928,6 +930,25 @@ export default function SettingsScreen() {
                 thumbColor="#ffffff"
               />
             </View>
+          </View>
+        </CollapsibleSection>
+
+        <CollapsibleSection 
+          id="reports" 
+          icon={FileText} 
+          title="Reports & Consolidation" 
+          iconColor="#10b981"
+        >
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>View transaction history, analytics, and generate reports</Text>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: colors.primary, marginBottom: 0 }]}
+              onPress={() => router.push('/reports')}
+              activeOpacity={0.8}
+            >
+              <FileText size={20} color="#ffffff" />
+              <Text style={styles.buttonText}>Open Reports</Text>
+            </TouchableOpacity>
           </View>
         </CollapsibleSection>
 

@@ -12,7 +12,7 @@ import {
   Share,
   Platform,
 } from 'react-native';
-import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3 } from 'lucide-react-native';
+import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers } from 'lucide-react-native';
 import { transactionService } from '@/services/transactionService';
 import type { Transaction, TransactionReport } from '@/types/pos';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -29,9 +29,12 @@ export default function ReportsScreen() {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [operators, setOperators] = useState<Record<string, string>>({});
+  const [groups, setGroups] = useState<Record<string, string>>({});
+  const [departments, setDepartments] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadOperators();
+    loadGroupsAndDepartments();
     filterTransactionsByDateRange();
   }, []);
 
@@ -42,6 +45,23 @@ export default function ReportsScreen() {
       operatorMap[op.id] = op.name;
     });
     setOperators(operatorMap);
+  };
+
+  const loadGroupsAndDepartments = async () => {
+    const loadedGroups = await dataSyncService.getStoredGroups();
+    const loadedDepartments = await dataSyncService.getStoredDepartments();
+    
+    const groupMap: Record<string, string> = {};
+    loadedGroups.forEach(group => {
+      groupMap[group.id] = group.name;
+    });
+    setGroups(groupMap);
+
+    const departmentMap: Record<string, string> = {};
+    loadedDepartments.forEach(dept => {
+      departmentMap[dept.id] = dept.name;
+    });
+    setDepartments(departmentMap);
   };
 
 
@@ -246,6 +266,90 @@ export default function ReportsScreen() {
                   </Text>
                 </View>
               ))}
+            </View>
+
+            <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View style={styles.cardHeader}>
+                <Layers size={20} color={colors.primary} />
+                <Text style={[styles.cardTitle, { color: colors.text }]}>By Product Group</Text>
+              </View>
+              {(() => {
+                const groupSales: Record<string, { quantity: number; revenue: number }> = {};
+                filteredTransactions.forEach(transaction => {
+                  transaction.items.forEach(item => {
+                    const groupId = item.product.groupId;
+                    if (!groupSales[groupId]) {
+                      groupSales[groupId] = { quantity: 0, revenue: 0 };
+                    }
+                    groupSales[groupId].quantity += item.quantity;
+                    groupSales[groupId].revenue += item.lineTotal;
+                  });
+                });
+
+                const sortedGroups = Object.entries(groupSales).sort((a, b) => b[1].revenue - a[1].revenue);
+
+                return sortedGroups.length > 0 ? sortedGroups.map(([groupId, data]) => (
+                  <View key={groupId} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.breakdownLabel, { color: colors.text }]}>
+                        {groups[groupId] || `Group ${groupId}`}
+                      </Text>
+                      <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
+                        {data.quantity} item{data.quantity !== 1 ? 's' : ''} sold
+                      </Text>
+                    </View>
+                    <Text style={[styles.breakdownValue, { color: colors.primary }]}>
+                      £{data.revenue.toFixed(2)}
+                    </Text>
+                  </View>
+                )) : (
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                    No group data available
+                  </Text>
+                );
+              })()}
+            </View>
+
+            <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View style={styles.cardHeader}>
+                <Layers size={20} color={colors.primary} />
+                <Text style={[styles.cardTitle, { color: colors.text }]}>By Department</Text>
+              </View>
+              {(() => {
+                const departmentSales: Record<string, { quantity: number; revenue: number }> = {};
+                filteredTransactions.forEach(transaction => {
+                  transaction.items.forEach(item => {
+                    const departmentId = item.product.departmentId;
+                    if (!departmentSales[departmentId]) {
+                      departmentSales[departmentId] = { quantity: 0, revenue: 0 };
+                    }
+                    departmentSales[departmentId].quantity += item.quantity;
+                    departmentSales[departmentId].revenue += item.lineTotal;
+                  });
+                });
+
+                const sortedDepartments = Object.entries(departmentSales).sort((a, b) => b[1].revenue - a[1].revenue);
+
+                return sortedDepartments.length > 0 ? sortedDepartments.map(([departmentId, data]) => (
+                  <View key={departmentId} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.breakdownLabel, { color: colors.text }]}>
+                        {departments[departmentId] || `Department ${departmentId}`}
+                      </Text>
+                      <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
+                        {data.quantity} item{data.quantity !== 1 ? 's' : ''} sold
+                      </Text>
+                    </View>
+                    <Text style={[styles.breakdownValue, { color: colors.primary }]}>
+                      £{data.revenue.toFixed(2)}
+                    </Text>
+                  </View>
+                )) : (
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                    No department data available
+                  </Text>
+                );
+              })()}
             </View>
 
             <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
