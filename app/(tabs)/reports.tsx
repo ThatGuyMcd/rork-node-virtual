@@ -344,6 +344,21 @@ export default function ReportsScreen() {
                   </Text>
                 </View>
               ))}
+              {(() => {
+                const cashTotal = report.transactionsByTender['Cash']?.revenue || 0;
+                const cardTotal = report.transactionsByTender['Card']?.revenue || 0;
+                const combinedTotal = cashTotal + cardTotal;
+                return (
+                  <View style={[styles.breakdownItem, { borderTopWidth: 2, borderTopColor: colors.border, marginTop: 8, paddingTop: 16 }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.breakdownLabel, { color: colors.text, fontWeight: '700' as const }]}>Combined Total</Text>
+                    </View>
+                    <Text style={[styles.breakdownValue, { color: colors.primary, fontSize: 18 }]}>
+                      £{combinedTotal.toFixed(2)}
+                    </Text>
+                  </View>
+                );
+              })()}
             </View>
 
             <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
