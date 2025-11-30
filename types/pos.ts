@@ -118,6 +118,7 @@ export interface Transaction {
   tenderName: string;
   paymentMethod: string;
   payments?: PaymentRecord[];
+  isRefund?: boolean;
 }
 
 export interface TransactionReport {

@@ -21,6 +21,7 @@ interface POSContextType {
   cashPaymentEnabled: boolean;
   cardMachineProvider: 'Teya' | 'None';
   splitPaymentsEnabled: boolean;
+  isRefundMode: boolean;
   login: (operator: Operator) => Promise<void>;
   logout: () => Promise<void>;
   addToBasket: (product: Product, selectedPrice: any, quantity?: number, manualPrice?: number) => void;
@@ -44,6 +45,7 @@ interface POSContextType {
   updateCardMachineProvider: (provider: 'Teya' | 'None') => Promise<void>;
   updateSplitPaymentsEnabled: (enabled: boolean) => Promise<void>;
   getAvailableTenders: () => Tender[];
+  toggleRefundMode: () => void;
 }
 
 export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
@@ -59,6 +61,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   const [cashPaymentEnabled, setCashPaymentEnabled] = useState(true);
   const [cardMachineProvider, setCardMachineProvider] = useState<'Teya' | 'None'>('None');
   const [splitPaymentsEnabled, setSplitPaymentsEnabled] = useState(false);
+  const [isRefundMode, setIsRefundMode] = useState(false);
 
   const [tenders, setTenders] = useState<Tender[]>([
     { id: '1', name: 'Cash', color: '#10b981' },
@@ -144,14 +147,16 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       ? { ...selectedPrice, price: manualPrice, label: selectedPrice?.label || 'manual' }
       : selectedPrice;
 
+    const quantityToUse = isRefundMode ? -Math.abs(quantity) : quantity;
+
     const newItem: BasketItem = {
       product,
-      quantity,
+      quantity: quantityToUse,
       selectedPrice: priceToUse,
-      lineTotal: quantity * actualPrice,
+      lineTotal: quantityToUse * actualPrice,
     };
     setBasket([...basket, newItem]);
-  }, [basket]);
+  }, [basket, isRefundMode]);
 
   const updateBasketItemQuantity = useCallback((index: number, quantity: number) => {
     if (quantity <= 0) {
@@ -225,6 +230,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         ...finalPayment
       ].filter(payment => Math.abs(payment.amount) >= 0.01);
       
+      const isRefund = basket.some(item => item.quantity < 0);
       const transaction: Transaction = {
         id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: new Date().toISOString(),
@@ -240,10 +246,12 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         tenderName: `Split Payment`,
         paymentMethod: `Split Payment`,
         payments: allPayments,
+        isRefund,
       };
       await transactionService.saveTransaction(transaction);
       console.log('[POS] Split payment transaction recorded:', transaction.id, allPayments);
     } else {
+      const isRefund = basket.some(item => item.quantity < 0);
       const transaction: Transaction = {
         id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: new Date().toISOString(),
@@ -258,9 +266,15 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         tenderId: tender.id,
         tenderName: tender.name,
         paymentMethod: tender.name,
+        isRefund,
       };
       await transactionService.saveTransaction(transaction);
       console.log('[POS] Transaction recorded:', transaction.id);
+    }
+    
+    if (basket.some(item => item.quantity < 0)) {
+      setIsRefundMode(false);
+      console.log('[POS] Refund completed, exiting refund mode');
     }
     
     if (currentTable) {
@@ -440,6 +454,11 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     });
   }, [tenders, cashPaymentEnabled, cardPaymentEnabled]);
 
+  const toggleRefundMode = useCallback(() => {
+    setIsRefundMode(!isRefundMode);
+    console.log('[POS] Refund mode toggled:', !isRefundMode);
+  }, [isRefundMode]);
+
   return {
     currentOperator,
     basket,
@@ -478,5 +497,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     updateCardMachineProvider,
     updateSplitPaymentsEnabled,
     getAvailableTenders,
+    isRefundMode,
+    toggleRefundMode,
   };
 });

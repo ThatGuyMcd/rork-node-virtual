@@ -11,7 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 
-import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare } from 'lucide-react-native';
+import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare, RotateCcw } from 'lucide-react-native';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -19,6 +19,7 @@ export default function BasketScreen() {
   const {
     basket,
     currentTable,
+    currentOperator,
     updateBasketItemQuantity,
     updateBasketItemMessage,
     removeFromBasket,
@@ -28,6 +29,8 @@ export default function BasketScreen() {
     saveTableTab,
     getAvailableTenders,
     splitPaymentsEnabled,
+    isRefundMode,
+    toggleRefundMode,
   } = usePOS();
   const { colors, theme } = useTheme();
 
@@ -169,15 +172,43 @@ export default function BasketScreen() {
               Table: {currentTable.name}
             </Text>
           )}
+          {isRefundMode && (
+            <Text style={[styles.refundModeTag, { color: colors.error, backgroundColor: colors.error + '20' }]}>
+              🔄 REFUND MODE
+            </Text>
+          )}
         </View>
-        <TouchableOpacity
-          style={[styles.clearButton, { backgroundColor: colors.cardBackground }]}
-          onPress={clearBasket}
-          activeOpacity={0.7}
-        >
-          <Trash2 size={20} color={colors.error} />
-          <Text style={[styles.clearText, { color: colors.error }]}>Clear</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {currentOperator?.isManager && (
+            <TouchableOpacity
+              style={[
+                styles.refundButton,
+                { 
+                  backgroundColor: isRefundMode ? colors.error : colors.cardBackground,
+                  borderColor: colors.error,
+                }
+              ]}
+              onPress={toggleRefundMode}
+              activeOpacity={0.7}
+            >
+              <RotateCcw size={20} color={isRefundMode ? '#fff' : colors.error} />
+              <Text style={[
+                styles.refundButtonText,
+                { color: isRefundMode ? '#fff' : colors.error }
+              ]}>
+                {isRefundMode ? 'Exit' : 'Refund'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.clearButton, { backgroundColor: colors.cardBackground }]}
+            onPress={clearBasket}
+            activeOpacity={0.7}
+          >
+            <Trash2 size={20} color={colors.error} />
+            <Text style={[styles.clearText, { color: colors.error }]}>Clear</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -185,10 +216,29 @@ export default function BasketScreen() {
         contentContainerStyle={styles.itemsContainer}
         showsVerticalScrollIndicator={false}
       >
-        {basket.map((item, index) => (
-          <View key={index} style={[styles.basketItem, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        {basket.map((item, index) => {
+          const isRefundItem = item.quantity < 0;
+          return (
+          <View 
+            key={index} 
+            style={[
+              styles.basketItem, 
+              { 
+                backgroundColor: colors.cardBackground, 
+                borderColor: isRefundItem ? colors.error : colors.border,
+                borderWidth: isRefundItem ? 2 : 1,
+              }
+            ]}
+          >
             <View style={styles.itemInfo}>
-              <Text style={[styles.itemName, { color: colors.text }]}>{item.product.name}</Text>
+              <View style={styles.itemNameRow}>
+                <Text style={[styles.itemName, { color: colors.text }]}>{item.product.name}</Text>
+                {isRefundItem && (
+                  <View style={[styles.refundBadge, { backgroundColor: colors.error }]}>
+                    <Text style={styles.refundBadgeText}>REFUND</Text>
+                  </View>
+                )}
+              </View>
               <Text style={[styles.itemPrice, { color: colors.textSecondary }]}>
                 £{item.selectedPrice.price.toFixed(2)}
                 {item.selectedPrice.label !== 'Standard' &&
@@ -219,8 +269,8 @@ export default function BasketScreen() {
                 </TouchableOpacity>
               </View>
 
-              <Text style={[styles.lineTotal, { color: colors.primary }]}>
-                £{item.lineTotal.toFixed(2)}
+              <Text style={[styles.lineTotal, { color: isRefundItem ? colors.error : colors.primary }]}>
+                {isRefundItem ? '-' : ''}£{Math.abs(item.lineTotal).toFixed(2)}
               </Text>
 
               <TouchableOpacity
@@ -240,7 +290,7 @@ export default function BasketScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        ))}
+        )})}
       </ScrollView>
 
       <View style={[styles.summary, { backgroundColor: colors.cardBackground, borderTopColor: colors.border }]}>
@@ -442,9 +492,13 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     padding: 16,
     paddingBottom: 12,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
   title: {
     fontSize: 20,
@@ -454,6 +508,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginTop: 4,
+  },
+  refundModeTag: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    overflow: 'hidden' as const,
+  },
+  refundButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+  },
+  refundButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   clearButton: {
     flexDirection: 'row',
@@ -481,6 +556,22 @@ const styles = StyleSheet.create({
   },
   itemInfo: {
     marginBottom: 12,
+  },
+  itemNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap' as const,
+  },
+  refundBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  refundBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
   },
   itemName: {
     fontSize: 16,
