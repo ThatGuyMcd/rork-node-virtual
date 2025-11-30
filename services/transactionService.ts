@@ -88,14 +88,33 @@ class TransactionService {
         report.transactionsByOperator[transaction.operatorId].count++;
         report.transactionsByOperator[transaction.operatorId].revenue += transaction.total;
 
-        if (!report.transactionsByTender[transaction.tenderName]) {
-          report.transactionsByTender[transaction.tenderName] = {
-            count: 0,
-            revenue: 0,
-          };
+        if (transaction.payments && transaction.payments.length > 0) {
+          transaction.payments.forEach(payment => {
+            if (!report.transactionsByTender[payment.tenderName]) {
+              report.transactionsByTender[payment.tenderName] = {
+                count: 0,
+                revenue: 0,
+              };
+            }
+            report.transactionsByTender[payment.tenderName].revenue += payment.amount;
+          });
+          if (!report.transactionsByTender['Split Payment']) {
+            report.transactionsByTender['Split Payment'] = {
+              count: 0,
+              revenue: 0,
+            };
+          }
+          report.transactionsByTender['Split Payment'].count++;
+        } else {
+          if (!report.transactionsByTender[transaction.tenderName]) {
+            report.transactionsByTender[transaction.tenderName] = {
+              count: 0,
+              revenue: 0,
+            };
+          }
+          report.transactionsByTender[transaction.tenderName].count++;
+          report.transactionsByTender[transaction.tenderName].revenue += transaction.total;
         }
-        report.transactionsByTender[transaction.tenderName].count++;
-        report.transactionsByTender[transaction.tenderName].revenue += transaction.total;
 
         if (transaction.tableId && transaction.tableName) {
           if (!report.transactionsByTable) {
