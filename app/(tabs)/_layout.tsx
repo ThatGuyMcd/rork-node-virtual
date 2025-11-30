@@ -6,7 +6,7 @@ import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function TabLayout() {
-  const { currentOperator, logout, isInitialSetupComplete } = usePOS();
+  const { currentOperator, logout, isInitialSetupComplete, basket } = usePOS();
   const { colors } = useTheme();
 
   if (!currentOperator) {
@@ -93,7 +93,33 @@ export default function TabLayout() {
         name="basket"
         options={{
           title: 'Basket',
-          tabBarIcon: ({ color, size }) => <ShoppingCart size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <View>
+              <ShoppingCart size={size} color={color} />
+              {basket.length > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  right: -8,
+                  top: -4,
+                  backgroundColor: colors.error,
+                  borderRadius: 10,
+                  minWidth: 20,
+                  height: 20,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  paddingHorizontal: 4,
+                }}>
+                  <Text style={{
+                    color: '#fff',
+                    fontSize: 12,
+                    fontWeight: '700',
+                  }}>
+                    {basket.length}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ),
           headerTitle: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Image

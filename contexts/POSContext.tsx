@@ -24,6 +24,7 @@ interface POSContextType {
   logout: () => Promise<void>;
   addToBasket: (product: Product, selectedPrice: any, quantity?: number, manualPrice?: number) => void;
   updateBasketItemQuantity: (index: number, quantity: number) => void;
+  updateBasketItemMessage: (index: number, message: string) => void;
   removeFromBasket: (index: number) => void;
   clearBasket: () => void;
   completeSale: (tenderId: string) => Promise<void>;
@@ -130,28 +131,13 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       ? { ...selectedPrice, price: manualPrice, label: selectedPrice?.label || 'manual' }
       : selectedPrice;
 
-    const existingIndex = basket.findIndex(
-      (item) =>
-        item.product.id === product.id &&
-        item.selectedPrice.key === priceToUse.key &&
-        item.selectedPrice.price === actualPrice
-    );
-
-    if (existingIndex >= 0) {
-      const newBasket = [...basket];
-      newBasket[existingIndex].quantity += quantity;
-      newBasket[existingIndex].lineTotal =
-        newBasket[existingIndex].quantity * newBasket[existingIndex].selectedPrice.price;
-      setBasket(newBasket);
-    } else {
-      const newItem: BasketItem = {
-        product,
-        quantity,
-        selectedPrice: priceToUse,
-        lineTotal: quantity * actualPrice,
-      };
-      setBasket([...basket, newItem]);
-    }
+    const newItem: BasketItem = {
+      product,
+      quantity,
+      selectedPrice: priceToUse,
+      lineTotal: quantity * actualPrice,
+    };
+    setBasket([...basket, newItem]);
   }, [basket]);
 
   const updateBasketItemQuantity = useCallback((index: number, quantity: number) => {
@@ -162,6 +148,17 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     const newBasket = [...basket];
     newBasket[index].quantity = quantity;
     newBasket[index].lineTotal = quantity * newBasket[index].selectedPrice.price;
+    setBasket(newBasket);
+  }, [basket]);
+
+  const updateBasketItemMessage = useCallback((index: number, message: string) => {
+    const newBasket = [...basket];
+    const item = newBasket[index];
+    const baseName = item.product.name.split(' - ')[0];
+    newBasket[index].product = { 
+      ...item.product, 
+      name: message ? `${baseName} - ${message}` : baseName 
+    };
     setBasket(newBasket);
   }, [basket]);
 
@@ -367,6 +364,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     logout,
     addToBasket,
     updateBasketItemQuantity,
+    updateBasketItemMessage,
     removeFromBasket,
     clearBasket,
     completeSale,

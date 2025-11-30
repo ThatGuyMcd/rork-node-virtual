@@ -11,7 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 
-import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign } from 'lucide-react-native';
+import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare } from 'lucide-react-native';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -20,6 +20,7 @@ export default function BasketScreen() {
     basket,
     currentTable,
     updateBasketItemQuantity,
+    updateBasketItemMessage,
     removeFromBasket,
     clearBasket,
     calculateTotals,
@@ -33,6 +34,9 @@ export default function BasketScreen() {
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [splitPaymentAmount, setSplitPaymentAmount] = useState('');
   const [paidAmount, setPaidAmount] = useState(0);
+  const [messageModalVisible, setMessageModalVisible] = useState(false);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState<number | null>(null);
+  const [messageInput, setMessageInput] = useState('');
   const scaleAnim = useState(new Animated.Value(0))[0];
   const availableTenders = getAvailableTenders();
 
@@ -93,6 +97,37 @@ export default function BasketScreen() {
 
   const handleSaveTab = async () => {
     await saveTableTab();
+  };
+
+  const openMessageModal = (index: number) => {
+    setCurrentMessageIndex(index);
+    const item = basket[index];
+    const existingMessage = item.product.name.includes(' - ') 
+      ? item.product.name.split(' - ').slice(1).join(' - ') 
+      : '';
+    setMessageInput(existingMessage);
+    setMessageModalVisible(true);
+  };
+
+  const closeMessageModal = () => {
+    setMessageModalVisible(false);
+    setCurrentMessageIndex(null);
+    setMessageInput('');
+  };
+
+  const handleMessageSubmit = () => {
+    if (currentMessageIndex !== null) {
+      updateBasketItemMessage(currentMessageIndex, messageInput.trim());
+      closeMessageModal();
+    }
+  };
+
+  const handleMessageKeyPress = (char: string) => {
+    setMessageInput(prev => prev + char);
+  };
+
+  const handleMessageBackspace = () => {
+    setMessageInput(prev => prev.slice(0, -1));
   };
 
   if (basket.length === 0) {
@@ -175,6 +210,14 @@ export default function BasketScreen() {
               <Text style={[styles.lineTotal, { color: colors.primary }]}>
                 £{item.lineTotal.toFixed(2)}
               </Text>
+
+              <TouchableOpacity
+                style={styles.messageButton}
+                onPress={() => openMessageModal(index)}
+                activeOpacity={0.7}
+              >
+                <MessageSquare size={18} color={colors.primary} />
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.removeButton}
@@ -328,6 +371,97 @@ export default function BasketScreen() {
           </Animated.View>
         </View>
       </Modal>
+
+      <Modal
+        transparent
+        visible={messageModalVisible}
+        onRequestClose={closeMessageModal}
+        animationType="fade"
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+          <View style={[styles.messageModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Add Message</Text>
+              <TouchableOpacity onPress={closeMessageModal}>
+                <X size={24} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+
+            {currentMessageIndex !== null && (
+              <Text style={[styles.modalProductName, { color: colors.textSecondary }]}>
+                {basket[currentMessageIndex].product.name.split(' - ')[0]}
+              </Text>
+            )}
+
+            <View style={[styles.messageInputDisplay, { backgroundColor: colors.background, borderColor: colors.primary }]}>
+              <Text style={[styles.messageInputText, { color: colors.text }]}>
+                {messageInput || 'Type your message...'}
+              </Text>
+            </View>
+
+            <View style={styles.keyboardContainer}>
+              {['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'].map((char) => (
+                <TouchableOpacity
+                  key={char}
+                  style={[styles.keyboardButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  onPress={() => handleMessageKeyPress(char)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.keyboardButtonText, { color: colors.text }]}>{char}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.keyboardContainer}>
+              {['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'].map((char) => (
+                <TouchableOpacity
+                  key={char}
+                  style={[styles.keyboardButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  onPress={() => handleMessageKeyPress(char)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.keyboardButtonText, { color: colors.text }]}>{char}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.keyboardContainer}>
+              {['Z', 'X', 'C', 'V', 'B', 'N', 'M'].map((char) => (
+                <TouchableOpacity
+                  key={char}
+                  style={[styles.keyboardButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  onPress={() => handleMessageKeyPress(char)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.keyboardButtonText, { color: colors.text }]}>{char}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={[styles.keyboardButton, styles.keyboardButtonWide, { backgroundColor: colors.background, borderColor: colors.border }]}
+                onPress={handleMessageBackspace}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.keyboardButtonText, { color: colors.text }]}>⌫</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.keyboardContainer}>
+              <TouchableOpacity
+                style={[styles.keyboardButton, styles.keyboardButtonSpace, { backgroundColor: colors.background, borderColor: colors.border }]}
+                onPress={() => handleMessageKeyPress(' ')}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.keyboardButtonText, { color: colors.text }]}>SPACE</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.submitMessageButton, { backgroundColor: colors.primary, marginTop: 16 }]}
+              onPress={handleMessageSubmit}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.submitMessageText}>Update Item</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -409,6 +543,9 @@ const styles = StyleSheet.create({
   lineTotal: {
     fontSize: 18,
     fontWeight: '700',
+  },
+  messageButton: {
+    padding: 8,
   },
   removeButton: {
     padding: 8,
@@ -599,5 +736,62 @@ const styles = StyleSheet.create({
   keypadButtonClearText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  messageModal: {
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalProductName: {
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  messageInputDisplay: {
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 2,
+    minHeight: 60,
+  },
+  messageInputText: {
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  keyboardContainer: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 6,
+    marginBottom: 6,
+    justifyContent: 'center' as const,
+  },
+  keyboardButton: {
+    minWidth: 32,
+    height: 42,
+    borderRadius: 8,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+  },
+  keyboardButtonWide: {
+    minWidth: 60,
+  },
+  keyboardButtonSpace: {
+    flex: 1,
+  },
+  keyboardButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+  },
+  submitMessageButton: {
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center' as const,
+  },
+  submitMessageText: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#fff',
   },
 });
