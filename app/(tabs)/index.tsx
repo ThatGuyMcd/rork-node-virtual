@@ -1165,9 +1165,6 @@ export default function ProductsScreen() {
               <Text style={[styles.modalTitle, { color: colors.text }]}>
                 {currentMenuId ? currentMenuId : 'Menu'}
               </Text>
-              <TouchableOpacity onPress={closeMenuModal}>
-                <X size={24} color={colors.textTertiary} />
-              </TouchableOpacity>
             </View>
 
             {menuStack.length > 1 && (

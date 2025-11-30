@@ -771,6 +771,14 @@ export class DataSyncService {
           continue;
         }
 
+        // Only include products with xxx-xxx- filename format
+        // This filters out size modifiers like LARGE.PLU, 125ml.PLU, etc.
+        const fileNameWithoutExt = pluFileName.replace(/\.PLU$/i, '');
+        if (!/^\d{3}-\d{3}-/.test(fileNameWithoutExt)) {
+          console.log(`[DataSync] Menu ${menuId}: Skipping non-product file (not xxx-xxx- format): ${pluFileName}`);
+          continue;
+        }
+
         // Find the matching PLU file (case-insensitive)
         const pluFileNameUpper = pluFileName.toUpperCase();
         const actualFileName = pluFileNames.get(pluFileNameUpper);
