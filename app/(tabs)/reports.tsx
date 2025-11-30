@@ -11,8 +11,9 @@ import {
   ActivityIndicator,
   Share,
   Platform,
+  TextInput,
 } from 'react-native';
-import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers } from 'lucide-react-native';
+import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar } from 'lucide-react-native';
 import { transactionService } from '@/services/transactionService';
 import type { Transaction, TransactionReport } from '@/types/pos';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -31,6 +32,9 @@ export default function ReportsScreen() {
   const [operators, setOperators] = useState<Record<string, string>>({});
   const [groups, setGroups] = useState<Record<string, string>>({});
   const [departments, setDepartments] = useState<Record<string, string>>({});
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [datePickerModalVisible, setDatePickerModalVisible] = useState(false);
 
   useEffect(() => {
     loadOperators();
@@ -86,6 +90,15 @@ export default function ReportsScreen() {
         case 'all':
           startDate = new Date(0);
           break;
+        case 'custom':
+          if (customStartDate && customEndDate) {
+            startDate = new Date(customStartDate);
+            endDate = new Date(customEndDate);
+            endDate.setHours(23, 59, 59, 999);
+          } else {
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+          }
+          break;
         default:
           startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
       }
@@ -100,7 +113,7 @@ export default function ReportsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [dateRange]);
+  }, [dateRange, customStartDate, customEndDate]);
 
   useEffect(() => {
     filterTransactionsByDateRange();
@@ -182,6 +195,28 @@ export default function ReportsScreen() {
             <DateRangeButton range="month" label="Month" />
             <DateRangeButton range="all" label="All Time" />
           </View>
+          <TouchableOpacity
+            style={[
+              styles.customDateButton,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              dateRange === 'custom' && { borderColor: colors.primary, backgroundColor: colors.primary + '20' },
+            ]}
+            onPress={() => setDatePickerModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Calendar size={18} color={dateRange === 'custom' ? colors.primary : colors.text} />
+            <Text
+              style={[
+                styles.customDateButtonText,
+                { color: colors.text },
+                dateRange === 'custom' && { color: colors.primary, fontWeight: '700' as const },
+              ]}
+            >
+              {dateRange === 'custom' && customStartDate && customEndDate
+                ? `${new Date(customStartDate).toLocaleDateString('en-GB')} - ${new Date(customEndDate).toLocaleDateString('en-GB')}`
+                : 'Custom Range'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {loading ? (
@@ -495,6 +530,69 @@ export default function ReportsScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        transparent
+        visible={datePickerModalVisible}
+        onRequestClose={() => setDatePickerModalVisible(false)}
+        animationType="fade"
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+          <View style={[styles.datePickerModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Date Range</Text>
+              <TouchableOpacity onPress={() => setDatePickerModalVisible(false)}>
+                <X size={24} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ gap: 16 }}>
+              <View>
+                <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>Start Date</Text>
+                <TextInput
+                  style={[
+                    styles.dateInput,
+                    { backgroundColor: colors.background, borderColor: colors.border, color: colors.text },
+                  ]}
+                  value={customStartDate}
+                  onChangeText={setCustomStartDate}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={colors.textTertiary}
+                />
+              </View>
+
+              <View>
+                <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>End Date</Text>
+                <TextInput
+                  style={[
+                    styles.dateInput,
+                    { backgroundColor: colors.background, borderColor: colors.border, color: colors.text },
+                  ]}
+                  value={customEndDate}
+                  onChangeText={setCustomEndDate}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={colors.textTertiary}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.applyButton, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  if (customStartDate && customEndDate) {
+                    setDateRange('custom');
+                    setDatePickerModalVisible(false);
+                  } else {
+                    Alert.alert('Invalid Dates', 'Please enter both start and end dates in YYYY-MM-DD format');
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.applyButtonText}>Apply Date Range</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -727,5 +825,48 @@ const styles = StyleSheet.create({
   totalValueBold: {
     fontSize: 18,
     fontWeight: '700' as const,
+  },
+  customDateButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    marginTop: 8,
+  },
+  customDateButtonText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
+  datePickerModal: {
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  dateLabel: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    marginBottom: 8,
+  },
+  dateInput: {
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    borderWidth: 2,
+  },
+  applyButton: {
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center' as const,
+    marginTop: 8,
+  },
+  applyButtonText: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#fff',
   },
 });

@@ -70,12 +70,24 @@ export default function BasketScreen() {
 
     if (splitPaymentsEnabled && splitPaymentAmount && parseFloat(splitPaymentAmount) > 0) {
       const amount = parseFloat(splitPaymentAmount);
+      const updatedSplitPayments = [...splitPayments, {
+        tenderId: tender.id,
+        tenderName: tender.name,
+        amount: amount,
+      }];
+      
+      const newRemaining = remainingTotal - amount;
+      
+      if (Math.abs(newRemaining) < 0.01) {
+        await completeSale(tenderId, updatedSplitPayments);
+        setSplitPayments([]);
+        setSplitPaymentAmount('');
+        closePaymentModal();
+        return;
+      }
+      
       if (amount < remainingTotal) {
-        setSplitPayments([...splitPayments, {
-          tenderId: tender.id,
-          tenderName: tender.name,
-          amount: amount,
-        }]);
+        setSplitPayments(updatedSplitPayments);
         setSplitPaymentAmount('');
         closePaymentModal();
         return;
