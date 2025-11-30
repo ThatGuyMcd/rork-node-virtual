@@ -9,6 +9,7 @@ import {
   Animated,
   StatusBar,
   TextInput,
+  Alert,
 } from 'react-native';
 
 import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare, RotateCcw } from 'lucide-react-native';
@@ -188,7 +189,16 @@ export default function BasketScreen() {
                   borderColor: colors.error,
                 }
               ]}
-              onPress={toggleRefundMode}
+              onPress={() => {
+                const success = toggleRefundMode();
+                if (!success && !isRefundMode) {
+                  Alert.alert(
+                    'Cannot Activate Refund Mode',
+                    'Please add at least one item to the basket before activating refund mode.',
+                    [{ text: 'OK' }]
+                  );
+                }
+              }}
               activeOpacity={0.7}
             >
               <RotateCcw size={20} color={isRefundMode ? '#fff' : colors.error} />

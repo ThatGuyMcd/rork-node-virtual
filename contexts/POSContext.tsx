@@ -45,7 +45,7 @@ interface POSContextType {
   updateCardMachineProvider: (provider: 'Teya' | 'None') => Promise<void>;
   updateSplitPaymentsEnabled: (enabled: boolean) => Promise<void>;
   getAvailableTenders: () => Tender[];
-  toggleRefundMode: () => void;
+  toggleRefundMode: () => boolean;
 }
 
 export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
@@ -455,9 +455,27 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   }, [tenders, cashPaymentEnabled, cardPaymentEnabled]);
 
   const toggleRefundMode = useCallback(() => {
-    setIsRefundMode(!isRefundMode);
-    console.log('[POS] Refund mode toggled:', !isRefundMode);
-  }, [isRefundMode]);
+    if (!isRefundMode && basket.length === 0) {
+      console.log('[POS] Cannot activate refund mode: basket is empty');
+      return false;
+    }
+
+    if (!isRefundMode) {
+      const updatedBasket = basket.map(item => ({
+        ...item,
+        quantity: -Math.abs(item.quantity),
+        lineTotal: -Math.abs(item.lineTotal),
+      }));
+      setBasket(updatedBasket);
+      setIsRefundMode(true);
+      console.log('[POS] Refund mode activated, existing items marked for refund');
+      return true;
+    } else {
+      setIsRefundMode(false);
+      console.log('[POS] Refund mode deactivated');
+      return true;
+    }
+  }, [isRefundMode, basket]);
 
   return {
     currentOperator,
