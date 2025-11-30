@@ -1437,5 +1437,6 @@ const styles = StyleSheet.create({
   },
   collapsibleContent: {
     marginTop: -12,
+    paddingTop: 16,
   },
 });
