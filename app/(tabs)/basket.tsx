@@ -351,8 +351,8 @@ export default function BasketScreen() {
           <Text style={[styles.summaryValue, { color: colors.text }]}>£{subtotal.toFixed(2)}</Text>
         </View>
 
-        {currentOperator?.isManager && (
-          <View style={styles.discountGratuityRow}>
+        <View style={styles.discountGratuityRow}>
+          {currentOperator?.isManager && (
             <TouchableOpacity
               style={[
                 styles.discountButtonBottom,
@@ -372,30 +372,30 @@ export default function BasketScreen() {
                 {basketDiscount > 0 ? `Discount (${basketDiscount}%)` : 'Discount'}
               </Text>
             </TouchableOpacity>
-            
-            {gratuitySettings.enabled && !isRefundMode && (
-              <TouchableOpacity
-                style={[
-                  styles.gratuityButtonBottom,
-                  { 
-                    backgroundColor: gratuityAmount > 0 ? colors.success : colors.background,
-                    borderColor: gratuityAmount > 0 ? colors.success : colors.border,
-                  }
-                ]}
-                onPress={() => setGratuityModalVisible(true)}
-                activeOpacity={0.7}
-              >
-                <DollarSign size={14} color={gratuityAmount > 0 ? '#fff' : colors.success} />
-                <Text style={[
-                  styles.gratuityButtonBottomText,
-                  { color: gratuityAmount > 0 ? '#fff' : colors.text }
-                ]}>
-                  {gratuityAmount > 0 ? `Gratuity (£${gratuityAmount.toFixed(2)})` : 'Gratuity'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+          )}
+          
+          {gratuitySettings.enabled && !isRefundMode && (
+            <TouchableOpacity
+              style={[
+                styles.gratuityButtonBottom,
+                { 
+                  backgroundColor: gratuityAmount > 0 ? colors.success : colors.background,
+                  borderColor: gratuityAmount > 0 ? colors.success : colors.border,
+                }
+              ]}
+              onPress={() => setGratuityModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <DollarSign size={14} color={gratuityAmount > 0 ? '#fff' : colors.success} />
+              <Text style={[
+                styles.gratuityButtonBottomText,
+                { color: gratuityAmount > 0 ? '#fff' : colors.text }
+              ]}>
+                {gratuityAmount > 0 ? `Gratuity (£${gratuityAmount.toFixed(2)})` : 'Gratuity'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {basketDiscount > 0 && (
           <View style={styles.summaryRow}>
