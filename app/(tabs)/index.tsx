@@ -1715,25 +1715,26 @@ const styles = StyleSheet.create({
   },
   keyboardContainer: {
     flexDirection: 'row' as const,
-    flexWrap: 'wrap' as const,
+    flexWrap: 'nowrap' as const,
     gap: 6,
     marginBottom: 6,
     justifyContent: 'center' as const,
   },
   keyboardButton: {
-    minWidth: 32,
+    flex: 1,
+    minWidth: 0,
     height: 42,
     borderRadius: 8,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderWidth: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
   },
   keyboardButtonWide: {
-    minWidth: 60,
+    flex: 1.5,
   },
   keyboardButtonSpace: {
-    flex: 1,
+    flex: 3,
   },
   keyboardButtonText: {
     fontSize: 16,
