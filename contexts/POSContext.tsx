@@ -215,10 +215,15 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     const totals = calculateTotals();
     
     if (splitPayments && splitPayments.length > 0) {
+      const remainingAmount = totals.total - splitPayments.reduce((sum, p) => sum + p.amount, 0);
+      const finalPayment = Math.abs(remainingAmount) >= 0.01 
+        ? [{ tenderId: tender.id, tenderName: tender.name, amount: remainingAmount }]
+        : [];
+      
       const allPayments = [
         ...splitPayments,
-        { tenderId: tender.id, tenderName: tender.name, amount: totals.total - splitPayments.reduce((sum, p) => sum + p.amount, 0) }
-      ];
+        ...finalPayment
+      ].filter(payment => Math.abs(payment.amount) >= 0.01);
       
       const transaction: Transaction = {
         id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
