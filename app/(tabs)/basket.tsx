@@ -114,9 +114,10 @@ export default function BasketScreen() {
       const newRemaining = remainingTotal - amount;
       
       if (Math.abs(newRemaining) < 0.01) {
-        await completeSale(tenderId, updatedSplitPayments);
+        await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined);
         setSplitPayments([]);
         setSplitPaymentAmount('');
+        setGratuityAmount(0);
         closePaymentModal();
         return;
       }
