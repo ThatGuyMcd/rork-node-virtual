@@ -119,6 +119,7 @@ export interface Transaction {
   paymentMethod: string;
   payments?: PaymentRecord[];
   isRefund?: boolean;
+  discount?: number;
   gratuity?: number;
 }
 

@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar, RotateCcw, Search } from 'lucide-react-native';
+import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar, RotateCcw, Search, Percent, Gift } from 'lucide-react-native';
 import { transactionService } from '@/services/transactionService';
 import type { Transaction, TransactionReport } from '@/types/pos';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -551,6 +551,206 @@ export default function ReportsScreen() {
                         </Text>
                       </View>
                       <Text style={[styles.transactionTotal, { color: '#ef4444' }]}>
+                        £{transaction.total.toFixed(2)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              );
+            })()}
+
+            {(() => {
+              const transactionsWithDiscount = filteredTransactions.filter(t => t.discount && t.discount > 0);
+              const totalDiscountAmount = transactionsWithDiscount.reduce((sum, t) => sum + (t.discount || 0), 0);
+              const discountCount = transactionsWithDiscount.length;
+
+              if (discountCount === 0) return null;
+
+              const discountsByOperator: Record<string, { count: number; total: number }> = {};
+
+              transactionsWithDiscount.forEach(transaction => {
+                if (!discountsByOperator[transaction.operatorId]) {
+                  discountsByOperator[transaction.operatorId] = { count: 0, total: 0 };
+                }
+                discountsByOperator[transaction.operatorId].count++;
+                discountsByOperator[transaction.operatorId].total += transaction.discount || 0;
+              });
+
+              return (
+                <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <View style={styles.cardHeader}>
+                    <Percent size={20} color="#f59e0b" />
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>Discounts</Text>
+                  </View>
+
+                  <View style={styles.summaryGrid}>
+                    <View style={[styles.summaryItem, { backgroundColor: colors.background }]}>
+                      <FileText size={24} color="#f59e0b" />
+                      <Text style={[styles.summaryValue, { color: colors.text }]}>{discountCount}</Text>
+                      <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Discounts</Text>
+                    </View>
+
+                    <View style={[styles.summaryItem, { backgroundColor: colors.background }]}>
+                      <TrendingUp size={24} color="#f59e0b" />
+                      <Text style={[styles.summaryValue, { color: '#f59e0b' }]}>£{totalDiscountAmount.toFixed(2)}</Text>
+                      <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total Discounted</Text>
+                    </View>
+                  </View>
+
+                  <Text style={[styles.sectionSubtitle, { color: colors.text }]}>By Operator</Text>
+                  {Object.entries(discountsByOperator).map(([operatorId, data]) => (
+                    <View key={operatorId} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.breakdownLabel, { color: colors.text }]}>{
+                          operators[operatorId] || operatorId
+                        }</Text>
+                        <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
+                          {data.count} discount{data.count !== 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                      <Text style={[styles.breakdownValue, { color: '#f59e0b' }]}>
+                        £{data.total.toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+
+                  <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Recent Discount Transactions</Text>
+                  {transactionsWithDiscount.slice(0, 5).map((transaction) => (
+                    <TouchableOpacity
+                      key={transaction.id}
+                      style={[styles.transactionItem, { borderBottomColor: colors.border }]}
+                      onPress={() => viewTransactionDetail(transaction)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.transactionId, { color: colors.text }]}>
+                          {new Date(transaction.timestamp).toLocaleString('en-GB')}
+                        </Text>
+                        <Text style={[styles.transactionOperator, { color: colors.textSecondary }]}>
+                          {transaction.operatorName} • {transaction.tenderName}
+                          {transaction.tableName && ` • ${transaction.tableName}`} • Discount: £{transaction.discount?.toFixed(2)}
+                        </Text>
+                      </View>
+                      <Text style={[styles.transactionTotal, { color: colors.primary }]}>
+                        £{transaction.total.toFixed(2)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              );
+            })()}
+
+            {(() => {
+              const transactionsWithGratuity = filteredTransactions.filter(t => t.gratuity && t.gratuity > 0);
+              const totalGratuityAmount = transactionsWithGratuity.reduce((sum, t) => sum + (t.gratuity || 0), 0);
+              const gratuityCount = transactionsWithGratuity.length;
+
+              if (gratuityCount === 0) return null;
+
+              const gratuityByOperator: Record<string, { count: number; total: number }> = {};
+              const gratuityByPaymentMethod: Record<string, { count: number; total: number }> = {};
+
+              transactionsWithGratuity.forEach(transaction => {
+                if (!gratuityByOperator[transaction.operatorId]) {
+                  gratuityByOperator[transaction.operatorId] = { count: 0, total: 0 };
+                }
+                gratuityByOperator[transaction.operatorId].count++;
+                gratuityByOperator[transaction.operatorId].total += transaction.gratuity || 0;
+
+                if (transaction.payments && transaction.payments.length > 0) {
+                  transaction.payments.forEach(payment => {
+                    if (!gratuityByPaymentMethod[payment.tenderName]) {
+                      gratuityByPaymentMethod[payment.tenderName] = { count: 0, total: 0 };
+                    }
+                  });
+                  if (!gratuityByPaymentMethod['Split Payment']) {
+                    gratuityByPaymentMethod['Split Payment'] = { count: 0, total: 0 };
+                  }
+                  gratuityByPaymentMethod['Split Payment'].total += transaction.gratuity || 0;
+                } else {
+                  if (!gratuityByPaymentMethod[transaction.tenderName]) {
+                    gratuityByPaymentMethod[transaction.tenderName] = { count: 0, total: 0 };
+                  }
+                  gratuityByPaymentMethod[transaction.tenderName].count++;
+                  gratuityByPaymentMethod[transaction.tenderName].total += transaction.gratuity || 0;
+                }
+              });
+
+              return (
+                <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <View style={styles.cardHeader}>
+                    <Gift size={20} color="#10b981" />
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>Gratuities</Text>
+                  </View>
+
+                  <View style={styles.summaryGrid}>
+                    <View style={[styles.summaryItem, { backgroundColor: colors.background }]}>
+                      <FileText size={24} color="#10b981" />
+                      <Text style={[styles.summaryValue, { color: colors.text }]}>{gratuityCount}</Text>
+                      <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Gratuities</Text>
+                    </View>
+
+                    <View style={[styles.summaryItem, { backgroundColor: colors.background }]}>
+                      <TrendingUp size={24} color="#10b981" />
+                      <Text style={[styles.summaryValue, { color: '#10b981' }]}>£{totalGratuityAmount.toFixed(2)}</Text>
+                      <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total Gratuity</Text>
+                    </View>
+                  </View>
+
+                  <Text style={[styles.sectionSubtitle, { color: colors.text }]}>By Operator</Text>
+                  {Object.entries(gratuityByOperator).map(([operatorId, data]) => (
+                    <View key={operatorId} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.breakdownLabel, { color: colors.text }]}>{
+                          operators[operatorId] || operatorId
+                        }</Text>
+                        <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
+                          {data.count} gratuity transaction{data.count !== 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                      <Text style={[styles.breakdownValue, { color: '#10b981' }]}>
+                        £{data.total.toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+
+                  <Text style={[styles.sectionSubtitle, { color: colors.text }]}>By Payment Method</Text>
+                  {Object.entries(gratuityByPaymentMethod)
+                    .filter(([method]) => method !== 'Split Payment' || gratuityByPaymentMethod['Split Payment'].total > 0)
+                    .map(([method, data]) => (
+                    <View key={method} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.breakdownLabel, { color: colors.text }]}>{method}</Text>
+                        {data.count > 0 && (
+                          <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
+                            {data.count} gratuity transaction{data.count !== 1 ? 's' : ''}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={[styles.breakdownValue, { color: '#10b981' }]}>
+                        £{data.total.toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+
+                  <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Recent Gratuity Transactions</Text>
+                  {transactionsWithGratuity.slice(0, 5).map((transaction) => (
+                    <TouchableOpacity
+                      key={transaction.id}
+                      style={[styles.transactionItem, { borderBottomColor: colors.border }]}
+                      onPress={() => viewTransactionDetail(transaction)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.transactionId, { color: colors.text }]}>
+                          {new Date(transaction.timestamp).toLocaleString('en-GB')}
+                        </Text>
+                        <Text style={[styles.transactionOperator, { color: colors.textSecondary }]}>
+                          {transaction.operatorName} • {transaction.tenderName}
+                          {transaction.tableName && ` • ${transaction.tableName}`} • Gratuity: £{transaction.gratuity?.toFixed(2)}
+                        </Text>
+                      </View>
+                      <Text style={[styles.transactionTotal, { color: colors.primary }]}>
                         £{transaction.total.toFixed(2)}
                       </Text>
                     </TouchableOpacity>

@@ -270,6 +270,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         paymentMethod: `Split Payment`,
         payments: allPayments,
         isRefund,
+        discount: totals.discount > 0 ? totals.discount : undefined,
         gratuity,
       };
       await transactionService.saveTransaction(transaction);
@@ -291,6 +292,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         tenderName: tender.name,
         paymentMethod: tender.name,
         isRefund,
+        discount: totals.discount > 0 ? totals.discount : undefined,
         gratuity,
       };
       await transactionService.saveTransaction(transaction);
