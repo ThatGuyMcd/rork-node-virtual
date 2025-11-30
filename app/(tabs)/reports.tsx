@@ -18,6 +18,7 @@ import { transactionService } from '@/services/transactionService';
 import type { Transaction, TransactionReport } from '@/types/pos';
 import { useTheme } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
+import { useFocusEffect } from 'expo-router';
 
 type DateRange = 'today' | 'week' | 'month' | 'all' | 'custom';
 
@@ -68,8 +69,15 @@ export default function ReportsScreen() {
   useEffect(() => {
     loadOperators();
     loadGroupsAndDepartments();
-    filterTransactionsByDateRange();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log('[Reports] Tab focused - reloading transactions');
+      filterTransactionsByDateRange();
+      return () => {};
+    }, [dateRange, customStartDate, customEndDate])
+  );
 
   const loadOperators = async () => {
     const ops = await dataSyncService.getStoredOperators();
