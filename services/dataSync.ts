@@ -129,6 +129,8 @@ export class DataSyncService {
           return 'Downloading Functions';
         case 'MENUDATA':
           return 'Downloading Menus';
+        case 'VATDATA':
+          return 'Downloading VAT Data';
         default:
           return `Downloading from ${folder}`;
       }
@@ -197,6 +199,7 @@ export class DataSyncService {
       'TABDATA',
       'FUNCTIONDATA',
       'MENUDATA',
+      'VATDATA',
     ];
 
     const filtered = manifest.filter(path => {
@@ -230,8 +233,9 @@ export class DataSyncService {
         'OPERATORDATA': 1,
         'TABDATA': 2,
         'FUNCTIONDATA': 3,
-        'MENUDATA': 4,
-        'PLUDATA': 5,
+        'VATDATA': 4,
+        'MENUDATA': 5,
+        'PLUDATA': 6,
       };
       
       const orderA = folderOrder[folderA] || 999;
@@ -251,9 +255,9 @@ export class DataSyncService {
     const { groups, departments } = await this.parseProductStructure(files);
     const menuData = await this.parseMenuData(files);
     const menuProductFilenames = this.extractMenuProductFilenames(menuData);
-    const products = await this.parseProducts(files, menuProductFilenames);
-    const tenders = await this.parseTenders(files);
     const vatRates = await this.parseVAT(files);
+    const products = await this.parseProducts(files, menuProductFilenames, vatRates);
+    const tenders = await this.parseTenders(files);
     const tables = await this.parseTables(files);
 
     await AsyncStorage.setItem(STORAGE_KEYS.OPERATORS, JSON.stringify(operators));
@@ -391,7 +395,7 @@ export class DataSyncService {
     return filenames;
   }
 
-  private async parseProducts(files: Map<string, string>, menuProductFilenames: Set<string>): Promise<Product[]> {
+  private async parseProducts(files: Map<string, string>, menuProductFilenames: Set<string>, vatRates: VATRate[] = []): Promise<Product[]> {
     const products: Product[] = [];
     let productIndex = 0;
 
@@ -434,13 +438,20 @@ export class DataSyncService {
       const name = kv.PRODUCT_DESCRIPTION || fileName;
       let prices = dataParser.parsePriceOptions(kv);
       const vatCode = (kv.VAT_CODE || 'S').trim();
-      const vatPercentage = parseFloat(kv.VAT_PERCENTAGE || kv.VAT_RATE || kv.VAT || '20') || 20;
+      
+      let vatPercentage = parseFloat(kv.VAT_PERCENTAGE || kv.VAT_RATE || kv.VAT || '20') || 20;
+      const matchingVatRate = vatRates.find(rate => rate.code.toUpperCase() === vatCode.toUpperCase());
+      if (matchingVatRate) {
+        vatPercentage = matchingVatRate.percentage;
+        console.log(`[DataSync] Product ${fileName}: Using VAT from .VATCODE file: ${vatCode} = ${vatPercentage}%`);
+      } else {
+        console.log(`[DataSync] Product ${fileName}: Using VAT from .PLU file: ${vatCode} = ${vatPercentage}%`);
+      }
+      
       const buttonColor = dataParser.parseColor(kv.BUTTON_COLOUR) || '#1e293b';
       const fontColor = dataParser.parseColor(kv.FONT_COLOUR) || '#ffffff';
       const hotcode = kv.HOTCODE || undefined;
       const barcode = kv.BARCODE || undefined;
-      
-      console.log(`[DataSync] Product ${fileName}: VAT Code=${vatCode}, VAT Percentage=${vatPercentage}%`);
 
       if (prices.length === 0) {
         const std = String(kv.PRICE_STANDARD || '').trim().toUpperCase();
@@ -908,9 +919,9 @@ export class DataSyncService {
     const { groups: newGroups, departments: newDepartments } = await this.parseProductStructure(files);
     const newMenuData = await this.parseMenuData(files);
     const menuProductFilenames = this.extractMenuProductFilenames(newMenuData);
-    const newProducts = await this.parseProducts(files, menuProductFilenames);
-    const newTenders = await this.parseTenders(files);
     const newVATRates = await this.parseVAT(files);
+    const newProducts = await this.parseProducts(files, menuProductFilenames, newVATRates);
+    const newTenders = await this.parseTenders(files);
     const newTables = await this.parseTables(files);
 
     const mergedOperators = newOperators.length > 0 ? newOperators : existingOperators;
