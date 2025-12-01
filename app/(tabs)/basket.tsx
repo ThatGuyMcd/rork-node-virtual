@@ -215,45 +215,7 @@ export default function BasketScreen() {
     setDiscountModalVisible(false);
   };
 
-  const handlePrintBill = async () => {
-    if (!printerConnected) {
-      Alert.alert('Printer Not Connected', 'Please connect a printer in settings.');
-      return;
-    }
 
-    if (!currentOperator) {
-      Alert.alert('Error', 'No operator logged in');
-      return;
-    }
-
-    const totals = calculateTotals();
-    const billTransaction = {
-      id: `bill_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date().toISOString(),
-      operatorId: currentOperator.id,
-      operatorName: currentOperator.name,
-      tableId: currentTable?.id,
-      tableName: currentTable?.name,
-      items: [...basket],
-      subtotal: totals.subtotal,
-      vatBreakdown: totals.vatBreakdown,
-      total: totals.total + gratuityAmount,
-      tenderId: '',
-      tenderName: 'BILL',
-      paymentMethod: 'BILL',
-      isRefund: basket.some(item => item.quantity < 0),
-      discount: totals.discount > 0 ? totals.discount : undefined,
-      gratuity: gratuityAmount > 0 ? gratuityAmount : undefined,
-    };
-
-    try {
-      await printerService.printReceipt(billTransaction);
-      Alert.alert('Success', 'Bill printed successfully');
-    } catch (error) {
-      console.error('[Basket] Failed to print bill:', error);
-      Alert.alert('Print Error', 'Failed to print bill. Please check printer connection.');
-    }
-  };
 
   const handlePrintReceipt = async () => {
     if (!lastTransaction) {
@@ -320,21 +282,6 @@ export default function BasketScreen() {
           )}
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={[
-              styles.printBillButton,
-              {
-                backgroundColor: colors.cardBackground,
-                borderColor: printerConnected ? colors.primary : colors.border,
-                borderStyle: printerConnected ? 'solid' : 'dotted',
-              },
-            ]}
-            onPress={handlePrintBill}
-            activeOpacity={printerConnected ? 0.7 : 1}
-            disabled={!printerConnected}
-          >
-            <Printer size={20} color={printerConnected ? colors.primary : colors.textTertiary} />
-          </TouchableOpacity>
           {currentOperator?.isManager && refundButtonEnabled && (
             <TouchableOpacity
               style={[
