@@ -546,14 +546,40 @@ class TableDataService {
       console.log(`[TableDataService] Posting to: https://app.positron-portal.com/webviewdataupload`);
       
       // Post to server using the same endpoint as Windows app
-      const response = await fetch('https://app.positron-portal.com/webviewdataupload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('[TableDataService] Request timeout after 60 seconds');
+        controller.abort();
+      }, 60000); // 60 second timeout for bulk sync
+      
+      let response: Response;
+      try {
+        response = await fetch('https://app.positron-portal.com/webviewdataupload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        console.error('[TableDataService] Fetch error:', fetchError);
+        console.error('[TableDataService] Error name:', fetchError.name);
+        console.error('[TableDataService] Error message:', fetchError.message);
+        
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Connection timeout while syncing table data to server. The sync may take longer with large amounts of data.');
+        }
+        
+        if (fetchError.message === 'Failed to fetch' || fetchError.message === 'Network request failed') {
+          throw new Error('Unable to connect to server. Please check your internet connection and try again.');
+        }
+        
+        throw fetchError;
+      }
       
       if (!response.ok) {
         const text = await response.text();
