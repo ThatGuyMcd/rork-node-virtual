@@ -212,11 +212,11 @@ export default function ReportsScreen() {
     if (!selectedTransaction) return;
 
     try {
-      await printerService.printReceipt(selectedTransaction, 'Your Business Name');
-      Alert.alert('Success', 'Receipt printed successfully');
+      await printerService.printReceipt(selectedTransaction, 'Your Business Name', true);
+      Alert.alert('Success', 'Receipt reprinted successfully');
     } catch (error) {
-      console.error('[Reports] Error printing receipt:', error);
-      Alert.alert('Error', 'Failed to print receipt: ' + (error as Error).message);
+      console.error('[Reports] Error reprinting receipt:', error);
+      Alert.alert('Error', 'Failed to reprint receipt: ' + (error as Error).message);
     }
   };
 
@@ -1229,7 +1229,7 @@ export default function ReportsScreen() {
                   { color: isPrinterConnected ? '#fff' : colors.textTertiary },
                 ]}
               >
-                Print Receipt
+                Re-Print Receipt
               </Text>
             </TouchableOpacity>
           </View>

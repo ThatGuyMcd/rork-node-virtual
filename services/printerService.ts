@@ -124,17 +124,17 @@ class PrinterService {
     }
   }
 
-  async printReceipt(transaction: Transaction, siteName?: string): Promise<void> {
+  async printReceipt(transaction: Transaction, siteName?: string, isReprint: boolean = false): Promise<void> {
     if (!this.settings.isConnected) {
       throw new Error('Printer not connected');
     }
 
     const generator = new ESCPOSGenerator(this.settings.paperWidth);
-    const receiptData = generator.generateReceipt(transaction, siteName);
+    const receiptData = generator.generateReceipt(transaction, siteName, isReprint);
 
     try {
       await this.sendData(receiptData);
-      console.log('[PrinterService] Receipt printed successfully');
+      console.log(`[PrinterService] Receipt ${isReprint ? 'reprinted' : 'printed'} successfully`);
     } catch (error) {
       console.error('[PrinterService] Print error:', error);
       throw error;

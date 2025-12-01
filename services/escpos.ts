@@ -89,7 +89,7 @@ export class ESCPOSGenerator {
     return char.repeat(this.charsPerLine) + this.commands.LF;
   }
 
-  generateReceipt(transaction: Transaction, siteName?: string): Uint8Array {
+  generateReceipt(transaction: Transaction, siteName?: string, isReprint: boolean = false): Uint8Array {
     let receipt = '';
 
     receipt += this.init();
@@ -97,6 +97,13 @@ export class ESCPOSGenerator {
     receipt += this.doubleSize(true);
     receipt += (siteName || 'RECEIPT') + this.commands.LF;
     receipt += this.doubleSize(false);
+    
+    if (isReprint) {
+      receipt += this.bold(true);
+      receipt += '*** REPRINT ***' + this.commands.LF;
+      receipt += this.bold(false);
+    }
+    
     receipt += this.feed(1);
 
     receipt += this.alignLeft();
