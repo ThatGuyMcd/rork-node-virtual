@@ -79,21 +79,29 @@ export default function TabLayout() {
   };
 
   const BasketHeaderRight = () => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 8 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20, marginRight: 8 }}>
       <TouchableOpacity
         style={{
           padding: 8,
+          paddingHorizontal: 10,
           borderRadius: 8,
           borderWidth: 2,
           borderStyle: printerConnected ? 'solid' : 'dotted',
           borderColor: printerConnected ? colors.primary : colors.border,
           backgroundColor: colors.cardBackground,
+          alignItems: 'center',
         }}
         onPress={handlePrintBill}
         activeOpacity={printerConnected ? 0.7 : 1}
         disabled={!printerConnected}
       >
         <Printer size={20} color={printerConnected ? colors.primary : colors.textTertiary} />
+        <Text style={{
+          fontSize: 10,
+          fontWeight: '600',
+          color: printerConnected ? colors.primary : colors.textTertiary,
+          marginTop: 2,
+        }}>print bill</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={logout}
