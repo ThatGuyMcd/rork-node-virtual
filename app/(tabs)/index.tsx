@@ -159,6 +159,7 @@ export default function ProductsScreen() {
       if (!siteInfo) {
         console.error('[Products] No site info found');
         showNotification('Cannot sync data: No site linked', true);
+        setLoadingAreaData(false);
         return;
       }
 
@@ -170,10 +171,29 @@ export default function ProductsScreen() {
 
       console.log(`[Products] Found ${areaFiles.length} files for area ${area}`);
 
+      // Download files in parallel with a batch size
+      const BATCH_SIZE = 10;
       const files: Map<string, string> = new Map();
-      for (const path of areaFiles) {
-        const content = await apiClient.getFile(siteInfo.siteId, path);
-        files.set(path, content);
+      
+      for (let i = 0; i < areaFiles.length; i += BATCH_SIZE) {
+        const batch = areaFiles.slice(i, i + BATCH_SIZE);
+        const batchPromises = batch.map(path => 
+          apiClient.getFile(siteInfo.siteId, path)
+            .then(content => ({ path, content }))
+            .catch(error => {
+              console.error(`[Products] Failed to download ${path}:`, error);
+              return null;
+            })
+        );
+        
+        const results = await Promise.all(batchPromises);
+        results.forEach(result => {
+          if (result) {
+            files.set(result.path, result.content);
+          }
+        });
+        
+        console.log(`[Products] Downloaded ${files.size}/${areaFiles.length} files...`);
       }
 
       console.log(`[Products] Downloaded ${files.size} files for area ${area}`);
@@ -222,7 +242,11 @@ export default function ProductsScreen() {
         const otherAreaTables = prevTables.filter(t => t.area !== area);
         return [...otherAreaTables, ...areaTables];
       });
+      
+      // Stop loading spinner early so tables are visible
+      setLoadingAreaData(false);
 
+      // Load table statuses in the background
       const areaTableIds = areaTables.map(t => t.id);
       const statuses = await tableDataService.getAllTableStatuses(areaTableIds);
       setTableStatuses(prevStatuses => {
@@ -238,7 +262,6 @@ export default function ProductsScreen() {
     } catch (error) {
       console.error('[Products] Failed to load area data:', error);
       showNotification('Failed to refresh area data', true);
-    } finally {
       setLoadingAreaData(false);
     }
   };
