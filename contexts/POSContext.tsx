@@ -374,9 +374,14 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   }, [tableOrders]);
 
   const selectTable = useCallback(async (table: Table | null) => {
-    if (currentTable && basket.length > 0) {
-      saveTableOrder();
+    const previousTable = currentTable;
+    const previousBasket = [...basket];
+    
+    if (previousTable && previousBasket.length > 0 && currentOperator) {
+      console.log(`[POS] Saving previous table ${previousTable.name} with ${previousBasket.length} items before switching`);
+      await tableDataService.saveTableData(previousTable, previousBasket, currentOperator, vatRates);
     }
+    
     setCurrentTable(table);
     if (table) {
       const csvRows = await tableDataService.loadTableData(table.id);
@@ -432,7 +437,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     } else {
       setBasket([]);
     }
-  }, [currentTable, basket, saveTableOrder, tableOrders]);
+  }, [currentTable, basket, tableOrders, currentOperator, vatRates]);
 
   const saveTableTab = useCallback(async () => {
     if (!currentTable || !currentOperator || basket.length === 0) {
