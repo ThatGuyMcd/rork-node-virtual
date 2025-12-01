@@ -1208,16 +1208,30 @@ export default function ReportsScreen() {
               </ScrollView>
             )}
 
-            {isPrinterConnected && (
-              <TouchableOpacity
-                style={[styles.printReceiptButton, { backgroundColor: colors.primary }]}
-                onPress={handlePrintReceipt}
-                activeOpacity={0.8}
+            <TouchableOpacity
+              style={[
+                styles.printReceiptButton,
+                {
+                  backgroundColor: isPrinterConnected ? colors.primary : colors.cardBackground,
+                  borderColor: isPrinterConnected ? colors.primary : colors.border,
+                  borderWidth: isPrinterConnected ? 0 : 2,
+                  borderStyle: isPrinterConnected ? 'solid' : 'dotted',
+                },
+              ]}
+              onPress={handlePrintReceipt}
+              activeOpacity={isPrinterConnected ? 0.8 : 1}
+              disabled={!isPrinterConnected}
+            >
+              <Printer size={20} color={isPrinterConnected ? '#fff' : colors.textTertiary} />
+              <Text
+                style={[
+                  styles.printReceiptButtonText,
+                  { color: isPrinterConnected ? '#fff' : colors.textTertiary },
+                ]}
               >
-                <Printer size={20} color="#fff" />
-                <Text style={styles.printReceiptButtonText}>Print Receipt</Text>
-              </TouchableOpacity>
-            )}
+                Print Receipt
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

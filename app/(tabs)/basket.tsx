@@ -314,15 +314,21 @@ export default function BasketScreen() {
           )}
         </View>
         <View style={styles.headerActions}>
-          {printerConnected && (
-            <TouchableOpacity
-              style={[styles.printBillButton, { backgroundColor: colors.cardBackground, borderColor: colors.primary }]}
-              onPress={handlePrintBill}
-              activeOpacity={0.7}
-            >
-              <Printer size={20} color={colors.primary} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[
+              styles.printBillButton,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: printerConnected ? colors.primary : colors.border,
+                borderStyle: printerConnected ? 'solid' : 'dotted',
+              },
+            ]}
+            onPress={handlePrintBill}
+            activeOpacity={printerConnected ? 0.7 : 1}
+            disabled={!printerConnected}
+          >
+            <Printer size={20} color={printerConnected ? colors.primary : colors.textTertiary} />
+          </TouchableOpacity>
           {currentOperator?.isManager && refundButtonEnabled && (
             <TouchableOpacity
               style={[
@@ -947,6 +953,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 2,
+    opacity: 1,
   },
   refundButton: {
     flexDirection: 'row',
