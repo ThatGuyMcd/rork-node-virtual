@@ -872,20 +872,20 @@ export default function BasketScreen() {
 
             <ScrollView style={styles.screenReceiptContent} showsVerticalScrollIndicator={false}>
               {lastTransaction && (
-                <View style={styles.receiptContainer}>
+                <View style={[styles.receiptContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
                   <Text style={[styles.receiptHeader, { color: colors.text }]}>RECEIPT</Text>
                   <Text style={[styles.receiptSubheader, { color: colors.textSecondary }]}>Transaction #{lastTransaction.id.slice(-8)}</Text>
                   <Text style={[styles.receiptDate, { color: colors.textSecondary }]}>{new Date(lastTransaction.timestamp).toLocaleString()}</Text>
                   
                   <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
                   
-                  <View style={styles.receiptSection}>
+                  <View style={styles.receiptInfoRow}>
                     <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>Operator:</Text>
                     <Text style={[styles.receiptValue, { color: colors.text }]}>{lastTransaction.operatorName}</Text>
                   </View>
 
                   {lastTransaction.tableName && (
-                    <View style={styles.receiptSection}>
+                    <View style={styles.receiptInfoRow}>
                       <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>Table:</Text>
                       <Text style={[styles.receiptValue, { color: colors.text }]}>{lastTransaction.tableName}</Text>
                     </View>
@@ -893,13 +893,13 @@ export default function BasketScreen() {
 
                   <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
 
-                  <Text style={[styles.receiptSectionTitle, { color: colors.text }]}>Items:</Text>
+                  <Text style={[styles.receiptSectionTitle, { color: colors.text }]}>Items</Text>
                   {lastTransaction.items.map((item, index) => (
                     <View key={index} style={styles.receiptItemRow}>
                       <View style={styles.receiptItemInfo}>
                         <Text style={[styles.receiptItemName, { color: colors.text }]}>{item.product.name}</Text>
                         <Text style={[styles.receiptItemDetails, { color: colors.textSecondary }]}>
-                          {Math.abs(item.quantity)} x £{item.selectedPrice.price.toFixed(2)}
+                          {Math.abs(item.quantity)} × £{item.selectedPrice.price.toFixed(2)}
                         </Text>
                       </View>
                       <Text style={[styles.receiptItemTotal, { color: colors.text }]}>£{Math.abs(item.lineTotal).toFixed(2)}</Text>
@@ -909,45 +909,57 @@ export default function BasketScreen() {
                   <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
 
                   <View style={styles.receiptTotalsSection}>
-                    <View style={styles.receiptTotalRow}>
-                      <Text style={[styles.receiptTotalLabel, { color: colors.textSecondary }]}>Subtotal:</Text>
-                      <Text style={[styles.receiptTotalValue, { color: colors.text }]}>£{lastTransaction.subtotal.toFixed(2)}</Text>
+                    <View style={styles.receiptInfoRow}>
+                      <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>Subtotal</Text>
+                      <Text style={[styles.receiptValue, { color: colors.text }]}>£{lastTransaction.subtotal.toFixed(2)}</Text>
                     </View>
 
                     {lastTransaction.discount && lastTransaction.discount > 0 && (
-                      <View style={styles.receiptTotalRow}>
-                        <Text style={[styles.receiptTotalLabel, { color: colors.accent }]}>Discount:</Text>
-                        <Text style={[styles.receiptTotalValue, { color: colors.accent }]}>-£{lastTransaction.discount.toFixed(2)}</Text>
+                      <View style={styles.receiptInfoRow}>
+                        <Text style={[styles.receiptLabel, { color: colors.accent }]}>Discount</Text>
+                        <Text style={[styles.receiptValue, { color: colors.accent }]}>-£{lastTransaction.discount.toFixed(2)}</Text>
                       </View>
                     )}
 
                     {Object.entries(lastTransaction.vatBreakdown).map(([code, amount]) => (
-                      <View key={code} style={styles.receiptTotalRow}>
-                        <Text style={[styles.receiptTotalLabel, { color: colors.textTertiary }]}>VAT ({code}):</Text>
-                        <Text style={[styles.receiptTotalValue, { color: colors.textSecondary }]}>£{amount.toFixed(2)}</Text>
+                      <View key={code} style={styles.receiptInfoRow}>
+                        <Text style={[styles.receiptLabel, { color: colors.textTertiary }]}>VAT ({code})</Text>
+                        <Text style={[styles.receiptValue, { color: colors.textSecondary }]}>£{amount.toFixed(2)}</Text>
                       </View>
                     ))}
 
                     {lastTransaction.gratuity && lastTransaction.gratuity > 0 && (
-                      <View style={styles.receiptTotalRow}>
-                        <Text style={[styles.receiptTotalLabel, { color: colors.success }]}>Gratuity:</Text>
-                        <Text style={[styles.receiptTotalValue, { color: colors.success }]}>£{lastTransaction.gratuity.toFixed(2)}</Text>
+                      <View style={styles.receiptInfoRow}>
+                        <Text style={[styles.receiptLabel, { color: colors.success }]}>Gratuity</Text>
+                        <Text style={[styles.receiptValue, { color: colors.success }]}>£{lastTransaction.gratuity.toFixed(2)}</Text>
                       </View>
                     )}
 
                     <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
 
-                    <View style={styles.receiptTotalRow}>
-                      <Text style={[styles.receiptTotalLabelBold, { color: colors.text }]}>Total:</Text>
+                    <View style={styles.receiptInfoRow}>
+                      <Text style={[styles.receiptTotalLabelBold, { color: colors.text }]}>TOTAL</Text>
                       <Text style={[styles.receiptTotalValueBold, { color: colors.primary }]}>£{lastTransaction.total.toFixed(2)}</Text>
                     </View>
 
                     <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
 
-                    <View style={styles.receiptTotalRow}>
-                      <Text style={[styles.receiptTotalLabel, { color: colors.textSecondary }]}>Payment Method:</Text>
-                      <Text style={[styles.receiptTotalValue, { color: colors.text }]}>{lastTransaction.paymentMethod}</Text>
-                    </View>
+                    {lastTransaction.payments && lastTransaction.payments.length > 0 ? (
+                      <View>
+                        <Text style={[styles.receiptLabel, { color: colors.textSecondary, marginBottom: 8 }]}>Payment Method: Split Payment</Text>
+                        {lastTransaction.payments.map((payment, idx) => (
+                          <View key={idx} style={styles.receiptInfoRow}>
+                            <Text style={[styles.receiptLabel, { color: colors.text, paddingLeft: 12 }]}>{payment.tenderName}</Text>
+                            <Text style={[styles.receiptValue, { color: colors.text }]}>£{payment.amount.toFixed(2)}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : (
+                      <View style={styles.receiptInfoRow}>
+                        <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>Payment Method</Text>
+                        <Text style={[styles.receiptValue, { color: colors.text }]}>{lastTransaction.paymentMethod}</Text>
+                      </View>
+                    )}
                   </View>
 
                   {lastTransaction.isRefund && (
@@ -1580,6 +1592,10 @@ const styles = StyleSheet.create({
   },
   receiptContainer: {
     paddingBottom: 20,
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginHorizontal: 8,
   },
   receiptHeader: {
     fontSize: 22,
@@ -1601,10 +1617,10 @@ const styles = StyleSheet.create({
     height: 1,
     marginVertical: 12,
   },
-  receiptSection: {
+  receiptInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 4,
+    marginVertical: 6,
   },
   receiptLabel: {
     fontSize: 14,
@@ -1616,8 +1632,9 @@ const styles = StyleSheet.create({
   receiptSectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: 4,
+    marginBottom: 12,
+    textTransform: 'uppercase',
   },
   receiptItemRow: {
     flexDirection: 'row',
@@ -1641,12 +1658,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   receiptTotalsSection: {
-    marginTop: 8,
-  },
-  receiptTotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 4,
+    marginTop: 4,
   },
   receiptTotalLabel: {
     fontSize: 14,
