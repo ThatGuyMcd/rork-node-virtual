@@ -65,6 +65,8 @@ export default function SettingsScreen() {
     paperWidth: '80mm',
     isConnected: false,
     autoConnect: false,
+    cashDrawerEnabled: false,
+    cashDrawerVoltage: '12v',
   });
   const [printerIPInput, setPrinterIPInput] = useState('');
   const [printerPortInput, setPrinterPortInput] = useState('9100');
@@ -244,6 +246,26 @@ export default function SettingsScreen() {
       setPrinterSettings(updatedSettings);
     } catch (error) {
       console.error('Error updating connection type:', error);
+    }
+  };
+
+  const handleCashDrawerToggle = async (enabled: boolean) => {
+    try {
+      const updatedSettings = { ...printerSettings, cashDrawerEnabled: enabled };
+      await printerService.saveSettings(updatedSettings);
+      setPrinterSettings(updatedSettings);
+    } catch (error) {
+      console.error('Error updating cash drawer setting:', error);
+    }
+  };
+
+  const handleCashDrawerVoltageChange = async (voltage: '12v' | '24v') => {
+    try {
+      const updatedSettings = { ...printerSettings, cashDrawerVoltage: voltage };
+      await printerService.saveSettings(updatedSettings);
+      setPrinterSettings(updatedSettings);
+    } catch (error) {
+      console.error('Error updating cash drawer voltage:', error);
     }
   };
 
@@ -1260,7 +1282,6 @@ export default function SettingsScreen() {
                   ]}
                   onPress={() => handleConnectionTypeChange('bluetooth')}
                   activeOpacity={0.7}
-                  disabled={printerSettings.isConnected}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Bluetooth size={16} color={printerSettings.connectionType === 'bluetooth' ? colors.primary : colors.textSecondary} />
@@ -1276,7 +1297,6 @@ export default function SettingsScreen() {
                   ]}
                   onPress={() => handleConnectionTypeChange('network')}
                   activeOpacity={0.7}
-                  disabled={printerSettings.isConnected}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Wifi size={16} color={printerSettings.connectionType === 'network' ? colors.primary : colors.textSecondary} />
@@ -1352,6 +1372,61 @@ export default function SettingsScreen() {
                   </>
                 )}
               </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View style={styles.settingRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Cash Drawer</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Open cash drawer when printing receipts</Text>
+              </View>
+              <Switch
+                value={printerSettings.cashDrawerEnabled}
+                onValueChange={handleCashDrawerToggle}
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor="#ffffff"
+              />
+            </View>
+          </View>
+
+          {printerSettings.cashDrawerEnabled && (
+            <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View style={styles.settingRowColumn}>
+                <View style={styles.settingHeader}>
+                  <SettingsIcon size={18} color={colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.settingTitle, { color: colors.text }]}>Cash Drawer Voltage</Text>
+                    <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Select the voltage for your cash drawer</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.layoutOptions}>
+                  <TouchableOpacity
+                    style={[
+                      styles.layoutOption,
+                      { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                      printerSettings.cashDrawerVoltage === '12v' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                    ]}
+                    onPress={() => handleCashDrawerVoltageChange('12v')}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>12V</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.layoutOption,
+                      { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                      printerSettings.cashDrawerVoltage === '24v' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                    ]}
+                    onPress={() => handleCashDrawerVoltageChange('24v')}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>24V</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           )}
 

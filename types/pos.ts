@@ -157,6 +157,8 @@ export interface PrinterSettings {
   port?: number;
   isConnected: boolean;
   autoConnect: boolean;
+  cashDrawerEnabled: boolean;
+  cashDrawerVoltage: '12v' | '24v';
 }
 
 export interface PrinterDevice {

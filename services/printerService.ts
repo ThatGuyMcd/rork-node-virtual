@@ -11,6 +11,8 @@ class PrinterService {
     paperWidth: '80mm',
     isConnected: false,
     autoConnect: false,
+    cashDrawerEnabled: false,
+    cashDrawerVoltage: '12v',
   };
 
   private socket: any = null;
