@@ -255,7 +255,7 @@ export default function BasketScreen() {
     setScreenReceiptModalVisible(false);
   };
 
-  if (basket.length === 0 && !receiptPrintModalVisible) {
+  if (basket.length === 0 && !receiptPrintModalVisible && !screenReceiptModalVisible) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
