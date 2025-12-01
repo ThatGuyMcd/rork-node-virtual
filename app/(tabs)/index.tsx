@@ -74,7 +74,7 @@ export default function ProductsScreen() {
   const [tableModalVisible, setTableModalVisible] = useState(false);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [loadingAreaData, setLoadingAreaData] = useState(false);
-  const [tableStatuses, setTableStatuses] = useState<Map<string, { hasData: boolean; subtotal: number }>>(new Map());
+  const [tableStatuses, setTableStatuses] = useState<Map<string, { hasData: boolean; subtotal: number; isLocked: boolean }>>(new Map());
   const [loading, setLoading] = useState(true);
   const [displaySettings, setDisplaySettings] = useState<ProductDisplaySettings>({
     hiddenGroupIds: [],
@@ -148,7 +148,11 @@ export default function ProductsScreen() {
     console.log('[Products] Loading table statuses...');
     const tableIds = tables.map(t => t.id);
     const statuses = await tableDataService.getAllTableStatuses(tableIds);
-    setTableStatuses(statuses);
+    const statusesWithLock = new Map<string, { hasData: boolean; subtotal: number; isLocked: boolean }>();
+    statuses.forEach((status, tableId) => {
+      statusesWithLock.set(tableId, { ...status, isLocked: false });
+    });
+    setTableStatuses(statusesWithLock);
     console.log('[Products] Table statuses loaded:', statuses.size);
   };
 
@@ -202,11 +206,11 @@ export default function ProductsScreen() {
       const areaTables: Table[] = [];
       const tableSet = new Map<string, { area: string; table: string; tableId: string }>();
       const tableDataMap = new Map<string, string>();
+      const tableLocksMap = new Map<string, boolean>();
 
       for (const [path, content] of files.entries()) {
         const upper = path.toUpperCase();
         if (!upper.startsWith('TABDATA/')) continue;
-        if (upper.endsWith('.INI')) continue;
         
         const parts = path.slice('TABDATA/'.length).split('/');
         if (parts.length < 3) continue;
@@ -214,6 +218,14 @@ export default function ProductsScreen() {
         const areaName = parts[0];
         const table = parts[1];
         const fileName = parts[2];
+        
+        if (fileName.toUpperCase() === 'TABLEOPEN.INI' && content && content.trim().length > 0) {
+          const key = `${areaName}/${table}`;
+          tableLocksMap.set(key, true);
+          console.log(`[Products] Found lock file for table: ${table}`);
+        }
+        
+        if (upper.endsWith('.INI')) continue;
         
         const key = `${areaName}/${table}`;
         if (!tableSet.has(key)) {
@@ -351,7 +363,12 @@ export default function ProductsScreen() {
       setTableStatuses(prevStatuses => {
         const newStatuses = new Map(prevStatuses);
         statuses.forEach((status, tableId) => {
-          newStatuses.set(tableId, status);
+          const table = areaTables.find(t => t.id === tableId);
+          if (table) {
+            const key = `${table.area}/${table.name}`;
+            const isLocked = tableLocksMap.get(key) || false;
+            newStatuses.set(tableId, { ...status, isLocked });
+          }
         });
         return newStatuses;
       });
@@ -1380,8 +1397,9 @@ export default function ProductsScreen() {
                       .map((table) => {
                         const status = tableStatuses.get(table.id);
                         const hasData = status?.hasData || false;
+                        const isLocked = status?.isLocked || false;
                         const subtotal = status?.subtotal || 0;
-                        const statusColor = hasData ? '#ef4444' : '#10b981';
+                        const statusColor = isLocked ? '#f97316' : (hasData ? '#ef4444' : '#10b981');
 
                         return (
                           <TouchableOpacity
@@ -1391,25 +1409,35 @@ export default function ProductsScreen() {
                               { backgroundColor: colors.background, borderColor: colors.border },
                               { borderLeftWidth: 4, borderLeftColor: statusColor },
                               currentTable?.id === table.id && styles.tableOptionSelected,
+                              isLocked && styles.tableLockedItem,
                             ]}
                             onPress={() => {
+                              if (isLocked) {
+                                showNotification(`Table ${table.name} is locked by another terminal`, true);
+                                return;
+                              }
                               selectTable(table);
                               setTableModalVisible(false);
                               setSelectedArea(null);
                               showNotification(`Selected table: ${table.name} (${selectedArea})`);
                             }}
-                            activeOpacity={0.7}
+                            activeOpacity={isLocked ? 1 : 0.7}
                           >
                             <View style={{ flex: 1 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                <Text style={[styles.tableOptionText, { color: colors.text }]}>{table.name}</Text>
-                                {hasData && (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <Text style={[styles.tableOptionText, { color: isLocked ? colors.textTertiary : colors.text }]}>{table.name}</Text>
+                                {isLocked && (
+                                  <View style={[styles.tableInUseIndicator, { backgroundColor: '#f97316' }]}>
+                                    <Text style={styles.tableInUseText}>LOCKED</Text>
+                                  </View>
+                                )}
+                                {hasData && !isLocked && (
                                   <View style={[styles.tableInUseIndicator, { backgroundColor: colors.warning }]}>
                                     <Text style={styles.tableInUseText}>IN USE</Text>
                                   </View>
                                 )}
                               </View>
-                              {hasData && (
+                              {hasData && !isLocked && (
                                 <Text style={[styles.tableSubtotal, { color: colors.primary }]}>Subtotal: £{subtotal.toFixed(2)}</Text>
                               )}
                             </View>
@@ -2005,5 +2033,8 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
     borderWidth: 1,
     minHeight: 80,
+  },
+  tableLockedItem: {
+    opacity: 0.6,
   },
 });
