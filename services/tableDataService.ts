@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import type { BasketItem, Operator, Table } from '@/types/pos';
 import { dataParser } from './dataParser';
 import { dataSyncService } from './dataSync';
+import { trpcClient } from '@/lib/trpc';
 
 export interface TableDataRow {
   quantity: number;
@@ -470,29 +471,7 @@ class TableDataService {
     console.log(`[TableDataService] Uploading via tRPC backend...`);
     
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL || 'http://localhost:3000';
-      const url = `${baseUrl}/api/trpc/tabledata.upload`;
-      console.log(`[TableDataService] Posting to tRPC endpoint: ${url}`);
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          0: {
-            json: payload,
-          },
-        }),
-      });
-      
-      if (!response.ok) {
-        const text = await response.text();
-        console.error('[TableDataService] tRPC error response:', response.status, text);
-        throw new Error(`tRPC returned ${response.status}: ${text}`);
-      }
-      
-      const result = await response.json();
+      const result = await trpcClient.tabledata.upload.mutate(payload);
       console.log('[TableDataService] Sync successful:', result);
       console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE =====');
     } catch (error: any) {
