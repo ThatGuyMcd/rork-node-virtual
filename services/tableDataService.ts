@@ -467,55 +467,38 @@ class TableDataService {
     console.log(`[TableDataService]   FOLDERDATA: ${JSON.stringify(payload.FOLDERDATA)}`);
     console.log(`[TableDataService]   FILEDATA keys: ${Object.keys(payload.FILEDATA).join(', ')}`);
     console.log(`[TableDataService] Payload size: ${JSON.stringify(payload).length} bytes`);
-    console.log(`[TableDataService] Posting to: https://app.positron-portal.com/webviewdataupload`);
+    console.log(`[TableDataService] Uploading via tRPC backend...`);
     
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      console.log('[TableDataService] Request timeout after 30 seconds');
-      controller.abort();
-    }, 30000);
-    
-    let response: Response;
     try {
-      response = await fetch('https://app.positron-portal.com/webviewdataupload', {
+      const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL || 'http://localhost:3000';
+      const url = `${baseUrl}/api/trpc/tabledata.upload`;
+      console.log(`[TableDataService] Posting to tRPC endpoint: ${url}`);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
         },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId);
-      console.error('[TableDataService] Fetch error:', fetchError);
-      console.error('[TableDataService] Error details:', {
-        name: fetchError.name,
-        message: fetchError.message,
-        stack: fetchError.stack,
+        body: JSON.stringify({
+          0: {
+            json: payload,
+          },
+        }),
       });
       
-      if (fetchError.name === 'AbortError') {
-        throw new Error('Connection timeout - the server is taking too long to respond');
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('[TableDataService] tRPC error response:', response.status, text);
+        throw new Error(`tRPC returned ${response.status}: ${text}`);
       }
       
-      if (fetchError.message === 'Failed to fetch' || fetchError.message === 'Network request failed') {
-        throw new Error('Network error - please check your internet connection and try again');
-      }
-      
-      throw fetchError;
+      const result = await response.json();
+      console.log('[TableDataService] Sync successful:', result);
+      console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE =====');
+    } catch (error: any) {
+      console.error('[TableDataService] Upload failed:', error);
+      throw new Error(`Upload failed: ${error.message}`);
     }
-    
-    if (!response.ok) {
-      const text = await response.text();
-      console.error('[TableDataService] Server error response:', response.status, text);
-      throw new Error(`Server returned ${response.status}: ${text}`);
-    }
-    
-    const result = await response.json().catch(() => ({ success: true }));
-    console.log('[TableDataService] Sync successful:', result);
-    console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE =====');
   }
 
   async syncAllTableDataToServer(): Promise<void> {
