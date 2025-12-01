@@ -2,7 +2,6 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import type { BasketItem, Operator, Table } from '@/types/pos';
 import { dataParser } from './dataParser';
-import { trpcClient } from '@/lib/trpc';
 import { dataSyncService } from './dataSync';
 
 export interface TableDataRow {
@@ -149,30 +148,11 @@ class TableDataService {
     }
 
     try {
-      console.log('[TableDataService] Syncing table data to server...');
-      
-      const siteInfo = await dataSyncService.getSiteInfo();
-      if (!siteInfo) {
-        console.warn('[TableDataService] No site info available, skipping server sync');
-        return;
-      }
-      
-      const result = await trpcClient.tabledata.sync.mutate({
-        siteId: siteInfo.siteId,
-        area: table.area,
-        tableName: table.name,
-        tableId: table.id,
-        tableData: rows,
-      });
-      
-      if (result.success) {
-        console.log('[TableDataService] Server sync successful:', result);
-      } else {
-        console.warn('[TableDataService] Server sync reported failure:', result.error);
-      }
+      console.log('[TableDataService] Syncing single table to server...');
+      await this.syncSingleTableToServer(table, rows);
+      console.log('[TableDataService] Single table sync successful');
     } catch (error) {
-      console.error('[TableDataService] Server sync failed:', error);
-      // Don't throw - allow local save to succeed even if server sync fails
+      console.error('[TableDataService] Single table sync failed:', error);
     }
   }
 
@@ -300,30 +280,11 @@ class TableDataService {
     try {
       await this.clearTableDataLocally(tableId);
       
-      // Sync empty table data to server (clears the table on server)
       if (table) {
         try {
           console.log('[TableDataService] Syncing table clear to server...');
-          
-          const siteInfo = await dataSyncService.getSiteInfo();
-          if (!siteInfo) {
-            console.warn('[TableDataService] No site info available, skipping server sync');
-            return;
-          }
-          
-          const result = await trpcClient.tabledata.sync.mutate({
-            siteId: siteInfo.siteId,
-            area: table.area,
-            tableName: table.name,
-            tableId: table.id,
-            tableData: [],
-          });
-          
-          if (result.success) {
-            console.log('[TableDataService] Server clear sync successful:', result);
-          } else {
-            console.warn('[TableDataService] Server clear sync reported failure:', result.error);
-          }
+          await this.syncSingleTableToServer(table, []);
+          console.log('[TableDataService] Server clear sync successful');
         } catch (error) {
           console.error('[TableDataService] Server clear sync failed:', error);
         }
@@ -448,6 +409,111 @@ class TableDataService {
     }
   }
 
+  private async syncSingleTableToServer(table: Table, rows: TableDataRow[]): Promise<void> {
+    console.log('[TableDataService] ===== SYNCING SINGLE TABLE =====');
+    console.log('[TableDataService] Table:', table.name, 'Area:', table.area, 'Rows:', rows.length);
+    
+    const siteInfo = await dataSyncService.getSiteInfo();
+    if (!siteInfo) {
+      console.warn('[TableDataService] No site info available, skipping sync');
+      return;
+    }
+    
+    const folderData: string[] = [];
+    const fileData: Record<string, string> = {};
+    
+    folderData.push(table.area);
+    const tableFolderPath = `${table.area}/${table.name}`;
+    folderData.push(tableFolderPath);
+    
+    const csvRows: string[] = [];
+    csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?,Table ID');
+    
+    for (const row of rows) {
+      const line = [
+        row.quantity.toFixed(3),
+        ` ${row.productName}`,
+        row.price.toFixed(2),
+        row.pluFile,
+        row.group,
+        row.department,
+        row.vatCode,
+        row.vatPercentage.toString(),
+        row.vatAmount.toFixed(2),
+        row.addedBy,
+        row.timeDate,
+        row.printer1,
+        row.printer2,
+        row.printer3,
+        row.itemPrinted,
+        row.tableId || '',
+      ].join(',');
+      csvRows.push(line);
+    }
+    
+    const csvContent = csvRows.join('\n');
+    const tableDataPath = `${tableFolderPath}/TABLEDATA.CSV`;
+    fileData[tableDataPath] = csvContent;
+    
+    const payload = {
+      SITEID: siteInfo.siteId,
+      DESTINATIONWEBVIEWFOLDER: 'TABDATA',
+      FOLDERDATA: folderData,
+      FILEDATA: fileData,
+    };
+    
+    console.log(`[TableDataService] Payload size: ${JSON.stringify(payload).length} bytes`);
+    console.log(`[TableDataService] Posting to: https://app.positron-portal.com/webviewdataupload`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.log('[TableDataService] Request timeout after 30 seconds');
+      controller.abort();
+    }, 30000);
+    
+    let response: Response;
+    try {
+      response = await fetch('https://app.positron-portal.com/webviewdataupload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      console.error('[TableDataService] Fetch error:', fetchError);
+      console.error('[TableDataService] Error details:', {
+        name: fetchError.name,
+        message: fetchError.message,
+        stack: fetchError.stack,
+      });
+      
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Connection timeout - the server is taking too long to respond');
+      }
+      
+      if (fetchError.message === 'Failed to fetch' || fetchError.message === 'Network request failed') {
+        throw new Error('Network error - please check your internet connection and try again');
+      }
+      
+      throw fetchError;
+    }
+    
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('[TableDataService] Server error response:', response.status, text);
+      throw new Error(`Server returned ${response.status}: ${text}`);
+    }
+    
+    const result = await response.json().catch(() => ({ success: true }));
+    console.log('[TableDataService] Sync successful:', result);
+    console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE =====');
+  }
+
   async syncAllTableDataToServer(): Promise<void> {
     console.log('[TableDataService] ===== STARTING BULK TABLE DATA SYNC =====');
     
@@ -466,134 +532,21 @@ class TableDataService {
       
       console.log(`[TableDataService] Found ${tables.length} tables to sync`);
       
-      // Group tables by area
-      const areaMap = new Map<string, typeof tables>();
       for (const table of tables) {
-        const areaList = areaMap.get(table.area) || [];
-        areaList.push(table);
-        areaMap.set(table.area, areaList);
-      }
-      
-      console.log(`[TableDataService] Found ${areaMap.size} areas`);
-      
-      // Collect all folder data and file data
-      const folderData: string[] = [];
-      const fileData: Record<string, string> = {};
-      
-      // Add area folders
-      for (const area of areaMap.keys()) {
-        folderData.push(area);
-        console.log(`[TableDataService] Added area folder: ${area}`);
-      }
-      
-      // Process each table
-      let totalFilesProcessed = 0;
-      for (const [area, areaTables] of areaMap.entries()) {
-        for (const table of areaTables) {
-          // Add table folder
-          const tableFolderPath = `${area}/${table.name}`;
-          folderData.push(tableFolderPath);
-          
-          // Get table data
+        try {
+          console.log(`[TableDataService] Syncing table: ${table.area}/${table.name}`);
           const tableRows = await this.loadTableData(table.id);
-          
-          // Convert to CSV
-          const csvRows: string[] = [];
-          csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?,Table ID');
-          
-          for (const row of tableRows) {
-            const line = [
-              row.quantity.toFixed(3),
-              ` ${row.productName}`,
-              row.price.toFixed(2),
-              row.pluFile,
-              row.group,
-              row.department,
-              row.vatCode,
-              row.vatPercentage.toString(),
-              row.vatAmount.toFixed(2),
-              row.addedBy,
-              row.timeDate,
-              row.printer1,
-              row.printer2,
-              row.printer3,
-              row.itemPrinted,
-              row.tableId || '',
-            ].join(',');
-            csvRows.push(line);
-          }
-          
-          const csvContent = csvRows.join('\n');
-          const tableDataPath = `${tableFolderPath}/TABLEDATA.CSV`;
-          fileData[tableDataPath] = csvContent;
-          totalFilesProcessed++;
-          
-          console.log(`[TableDataService] Added table: ${tableDataPath} (${tableRows.length} rows)`);
+          await this.syncSingleTableToServer(table, tableRows);
+          console.log(`[TableDataService] Successfully synced table: ${table.area}/${table.name}`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+          console.error(`[TableDataService] Failed to sync table ${table.area}/${table.name}:`, error);
         }
       }
       
-      console.log(`[TableDataService] Prepared ${folderData.length} folders and ${totalFilesProcessed} files`);
-      
-      // Create payload matching Windows app format
-      const payload = {
-        SITEID: siteInfo.siteId,
-        DESTINATIONWEBVIEWFOLDER: 'TABDATA',
-        FOLDERDATA: folderData,
-        FILEDATA: fileData,
-      };
-      
-      console.log(`[TableDataService] Payload size: ${JSON.stringify(payload).length} bytes`);
-      console.log(`[TableDataService] Posting to: https://app.positron-portal.com/webviewdataupload`);
-      
-      // Post to server using the same endpoint as Windows app
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.log('[TableDataService] Request timeout after 60 seconds');
-        controller.abort();
-      }, 60000); // 60 second timeout for bulk sync
-      
-      let response: Response;
-      try {
-        response = await fetch('https://app.positron-portal.com/webviewdataupload', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify(payload),
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-      } catch (fetchError: any) {
-        clearTimeout(timeoutId);
-        console.error('[TableDataService] Fetch error:', fetchError);
-        console.error('[TableDataService] Error name:', fetchError.name);
-        console.error('[TableDataService] Error message:', fetchError.message);
-        
-        if (fetchError.name === 'AbortError') {
-          throw new Error('Connection timeout while syncing table data to server. The sync may take longer with large amounts of data.');
-        }
-        
-        if (fetchError.message === 'Failed to fetch' || fetchError.message === 'Network request failed') {
-          throw new Error('Unable to connect to server. Please check your internet connection and try again.');
-        }
-        
-        throw fetchError;
-      }
-      
-      if (!response.ok) {
-        const text = await response.text();
-        console.error('[TableDataService] Bulk sync error response:', response.status, text);
-        throw new Error(`Server returned ${response.status}: ${text}`);
-      }
-      
-      const result = await response.json().catch(() => ({ success: true }));
-      console.log('[TableDataService] Bulk sync successful:', result);
       console.log('[TableDataService] ===== BULK TABLE DATA SYNC COMPLETE =====');
-      
     } catch (error) {
       console.error('[TableDataService] Bulk sync failed:', error);
-      // Don't throw - allow operation to continue even if server sync fails
     }
   }
 }
