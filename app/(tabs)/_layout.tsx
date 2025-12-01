@@ -82,6 +82,7 @@ export default function TabLayout() {
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20, marginRight: 8 }}>
       <TouchableOpacity
         style={{
+          flexDirection: 'row',
           padding: 8,
           paddingHorizontal: 10,
           borderRadius: 8,
@@ -90,18 +91,27 @@ export default function TabLayout() {
           borderColor: printerConnected ? colors.primary : colors.border,
           backgroundColor: colors.cardBackground,
           alignItems: 'center',
+          gap: 6,
         }}
         onPress={handlePrintBill}
         activeOpacity={printerConnected ? 0.7 : 1}
         disabled={!printerConnected}
       >
         <Printer size={20} color={printerConnected ? colors.primary : colors.textTertiary} />
-        <Text style={{
-          fontSize: 10,
-          fontWeight: '600',
-          color: printerConnected ? colors.primary : colors.textTertiary,
-          marginTop: 2,
-        }}>print bill</Text>
+        <View>
+          <Text style={{
+            fontSize: 10,
+            fontWeight: '600',
+            color: printerConnected ? colors.primary : colors.textTertiary,
+            lineHeight: 11,
+          }}>Print</Text>
+          <Text style={{
+            fontSize: 10,
+            fontWeight: '600',
+            color: printerConnected ? colors.primary : colors.textTertiary,
+            lineHeight: 11,
+          }}>Bill</Text>
+        </View>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={logout}
