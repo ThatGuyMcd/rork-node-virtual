@@ -1123,65 +1123,12 @@ export default function SettingsScreen() {
               />
             </View>
           </View>
-        </CollapsibleSection>
 
-        <CollapsibleSection 
-          id="discount" 
-          icon={Percent} 
-          title="Discount Settings" 
-          iconColor={colors.accent}
-        >
-          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-            <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>Configure up to 6 preset discount percentages that managers can apply to baskets</Text>
-            
-            <View style={styles.discountList}>
-              {discountPercentages.map((percentage, index) => (
-                <View key={index} style={[styles.discountItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Percent size={16} color={colors.accent} />
-                    <Text style={[styles.discountItemText, { color: colors.text }]}>{percentage}%</Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setEditingDiscountIndex(index);
-                      setDiscountInputValue(percentage);
-                      setDiscountModalVisible(true);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.editButton, { color: colors.primary }]}>Edit</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-
-            {discountPercentages.length < 6 && (
-              <TouchableOpacity
-                style={[styles.addDiscountButton, { backgroundColor: colors.primary }]}
-                onPress={() => {
-                  setEditingDiscountIndex(null);
-                  setDiscountInputValue('');
-                  setDiscountModalVisible(true);
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.addDiscountText}>Add Discount Percentage</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </CollapsibleSection>
-
-        <CollapsibleSection 
-          id="gratuity" 
-          icon={DollarSign} 
-          title="Gratuity Settings" 
-          iconColor={colors.success}
-        >
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.settingRow}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>Enable Gratuities</Text>
-                <Text style={[styles.settingTitle, { color: colors.text }]}>Prompt for gratuity when payment is processed</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Show gratuity button in the Basket for all users</Text>
               </View>
               <Switch
                 value={gratuitySettings.enabled}
@@ -1229,6 +1176,45 @@ export default function SettingsScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={styles.addDiscountText}>Add Gratuity Percentage</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>Configure up to 6 preset discount percentages that managers can apply to baskets</Text>
+            
+            <View style={styles.discountList}>
+              {discountPercentages.map((percentage, index) => (
+                <View key={index} style={[styles.discountItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Percent size={16} color={colors.accent} />
+                    <Text style={[styles.discountItemText, { color: colors.text }]}>{percentage}%</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setEditingDiscountIndex(index);
+                      setDiscountInputValue(percentage);
+                      setDiscountModalVisible(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.editButton, { color: colors.primary }]}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+
+            {discountPercentages.length < 6 && (
+              <TouchableOpacity
+                style={[styles.addDiscountButton, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  setEditingDiscountIndex(null);
+                  setDiscountInputValue('');
+                  setDiscountModalVisible(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.addDiscountText}>Add Discount Percentage</Text>
               </TouchableOpacity>
             )}
           </View>
