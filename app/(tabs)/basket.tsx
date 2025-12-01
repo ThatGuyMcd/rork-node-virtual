@@ -40,6 +40,7 @@ export default function BasketScreen() {
     basketDiscount,
     applyDiscount,
     gratuitySettings,
+    selectTable,
   } = usePOS();
   const { colors, theme } = useTheme();
 
@@ -235,6 +236,10 @@ export default function BasketScreen() {
       await printerService.printReceipt(lastTransaction);
       setReceiptPrintModalVisible(false);
       Alert.alert('Success', 'Receipt printed successfully');
+      if (currentTable) {
+        selectTable(null);
+        console.log('[Basket] Table deselected after printing receipt');
+      }
     } catch (error) {
       console.error('[Basket] Failed to print receipt:', error);
       setReceiptPrintModalVisible(false);
@@ -244,6 +249,10 @@ export default function BasketScreen() {
 
   const handleSkipReceipt = () => {
     setReceiptPrintModalVisible(false);
+    if (currentTable) {
+      selectTable(null);
+      console.log('[Basket] Table deselected after skipping receipt');
+    }
   };
 
   const handlePrintToScreen = () => {
@@ -255,6 +264,10 @@ export default function BasketScreen() {
 
   const handleCloseScreenReceipt = () => {
     setScreenReceiptModalVisible(false);
+    if (currentTable) {
+      selectTable(null);
+      console.log('[Basket] Table deselected after closing screen receipt');
+    }
   };
 
   if (basket.length === 0 && !receiptPrintModalVisible && !screenReceiptModalVisible) {

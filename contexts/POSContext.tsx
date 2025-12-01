@@ -343,17 +343,11 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       
       await tableDataService.unlockTable(currentTable);
       console.log('[POS] Successfully unlocked table after payment:', currentTable.name);
-      
-      setCurrentTable(null);
-      console.log('[POS] Deselected table after payment');
     }
     
     setBasketDiscount(0);
     clearBasket();
-    
-    setCurrentOperator(null);
-    await AsyncStorage.removeItem('currentOperator');
-    console.log('[POS] Logged out user after payment');
+    console.log('[POS] Payment completed, table still selected for receipt printing');
   }, [clearBasket, currentTable, currentOperator, tenders, basket, calculateTotals]);
 
   const saveTableOrder = useCallback(() => {
