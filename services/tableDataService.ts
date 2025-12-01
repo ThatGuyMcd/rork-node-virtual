@@ -90,7 +90,7 @@ class TableDataService {
       this.data.set(table.id, rows);
       console.log('[TableDataService] Successfully saved table data to memory');
     } else {
-      await this.clearTableData(table.id);
+      await this.clearTableData(table.id, table);
       await this.appendRowsToCSV(rows);
       console.log('[TableDataService] Successfully saved table data to CSV');
     }
