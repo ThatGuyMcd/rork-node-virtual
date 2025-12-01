@@ -381,6 +381,7 @@ export default function SettingsScreen() {
           style={[styles.collapsibleHeader, { borderColor: colors.border }]}
           onPress={() => toggleSection(id)}
           activeOpacity={0.7}
+          disabled={false}
         >
           <View style={styles.sectionHeader}>
             <Icon size={20} color={iconColor} />
@@ -462,6 +463,11 @@ export default function SettingsScreen() {
   const handleSync = async (incremental: boolean = false) => {
     if (!siteInfo) {
       Alert.alert('Error', 'Please link your account first');
+      return;
+    }
+
+    if (isSyncing) {
+      console.log('[Settings] Sync already in progress, ignoring duplicate request');
       return;
     }
 
@@ -643,7 +649,10 @@ export default function SettingsScreen() {
               activeOpacity={0.8}
             >
               {isSyncing ? (
-                <ActivityIndicator color="#ffffff" />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <ActivityIndicator color="#ffffff" size="small" />
+                  <Text style={styles.buttonText}>Syncing...</Text>
+                </View>
               ) : (
                 <>
                   <RefreshCw size={20} color="#ffffff" />
@@ -660,7 +669,10 @@ export default function SettingsScreen() {
                 activeOpacity={0.8}
               >
                 {isSyncing ? (
-                  <ActivityIndicator color="#ffffff" />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator color="#ffffff" size="small" />
+                    <Text style={styles.buttonText}>Syncing...</Text>
+                  </View>
                 ) : (
                   <>
                     <RefreshCw size={20} color="#ffffff" />
