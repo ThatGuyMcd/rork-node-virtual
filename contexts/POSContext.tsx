@@ -381,11 +381,13 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     if (table) {
       const csvRows = await tableDataService.loadTableData(table.id);
       if (csvRows.length > 0) {
-        console.log('[POS] Loading basket from CSV...');
+        console.log(`[POS] Loading basket from CSV... Found ${csvRows.length} rows`);
         const products = await dataSyncService.getStoredProducts();
         const loadedBasket: BasketItem[] = [];
 
-        for (const row of csvRows) {
+        for (let rowIdx = 0; rowIdx < csvRows.length; rowIdx++) {
+          const row = csvRows[rowIdx];
+          console.log(`[POS] Processing row ${rowIdx + 1}/${csvRows.length}: ${row.productName}`);
           const baseName = row.productName.split(' - ')[0];
           let product = products.find(p => p.name === baseName || p.name === row.productName);
           
@@ -402,19 +404,22 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
             const productWithMessage = row.productName.includes(' - ') 
               ? { ...product, name: row.productName }
               : product;
-            loadedBasket.push({
+            const basketItem = {
               product: productWithMessage,
               quantity: row.quantity,
               selectedPrice: { ...selectedPrice, price: row.price },
               lineTotal: row.quantity * row.price,
-            });
+            };
+            loadedBasket.push(basketItem);
+            console.log(`[POS] Added to basket: ${basketItem.product.name} x${basketItem.quantity}`);
           } else {
             console.warn('[POS] Could not find product for row:', row);
           }
         }
 
+        console.log(`[POS] Final basket to load has ${loadedBasket.length} items`);
         setBasket(loadedBasket);
-        console.log(`[POS] Loaded ${loadedBasket.length} items from CSV`);
+        console.log(`[POS] Successfully loaded ${loadedBasket.length} items from CSV into basket`);
       } else {
         const order = tableOrders.find(o => o.tableId === table.id);
         if (order) {
