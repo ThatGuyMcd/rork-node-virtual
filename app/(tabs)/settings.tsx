@@ -100,10 +100,16 @@ export default function SettingsScreen() {
     loadProductSettings();
     loadProductData();
     loadLastSyncTime();
-    setDiscountPercentages(discountSettings.presetPercentages.map(String));
-    setGratuityPercentages(gratuitySettings.presetPercentages.map(String));
     loadPrinterSettings();
-  }, [discountSettings, gratuitySettings]);
+  }, []);
+
+  useEffect(() => {
+    setDiscountPercentages(discountSettings.presetPercentages.map(String));
+  }, [discountSettings.presetPercentages]);
+
+  useEffect(() => {
+    setGratuityPercentages(gratuitySettings.presetPercentages.map(String));
+  }, [gratuitySettings.presetPercentages]);
 
   const loadSiteInfo = async () => {
     const info = await dataSyncService.getSiteInfo();
@@ -512,6 +518,8 @@ export default function SettingsScreen() {
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        removeClippedSubviews={false}
       >
         <Text style={[styles.heading, { color: colors.text }]}>Settings</Text>
 
@@ -534,7 +542,7 @@ export default function SettingsScreen() {
                 <TextInput
                   style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
                   value={username}
-                  onChangeText={setUsername}
+                  onChangeText={(text) => setUsername(text)}
                   placeholder="user@example.com"
                   placeholderTextColor={colors.textTertiary}
                   autoCapitalize="none"
@@ -546,7 +554,7 @@ export default function SettingsScreen() {
                 <TextInput
                   style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(text) => setPassword(text)}
                   placeholder="••••••••"
                   placeholderTextColor={colors.textTertiary}
                   secureTextEntry
@@ -629,9 +637,10 @@ export default function SettingsScreen() {
             )}
 
             <TouchableOpacity
-              style={[styles.button, styles.buttonSuccess]}
+              style={[styles.button, styles.buttonSuccess, isSyncing && { opacity: 0.7 }]}
               onPress={() => handleSync(false)}
               disabled={isSyncing}
+              activeOpacity={0.8}
             >
               {isSyncing ? (
                 <ActivityIndicator color="#ffffff" />
@@ -645,9 +654,10 @@ export default function SettingsScreen() {
 
             {lastSyncTime && (
               <TouchableOpacity
-                style={[styles.button, { backgroundColor: colors.accent, marginBottom: 12 }]}
+                style={[styles.button, { backgroundColor: colors.accent, marginBottom: 12 }, isSyncing && { opacity: 0.7 }]}
                 onPress={() => handleSync(true)}
                 disabled={isSyncing}
+                activeOpacity={0.8}
               >
                 {isSyncing ? (
                   <ActivityIndicator color="#ffffff" />
@@ -1345,10 +1355,10 @@ export default function SettingsScreen() {
               <TextInput
                 style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
                 value={printerIPInput}
-                onChangeText={setPrinterIPInput}
+                onChangeText={(text) => setPrinterIPInput(text)}
                 placeholder="e.g., 192.168.1.100"
                 placeholderTextColor={colors.textTertiary}
-                keyboardType="numeric"
+                keyboardType="default"
                 editable={!printerSettings.isConnected}
               />
 
@@ -1356,10 +1366,10 @@ export default function SettingsScreen() {
               <TextInput
                 style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
                 value={printerPortInput}
-                onChangeText={setPrinterPortInput}
+                onChangeText={(text) => setPrinterPortInput(text)}
                 placeholder="9100"
                 placeholderTextColor={colors.textTertiary}
-                keyboardType="numeric"
+                keyboardType="number-pad"
                 editable={!printerSettings.isConnected}
               />
 
@@ -1685,7 +1695,7 @@ export default function SettingsScreen() {
                     <TextInput
                       style={[styles.customColorInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
                       value={customColorInput}
-                      onChangeText={setCustomColorInput}
+                      onChangeText={(text) => setCustomColorInput(text)}
                       placeholder="#FF5733 or FF5733"
                       placeholderTextColor={colors.textTertiary}
                       autoCapitalize="characters"
@@ -1726,10 +1736,10 @@ export default function SettingsScreen() {
                 <TextInput
                   style={[styles.customColorInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
                   value={discountInputValue}
-                  onChangeText={setDiscountInputValue}
+                  onChangeText={(text) => setDiscountInputValue(text)}
                   placeholder="e.g., 10"
                   placeholderTextColor={colors.textTertiary}
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   autoFocus
                 />
                 <TouchableOpacity
@@ -1812,10 +1822,10 @@ export default function SettingsScreen() {
                 <TextInput
                   style={[styles.customColorInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
                   value={gratuityInputValue}
-                  onChangeText={setGratuityInputValue}
+                  onChangeText={(text) => setGratuityInputValue(text)}
                   placeholder="e.g., 15"
                   placeholderTextColor={colors.textTertiary}
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   autoFocus
                 />
                 <TouchableOpacity
@@ -1900,7 +1910,7 @@ export default function SettingsScreen() {
               <TextInput
                 style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text, marginBottom: 16 }]}
                 value={receiptLineText}
-                onChangeText={setReceiptLineText}
+                onChangeText={(text) => setReceiptLineText(text)}
                 placeholder="Enter line text"
                 placeholderTextColor={colors.textTertiary}
                 autoFocus
