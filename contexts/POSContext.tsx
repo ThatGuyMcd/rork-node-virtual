@@ -5,6 +5,7 @@ import type { BasketItem, Operator, Product, Tender, VATRate, Table, TableOrder,
 import { dataSyncService } from '@/services/dataSync';
 import { tableDataService } from '@/services/tableDataService';
 import { transactionService } from '@/services/transactionService';
+import { printerService } from '@/services/printerService';
 
 interface POSContextType {
   currentOperator: Operator | null;
@@ -284,6 +285,12 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       };
       await transactionService.saveTransaction(transaction);
       console.log('[POS] Split payment transaction recorded:', transaction.id, allPayments);
+      
+      try {
+        await printerService.openCashDrawer();
+      } catch (error) {
+        console.error('[POS] Failed to open cash drawer:', error);
+      }
     } else {
       const isRefund = basket.some(item => item.quantity < 0);
       const transaction: Transaction = {
@@ -306,6 +313,12 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       };
       await transactionService.saveTransaction(transaction);
       console.log('[POS] Transaction recorded:', transaction.id);
+      
+      try {
+        await printerService.openCashDrawer();
+      } catch (error) {
+        console.error('[POS] Failed to open cash drawer:', error);
+      }
     }
     
     if (basket.some(item => item.quantity < 0)) {

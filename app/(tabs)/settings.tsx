@@ -231,8 +231,8 @@ export default function SettingsScreen() {
 
   const handlePaperWidthChange = async (width: '58mm' | '80mm') => {
     try {
-      printerService.setPaperWidth(width);
-      const updatedSettings = printerService.getSettings();
+      const updatedSettings = { ...printerSettings, paperWidth: width };
+      await printerService.saveSettings(updatedSettings);
       setPrinterSettings(updatedSettings);
     } catch (error) {
       console.error('Error updating paper width:', error);
@@ -241,8 +241,8 @@ export default function SettingsScreen() {
 
   const handleConnectionTypeChange = async (type: 'bluetooth' | 'network') => {
     try {
-      printerService.setConnectionType(type);
-      const updatedSettings = printerService.getSettings();
+      const updatedSettings = { ...printerSettings, connectionType: type };
+      await printerService.saveSettings(updatedSettings);
       setPrinterSettings(updatedSettings);
     } catch (error) {
       console.error('Error updating connection type:', error);
@@ -1379,7 +1379,7 @@ export default function SettingsScreen() {
             <View style={styles.settingRow}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>Cash Drawer</Text>
-                <Text style={[styles.settingTitle, { color: colors.text }]}>Open cash drawer when printing receipts</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Open cash drawer when transaction is completed</Text>
               </View>
               <Switch
                 value={printerSettings.cashDrawerEnabled}

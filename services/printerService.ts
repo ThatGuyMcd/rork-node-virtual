@@ -198,14 +198,33 @@ class PrinterService {
     return this.settings.isConnected;
   }
 
-  setPaperWidth(width: '58mm' | '80mm'): void {
-    this.settings.paperWidth = width;
-    this.saveSettings(this.settings);
-  }
+  async openCashDrawer(): Promise<void> {
+    if (!this.settings.cashDrawerEnabled) {
+      console.log('[PrinterService] Cash drawer is disabled in settings');
+      return;
+    }
 
-  setConnectionType(type: 'bluetooth' | 'network'): void {
-    this.settings.connectionType = type;
-    this.saveSettings(this.settings);
+    if (!this.settings.isConnected) {
+      console.warn('[PrinterService] Cannot open cash drawer: printer not connected');
+      return;
+    }
+
+    const pulse = this.settings.cashDrawerVoltage === '12v' ? '\x00' : '\x01';
+    const cashDrawerCommand = new Uint8Array([
+      0x1B,
+      0x70,
+      pulse.charCodeAt(0),
+      0x19,
+      0xFA,
+    ]);
+
+    try {
+      await this.sendData(cashDrawerCommand);
+      console.log('[PrinterService] Cash drawer opened');
+    } catch (error) {
+      console.error('[PrinterService] Failed to open cash drawer:', error);
+      throw error;
+    }
   }
 }
 
