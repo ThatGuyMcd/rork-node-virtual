@@ -314,7 +314,7 @@ export default function ProductsScreen() {
               isManager: false,
             };
             
-            await tableDataService.saveTableData(
+            await tableDataService.saveTableDataLocally(
               table,
               tableDataRows.map(dataRow => ({
                 product: {
@@ -335,7 +335,7 @@ export default function ProductsScreen() {
               operator,
               await dataSyncService.getStoredVATRates()
             );
-            console.log(`[Products] Saved ${tableDataRows.length} items to storage for table ${table.name}`);
+            console.log(`[Products] Saved ${tableDataRows.length} items to local storage for table ${table.name} (no server sync)`);
           }
         } catch (error) {
           console.error(`[Products] Error parsing table data for table ${tableId}:`, error);

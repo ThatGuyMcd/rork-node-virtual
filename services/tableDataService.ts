@@ -43,6 +43,59 @@ class TableDataService {
     return Platform.OS !== 'web' && !!FileSystem.documentDirectory;
   }
 
+  async saveTableDataLocally(
+    table: Table,
+    basket: BasketItem[],
+    operator: Operator,
+    vatRates: { code: string; percentage: number }[]
+  ): Promise<void> {
+    console.log('[TableDataService] Saving table data locally (no sync) for table:', table.name);
+
+    const rows: TableDataRow[] = [];
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-GB', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const dateString = now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const timeDate = `${timeString} - ${dateString}`;
+
+    for (const item of basket) {
+      const vatRate = vatRates.find(v => v.code === item.product.vatCode);
+      const vatPercentage = vatRate?.percentage || 0;
+      const priceExVat = item.selectedPrice.price / (1 + vatPercentage / 100);
+      const vatAmount = item.selectedPrice.price - priceExVat;
+
+      const pluFile = `${item.product.groupId}-${item.product.departmentId}-${item.product.id.replace('prod_', '').padStart(5, '0')}.PLU`;
+
+      rows.push({
+        quantity: item.quantity,
+        productName: item.product.name,
+        price: item.selectedPrice.price,
+        pluFile,
+        group: item.product.groupId,
+        department: item.product.departmentId,
+        vatCode: item.product.vatCode,
+        vatPercentage,
+        vatAmount,
+        addedBy: operator.name,
+        timeDate,
+        printer1: this.determinePrinter(item.product.groupId),
+        printer2: 'NOT SET',
+        printer3: 'NOT SET',
+        itemPrinted: 'YES',
+        tableId: table.id,
+      });
+    }
+
+    if (!this.isFileSystemAvailable()) {
+      console.log('[TableDataService] Using in-memory storage');
+      this.data.set(table.id, rows);
+      console.log('[TableDataService] Successfully saved table data to memory');
+    } else {
+      await this.clearTableDataLocally(table.id);
+      await this.appendRowsToCSV(rows);
+      console.log('[TableDataService] Successfully saved table data to CSV (local only)');
+    }
+  }
+
   async saveTableData(
     table: Table,
     basket: BasketItem[],
@@ -90,7 +143,7 @@ class TableDataService {
       this.data.set(table.id, rows);
       console.log('[TableDataService] Successfully saved table data to memory');
     } else {
-      await this.clearTableData(table.id, table);
+      await this.clearTableDataLocally(table.id);
       await this.appendRowsToCSV(rows);
       console.log('[TableDataService] Successfully saved table data to CSV');
     }
@@ -191,8 +244,8 @@ class TableDataService {
     }
   }
 
-  async clearTableData(tableId: string, table?: Table): Promise<void> {
-    console.log('[TableDataService] Clearing table data for table ID:', tableId);
+  async clearTableDataLocally(tableId: string): Promise<void> {
+    console.log('[TableDataService] Clearing table data locally (no sync) for table ID:', tableId);
 
     try {
       if (!this.isFileSystemAvailable()) {
@@ -234,8 +287,18 @@ class TableDataService {
         const csvContent = this.rowsToCSV(filteredRows);
         await FileSystem.writeAsStringAsync(filePath, csvContent);
         
-        console.log('[TableDataService] Successfully cleared table data from local storage');
+        console.log('[TableDataService] Successfully cleared table data from local storage (no sync)');
       }
+    } catch (error) {
+      console.error('[TableDataService] Error clearing table data locally:', error);
+    }
+  }
+
+  async clearTableData(tableId: string, table?: Table): Promise<void> {
+    console.log('[TableDataService] Clearing table data for table ID:', tableId);
+
+    try {
+      await this.clearTableDataLocally(tableId);
       
       // Sync empty table data to server (clears the table on server)
       if (table) {
