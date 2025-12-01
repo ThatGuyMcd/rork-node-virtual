@@ -2266,4 +2266,21 @@ const styles = StyleSheet.create({
     marginTop: -12,
     paddingTop: 16,
   },
+  receiptLineItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+  receiptLineText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  receiptLineSize: {
+    fontSize: 12,
+    marginTop: 2,
+  },
 });
