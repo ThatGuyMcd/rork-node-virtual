@@ -248,7 +248,9 @@ export default function BasketScreen() {
 
   const handlePrintToScreen = () => {
     setReceiptPrintModalVisible(false);
-    setScreenReceiptModalVisible(true);
+    setTimeout(() => {
+      setScreenReceiptModalVisible(true);
+    }, 100);
   };
 
   const handleCloseScreenReceipt = () => {
