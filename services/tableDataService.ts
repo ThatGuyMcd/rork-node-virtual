@@ -427,7 +427,7 @@ class TableDataService {
     folderData.push(tableFolderPath);
     
     const csvRows: string[] = [];
-    csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?,Table ID');
+    csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?');
     
     for (const row of rows) {
       const line = [
@@ -446,13 +446,12 @@ class TableDataService {
         row.printer2,
         row.printer3,
         row.itemPrinted,
-        row.tableId || '',
       ].join(',');
       csvRows.push(line);
     }
     
-    const csvContent = csvRows.join('\n');
-    const tableDataPath = `${tableFolderPath}/TABLEDATA.CSV`;
+    const csvContent = csvRows.join('\r\n') + '\r\n';
+    const tableDataPath = `${tableFolderPath}/tabledata.csv`;
     fileData[tableDataPath] = csvContent;
     
     const payload = {
@@ -462,6 +461,11 @@ class TableDataService {
       FILEDATA: fileData,
     };
     
+    console.log(`[TableDataService] Payload structure:`);
+    console.log(`[TableDataService]   SITEID: ${payload.SITEID}`);
+    console.log(`[TableDataService]   DESTINATIONWEBVIEWFOLDER: ${payload.DESTINATIONWEBVIEWFOLDER}`);
+    console.log(`[TableDataService]   FOLDERDATA: ${JSON.stringify(payload.FOLDERDATA)}`);
+    console.log(`[TableDataService]   FILEDATA keys: ${Object.keys(payload.FILEDATA).join(', ')}`);
     console.log(`[TableDataService] Payload size: ${JSON.stringify(payload).length} bytes`);
     console.log(`[TableDataService] Posting to: https://app.positron-portal.com/webviewdataupload`);
     
