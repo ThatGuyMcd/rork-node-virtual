@@ -19,6 +19,7 @@ import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
 import { tableDataService } from '@/services/tableDataService';
+import { apiClient } from '@/services/api';
 import { getMostCommonColor } from '@/utils/colorUtils';
 import type { Product, PriceOption, ProductGroup, Department, Table, ProductDisplaySettings, MenuData, MenuProduct } from '@/types/pos';
 
@@ -71,6 +72,7 @@ export default function ProductsScreen() {
   const [tables, setTables] = useState<Table[]>([]);
   const [tableModalVisible, setTableModalVisible] = useState(false);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [loadingAreaData, setLoadingAreaData] = useState(false);
   const [tableStatuses, setTableStatuses] = useState<Map<string, { hasData: boolean; subtotal: number }>>(new Map());
   const [loading, setLoading] = useState(true);
   const [displaySettings, setDisplaySettings] = useState<ProductDisplaySettings>({
@@ -147,6 +149,98 @@ export default function ProductsScreen() {
     const statuses = await tableDataService.getAllTableStatuses(tableIds);
     setTableStatuses(statuses);
     console.log('[Products] Table statuses loaded:', statuses.size);
+  };
+
+  const loadAreaData = async (area: string) => {
+    setLoadingAreaData(true);
+    try {
+      console.log('[Products] Downloading fresh data for area:', area);
+      const siteInfo = await dataSyncService.getSiteInfo();
+      if (!siteInfo) {
+        console.error('[Products] No site info found');
+        showNotification('Cannot sync data: No site linked', true);
+        return;
+      }
+
+      const manifest = await apiClient.getManifest(siteInfo.siteId);
+      const areaFiles = manifest.filter(path => {
+        const upper = path.toUpperCase();
+        return upper.startsWith(`TABDATA/${area.toUpperCase()}/`);
+      });
+
+      console.log(`[Products] Found ${areaFiles.length} files for area ${area}`);
+
+      const files: Map<string, string> = new Map();
+      for (const path of areaFiles) {
+        const content = await apiClient.getFile(siteInfo.siteId, path);
+        files.set(path, content);
+      }
+
+      console.log(`[Products] Downloaded ${files.size} files for area ${area}`);
+
+      const areaTables: Table[] = [];
+      const tableSet = new Map<string, { area: string; table: string }>();
+
+      for (const [path] of files.entries()) {
+        const upper = path.toUpperCase();
+        if (!upper.startsWith('TABDATA/')) continue;
+        if (upper.endsWith('.INI')) continue;
+        
+        const parts = path.slice('TABDATA/'.length).split('/');
+        if (parts.length < 3) continue;
+
+        const areaName = parts[0];
+        const table = parts[1];
+        
+        const key = `${areaName}/${table}`;
+        if (!tableSet.has(key)) {
+          tableSet.set(key, { area: areaName, table });
+        }
+      }
+
+      let tableIndex = 0;
+      for (const { area: areaName, table } of tableSet.values()) {
+        let hash = 0;
+        const hashString = `${areaName}_${table}`;
+        for (let i = 0; i < hashString.length; i++) {
+          hash = (hash * 31 + hashString.charCodeAt(i)) >>> 0;
+        }
+        const hue = hash % 360;
+
+        areaTables.push({
+          id: `table_${Date.now()}_${tableIndex++}`,
+          name: table,
+          tabCode: table,
+          area: areaName,
+          color: `hsl(${hue}, 65%, 50%)`,
+        });
+      }
+
+      console.log(`[Products] Parsed ${areaTables.length} tables for area ${area}`);
+
+      setTables(prevTables => {
+        const otherAreaTables = prevTables.filter(t => t.area !== area);
+        return [...otherAreaTables, ...areaTables];
+      });
+
+      const areaTableIds = areaTables.map(t => t.id);
+      const statuses = await tableDataService.getAllTableStatuses(areaTableIds);
+      setTableStatuses(prevStatuses => {
+        const newStatuses = new Map(prevStatuses);
+        statuses.forEach((status, tableId) => {
+          newStatuses.set(tableId, status);
+        });
+        return newStatuses;
+      });
+
+      console.log('[Products] Successfully refreshed area data and table statuses');
+      showNotification(`Refreshed ${area} area data`);
+    } catch (error) {
+      console.error('[Products] Failed to load area data:', error);
+      showNotification('Failed to refresh area data', true);
+    } finally {
+      setLoadingAreaData(false);
+    }
   };
 
 
@@ -1125,7 +1219,10 @@ export default function ProductsScreen() {
                     <TouchableOpacity
                       key={area}
                       style={[styles.areaCard, { backgroundColor: colors.background, borderColor: colors.border }]}
-                      onPress={() => setSelectedArea(area)}
+                      onPress={async () => {
+                        setSelectedArea(area);
+                        await loadAreaData(area);
+                      }}
                       activeOpacity={0.7}
                     >
                       <Text style={[styles.areaCardTitle, { color: colors.text }]}>{area}</Text>
@@ -1145,7 +1242,12 @@ export default function ProductsScreen() {
                     <Text style={[styles.backText, { color: colors.primary }]}>Back to Areas</Text>
                   </TouchableOpacity>
 
-                  <Text style={[styles.areaTitle, { color: colors.text }]}>{selectedArea} Tables</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <Text style={[styles.areaTitle, { color: colors.text }]}>{selectedArea} Tables</Text>
+                    {loadingAreaData && (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    )}
+                  </View>
 
                   <View style={styles.tableGrid}>
                     {tables
