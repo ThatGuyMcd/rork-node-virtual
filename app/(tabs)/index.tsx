@@ -20,8 +20,9 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
 import { tableDataService } from '@/services/tableDataService';
 import { apiClient } from '@/services/api';
+import { dataParser } from '@/services/dataParser';
 import { getMostCommonColor } from '@/utils/colorUtils';
-import type { Product, PriceOption, ProductGroup, Department, Table, ProductDisplaySettings, MenuData, MenuProduct } from '@/types/pos';
+import type { Product, PriceOption, ProductGroup, Department, Table, ProductDisplaySettings, MenuData, MenuProduct, Operator } from '@/types/pos';
 
 const trimName = (name: string): string => {
   return name.length > 6 ? name.substring(6) : name;
@@ -199,9 +200,10 @@ export default function ProductsScreen() {
       console.log(`[Products] Downloaded ${files.size} files for area ${area}`);
 
       const areaTables: Table[] = [];
-      const tableSet = new Map<string, { area: string; table: string }>();
+      const tableSet = new Map<string, { area: string; table: string; tableId: string }>();
+      const tableDataMap = new Map<string, string>();
 
-      for (const [path] of files.entries()) {
+      for (const [path, content] of files.entries()) {
         const upper = path.toUpperCase();
         if (!upper.startsWith('TABDATA/')) continue;
         if (upper.endsWith('.INI')) continue;
@@ -211,15 +213,29 @@ export default function ProductsScreen() {
 
         const areaName = parts[0];
         const table = parts[1];
+        const fileName = parts[2];
         
         const key = `${areaName}/${table}`;
         if (!tableSet.has(key)) {
-          tableSet.set(key, { area: areaName, table });
+          let hash = 0;
+          const hashString = `${areaName}_${table}_${Date.now()}`;
+          for (let i = 0; i < hashString.length; i++) {
+            hash = (hash * 31 + hashString.charCodeAt(i)) >>> 0;
+          }
+          const tableId = `table_${hash}`;
+          tableSet.set(key, { area: areaName, table, tableId });
+        }
+        
+        if (fileName.toUpperCase() === 'TABLEDATA.CSV') {
+          const tableInfo = tableSet.get(key);
+          if (tableInfo) {
+            tableDataMap.set(tableInfo.tableId, content);
+            console.log(`[Products] Found tabledata.csv for ${table} (${content.length} bytes)`);
+          }
         }
       }
 
-      let tableIndex = 0;
-      for (const { area: areaName, table } of tableSet.values()) {
+      for (const { area: areaName, table, tableId } of tableSet.values()) {
         let hash = 0;
         const hashString = `${areaName}_${table}`;
         for (let i = 0; i < hashString.length; i++) {
@@ -228,7 +244,7 @@ export default function ProductsScreen() {
         const hue = hash % 360;
 
         areaTables.push({
-          id: `table_${Date.now()}_${tableIndex++}`,
+          id: tableId,
           name: table,
           tabCode: table,
           area: areaName,
@@ -237,11 +253,94 @@ export default function ProductsScreen() {
       }
 
       console.log(`[Products] Parsed ${areaTables.length} tables for area ${area}`);
+      console.log(`[Products] Found ${tableDataMap.size} tables with data`);
 
       setTables(prevTables => {
         const otherAreaTables = prevTables.filter(t => t.area !== area);
         return [...otherAreaTables, ...areaTables];
       });
+      
+      // Parse and store table data from the CSV files
+      for (const [tableId, csvContent] of tableDataMap.entries()) {
+        try {
+          const table = areaTables.find(t => t.id === tableId);
+          if (!table) {
+            console.warn(`[Products] Could not find table for ID: ${tableId}`);
+            continue;
+          }
+          
+          console.log(`[Products] Parsing table data for ${table.name}...`);
+          const rows = dataParser.parseCSV(csvContent);
+          
+          if (rows.length <= 1) {
+            console.log(`[Products] No data in CSV for ${table.name}`);
+            continue;
+          }
+          
+          const header = rows[0].map((h: string) => h.trim());
+          
+          const tableDataRows = [];
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            
+            tableDataRows.push({
+              quantity: parseFloat(row[0] || '1'),
+              productName: row[1]?.trim() || '',
+              price: parseFloat(row[2] || '0'),
+              pluFile: row[3]?.trim() || '',
+              group: row[4]?.trim() || '',
+              department: row[5]?.trim() || '',
+              vatCode: row[6]?.trim() || '',
+              vatPercentage: parseFloat(row[7] || '0'),
+              vatAmount: parseFloat(row[8] || '0'),
+              addedBy: row[9]?.trim() || '',
+              timeDate: row[10]?.trim() || '',
+              printer1: row[11]?.trim() || 'NOT SET',
+              printer2: row[12]?.trim() || 'NOT SET',
+              printer3: row[13]?.trim() || 'NOT SET',
+              itemPrinted: row[14]?.trim() || 'NO',
+              tableId: tableId,
+            });
+          }
+          
+          console.log(`[Products] Parsed ${tableDataRows.length} items for table ${table.name}`);
+          
+          if (tableDataRows.length > 0) {
+            const operator: Operator = {
+              id: 'system',
+              name: tableDataRows[0].addedBy || 'System',
+              pin: '',
+              active: true,
+              isManager: false,
+            };
+            
+            await tableDataService.saveTableData(
+              table,
+              tableDataRows.map(dataRow => ({
+                product: {
+                  id: `prod_${dataRow.pluFile}`,
+                  name: dataRow.productName,
+                  departmentId: dataRow.department,
+                  groupId: dataRow.group,
+                  prices: [{ key: 'PRICE_STANDARD', label: 'standard', price: dataRow.price }],
+                  vatCode: dataRow.vatCode,
+                  vatPercentage: dataRow.vatPercentage,
+                  buttonColor: '#1e293b',
+                  fontColor: '#ffffff',
+                },
+                quantity: dataRow.quantity,
+                selectedPrice: { key: 'PRICE_STANDARD', label: 'standard', price: dataRow.price },
+                lineTotal: dataRow.quantity * dataRow.price,
+              })),
+              operator,
+              await dataSyncService.getStoredVATRates()
+            );
+            console.log(`[Products] Saved ${tableDataRows.length} items to storage for table ${table.name}`);
+          }
+        } catch (error) {
+          console.error(`[Products] Error parsing table data for table ${tableId}:`, error);
+        }
+      }
       
       // Stop loading spinner early so tables are visible
       setLoadingAreaData(false);
