@@ -13,10 +13,11 @@ import {
   Modal,
 } from 'react-native';
 
-import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, DollarSign } from 'lucide-react-native';
+import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, DollarSign, Printer, Bluetooth, Wifi } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
+import { printerService } from '@/services/printerService';
 import { useRouter } from 'expo-router';
-import type { ProductDisplaySettings, ProductGroup, Department, DiscountSettings, GratuitySettings } from '@/types/pos';
+import type { ProductDisplaySettings, ProductGroup, Department, DiscountSettings, GratuitySettings, PrinterSettings } from '@/types/pos';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -59,6 +60,15 @@ export default function SettingsScreen() {
   const [gratuityModalVisible, setGratuityModalVisible] = useState(false);
   const [editingGratuityIndex, setEditingGratuityIndex] = useState<number | null>(null);
   const [gratuityInputValue, setGratuityInputValue] = useState('');
+  const [printerSettings, setPrinterSettings] = useState<PrinterSettings>({
+    connectionType: 'bluetooth',
+    paperWidth: '80mm',
+    isConnected: false,
+    autoConnect: false,
+  });
+  const [printerIPInput, setPrinterIPInput] = useState('');
+  const [printerPortInput, setPrinterPortInput] = useState('9100');
+  const [isConnectingPrinter, setIsConnectingPrinter] = useState(false);
   
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     account: true,
@@ -70,6 +80,7 @@ export default function SettingsScreen() {
     gratuity: false,
     initialSetup: false,
     danger: false,
+    printer: false,
   });
 
   useEffect(() => {
@@ -83,6 +94,7 @@ export default function SettingsScreen() {
     loadLastSyncTime();
     setDiscountPercentages(discountSettings.presetPercentages.map(String));
     setGratuityPercentages(gratuitySettings.presetPercentages.map(String));
+    loadPrinterSettings();
   }, [discountSettings, gratuitySettings]);
 
   const loadSiteInfo = async () => {
@@ -130,6 +142,109 @@ export default function SettingsScreen() {
   const loadLastSyncTime = async () => {
     const time = await dataSyncService.getLastSyncTime();
     setLastSyncTime(time);
+  };
+
+  const loadPrinterSettings = async () => {
+    try {
+      const settings = await printerService.loadSettings();
+      setPrinterSettings(settings);
+      if (settings.ipAddress) setPrinterIPInput(settings.ipAddress);
+      if (settings.port) setPrinterPortInput(settings.port.toString());
+    } catch (error) {
+      console.error('Error loading printer settings:', error);
+    }
+  };
+
+  const handleConnectBluetooth = async () => {
+    Alert.alert(
+      'Bluetooth Printer',
+      'Bluetooth printer scanning and connection requires native module integration. This feature will scan for nearby Bluetooth printers.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Scan',
+          onPress: async () => {
+            setIsConnectingPrinter(true);
+            try {
+              const devices = await printerService.scanBluetoothDevices();
+              if (devices.length === 0) {
+                Alert.alert('No Devices', 'No Bluetooth printers found nearby');
+              }
+            } catch (error) {
+              Alert.alert('Error', error instanceof Error ? error.message : 'Failed to scan for devices');
+            } finally {
+              setIsConnectingPrinter(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleConnectNetwork = async () => {
+    if (!printerIPInput.trim()) {
+      Alert.alert('Error', 'Please enter a valid IP address');
+      return;
+    }
+
+    const port = parseInt(printerPortInput) || 9100;
+    setIsConnectingPrinter(true);
+
+    try {
+      await printerService.connectNetwork(printerIPInput.trim(), port);
+      const updatedSettings = printerService.getSettings();
+      setPrinterSettings(updatedSettings);
+      Alert.alert('Success', 'Connected to network printer');
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to connect to network printer');
+    } finally {
+      setIsConnectingPrinter(false);
+    }
+  };
+
+  const handleDisconnectPrinter = async () => {
+    try {
+      await printerService.disconnect();
+      const updatedSettings = printerService.getSettings();
+      setPrinterSettings(updatedSettings);
+      Alert.alert('Success', 'Printer disconnected');
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to disconnect printer');
+    }
+  };
+
+  const handleTestPrint = async () => {
+    if (!printerSettings.isConnected) {
+      Alert.alert('Error', 'Please connect a printer first');
+      return;
+    }
+
+    try {
+      await printerService.printTestReceipt();
+      Alert.alert('Success', 'Test receipt sent to printer');
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to print test receipt');
+    }
+  };
+
+  const handlePaperWidthChange = async (width: '58mm' | '80mm') => {
+    try {
+      printerService.setPaperWidth(width);
+      const updatedSettings = printerService.getSettings();
+      setPrinterSettings(updatedSettings);
+    } catch (error) {
+      console.error('Error updating paper width:', error);
+    }
+  };
+
+  const handleConnectionTypeChange = async (type: 'bluetooth' | 'network') => {
+    try {
+      printerService.setConnectionType(type);
+      const updatedSettings = printerService.getSettings();
+      setPrinterSettings(updatedSettings);
+    } catch (error) {
+      console.error('Error updating connection type:', error);
+    }
   };
 
   const formatSyncTime = (isoString: string) => {
@@ -1067,6 +1182,202 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             )}
           </View>
+        </CollapsibleSection>
+
+        <CollapsibleSection 
+          id="printer" 
+          icon={Printer} 
+          title="Printer Settings" 
+          iconColor={colors.primary}
+        >
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>Connect a thermal printer to automatically print receipts</Text>
+
+            {printerSettings.isConnected && (
+              <View style={[styles.warningBox, { backgroundColor: colors.success + '20', borderColor: colors.success, marginBottom: 16 }]}>
+                <CheckCircle size={18} color={colors.success} />
+                <Text style={[styles.warningText, { color: colors.text }]}>
+                  {printerSettings.connectionType === 'bluetooth' 
+                    ? `Connected: ${printerSettings.deviceName || 'Bluetooth Printer'}`
+                    : `Connected: ${printerSettings.ipAddress}:${printerSettings.port}`}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.settingRowColumn}>
+              <View style={styles.settingHeader}>
+                <Printer size={18} color={colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.settingTitle, { color: colors.text }]}>Paper Width</Text>
+                  <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Select your thermal printer paper width</Text>
+                </View>
+              </View>
+              
+              <View style={styles.layoutOptions}>
+                <TouchableOpacity
+                  style={[
+                    styles.layoutOption,
+                    { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                    printerSettings.paperWidth === '58mm' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                  ]}
+                  onPress={() => handlePaperWidthChange('58mm')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>58mm (2 inch)</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.layoutOption,
+                    { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                    printerSettings.paperWidth === '80mm' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                  ]}
+                  onPress={() => handlePaperWidthChange('80mm')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>80mm (3 inch)</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View style={styles.settingRowColumn}>
+              <View style={styles.settingHeader}>
+                <SettingsIcon size={18} color={colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.settingTitle, { color: colors.text }]}>Connection Type</Text>
+                  <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Choose how to connect to your printer</Text>
+                </View>
+              </View>
+              
+              <View style={styles.layoutOptions}>
+                <TouchableOpacity
+                  style={[
+                    styles.layoutOption,
+                    { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                    printerSettings.connectionType === 'bluetooth' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                  ]}
+                  onPress={() => handleConnectionTypeChange('bluetooth')}
+                  activeOpacity={0.7}
+                  disabled={printerSettings.isConnected}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Bluetooth size={16} color={printerSettings.connectionType === 'bluetooth' ? colors.primary : colors.textSecondary} />
+                    <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Bluetooth</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.layoutOption,
+                    { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                    printerSettings.connectionType === 'network' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                  ]}
+                  onPress={() => handleConnectionTypeChange('network')}
+                  activeOpacity={0.7}
+                  disabled={printerSettings.isConnected}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Wifi size={16} color={printerSettings.connectionType === 'network' ? colors.primary : colors.textSecondary} />
+                    <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Network (IP)</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {printerSettings.connectionType === 'bluetooth' && (
+            <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Bluetooth Connection</Text>
+              <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>Scan for nearby Bluetooth printers and connect</Text>
+              
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, marginBottom: 0 }]}
+                onPress={handleConnectBluetooth}
+                disabled={isConnectingPrinter || printerSettings.isConnected}
+                activeOpacity={0.8}
+              >
+                {isConnectingPrinter ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <>
+                    <Bluetooth size={20} color="#ffffff" />
+                    <Text style={styles.buttonText}>Scan & Connect</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {printerSettings.connectionType === 'network' && (
+            <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Network Printer</Text>
+              <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>Enter the IP address and port of your network printer</Text>
+              
+              <Text style={[styles.label, { color: colors.textSecondary, marginTop: 0 }]}>IP Address</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                value={printerIPInput}
+                onChangeText={setPrinterIPInput}
+                placeholder="e.g., 192.168.1.100"
+                placeholderTextColor={colors.textTertiary}
+                keyboardType="numeric"
+                editable={!printerSettings.isConnected}
+              />
+
+              <Text style={[styles.label, { color: colors.textSecondary, marginTop: 12 }]}>Port</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                value={printerPortInput}
+                onChangeText={setPrinterPortInput}
+                placeholder="9100"
+                placeholderTextColor={colors.textTertiary}
+                keyboardType="numeric"
+                editable={!printerSettings.isConnected}
+              />
+
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, marginTop: 16, marginBottom: 0 }]}
+                onPress={handleConnectNetwork}
+                disabled={isConnectingPrinter || printerSettings.isConnected}
+                activeOpacity={0.8}
+              >
+                {isConnectingPrinter ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <>
+                    <Wifi size={20} color="#ffffff" />
+                    <Text style={styles.buttonText}>Connect</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {printerSettings.isConnected && (
+            <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Printer Actions</Text>
+              
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.accent, marginBottom: 12 }]}
+                onPress={handleTestPrint}
+                activeOpacity={0.8}
+              >
+                <Printer size={20} color="#ffffff" />
+                <Text style={styles.buttonText}>Print Test Receipt</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.error, marginBottom: 0 }]}
+                onPress={handleDisconnectPrinter}
+                activeOpacity={0.8}
+              >
+                <X size={20} color="#ffffff" />
+                <Text style={styles.buttonText}>Disconnect</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </CollapsibleSection>
 
         <CollapsibleSection 

@@ -144,3 +144,23 @@ export interface GratuitySettings {
   enabled: boolean;
   presetPercentages: number[];
 }
+
+export type PrinterConnectionType = 'bluetooth' | 'network';
+export type PrinterPaperWidth = '58mm' | '80mm';
+
+export interface PrinterSettings {
+  connectionType: PrinterConnectionType;
+  paperWidth: PrinterPaperWidth;
+  deviceName?: string;
+  deviceAddress?: string;
+  ipAddress?: string;
+  port?: number;
+  isConnected: boolean;
+  autoConnect: boolean;
+}
+
+export interface PrinterDevice {
+  name: string;
+  address: string;
+  type: 'bluetooth' | 'network';
+}
