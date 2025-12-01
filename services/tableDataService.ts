@@ -447,6 +447,129 @@ class TableDataService {
       return null;
     }
   }
+
+  async syncAllTableDataToServer(): Promise<void> {
+    console.log('[TableDataService] ===== STARTING BULK TABLE DATA SYNC =====');
+    
+    try {
+      const siteInfo = await dataSyncService.getSiteInfo();
+      if (!siteInfo) {
+        console.warn('[TableDataService] No site info available, skipping bulk sync');
+        return;
+      }
+      
+      const tables = await dataSyncService.getStoredTables();
+      if (tables.length === 0) {
+        console.log('[TableDataService] No tables configured, skipping bulk sync');
+        return;
+      }
+      
+      console.log(`[TableDataService] Found ${tables.length} tables to sync`);
+      
+      // Group tables by area
+      const areaMap = new Map<string, typeof tables>();
+      for (const table of tables) {
+        const areaList = areaMap.get(table.area) || [];
+        areaList.push(table);
+        areaMap.set(table.area, areaList);
+      }
+      
+      console.log(`[TableDataService] Found ${areaMap.size} areas`);
+      
+      // Collect all folder data and file data
+      const folderData: string[] = [];
+      const fileData: Record<string, string> = {};
+      
+      // Add area folders
+      for (const area of areaMap.keys()) {
+        folderData.push(area);
+        console.log(`[TableDataService] Added area folder: ${area}`);
+      }
+      
+      // Process each table
+      let totalFilesProcessed = 0;
+      for (const [area, areaTables] of areaMap.entries()) {
+        for (const table of areaTables) {
+          // Add table folder
+          const tableFolderPath = `${area}/${table.name}`;
+          folderData.push(tableFolderPath);
+          
+          // Get table data
+          const tableRows = await this.loadTableData(table.id);
+          
+          // Convert to CSV
+          const csvRows: string[] = [];
+          csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?,Table ID');
+          
+          for (const row of tableRows) {
+            const line = [
+              row.quantity.toFixed(3),
+              ` ${row.productName}`,
+              row.price.toFixed(2),
+              row.pluFile,
+              row.group,
+              row.department,
+              row.vatCode,
+              row.vatPercentage.toString(),
+              row.vatAmount.toFixed(2),
+              row.addedBy,
+              row.timeDate,
+              row.printer1,
+              row.printer2,
+              row.printer3,
+              row.itemPrinted,
+              row.tableId || '',
+            ].join(',');
+            csvRows.push(line);
+          }
+          
+          const csvContent = csvRows.join('\n');
+          const tableDataPath = `${tableFolderPath}/TABLEDATA.CSV`;
+          fileData[tableDataPath] = csvContent;
+          totalFilesProcessed++;
+          
+          console.log(`[TableDataService] Added table: ${tableDataPath} (${tableRows.length} rows)`);
+        }
+      }
+      
+      console.log(`[TableDataService] Prepared ${folderData.length} folders and ${totalFilesProcessed} files`);
+      
+      // Create payload matching Windows app format
+      const payload = {
+        SITEID: siteInfo.siteId,
+        DESTINATIONWEBVIEWFOLDER: 'TABDATA',
+        FOLDERDATA: folderData,
+        FILEDATA: fileData,
+      };
+      
+      console.log(`[TableDataService] Payload size: ${JSON.stringify(payload).length} bytes`);
+      console.log(`[TableDataService] Posting to: https://app.positron-portal.com/webviewdataupload`);
+      
+      // Post to server using the same endpoint as Windows app
+      const response = await fetch('https://app.positron-portal.com/webviewdataupload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('[TableDataService] Bulk sync error response:', response.status, text);
+        throw new Error(`Server returned ${response.status}: ${text}`);
+      }
+      
+      const result = await response.json().catch(() => ({ success: true }));
+      console.log('[TableDataService] Bulk sync successful:', result);
+      console.log('[TableDataService] ===== BULK TABLE DATA SYNC COMPLETE =====');
+      
+    } catch (error) {
+      console.error('[TableDataService] Bulk sync failed:', error);
+      // Don't throw - allow operation to continue even if server sync fails
+    }
+  }
 }
 
 export const tableDataService = new TableDataService();

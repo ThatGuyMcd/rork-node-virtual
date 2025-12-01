@@ -169,8 +169,11 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   const logout = useCallback(async () => {
     if (currentTable && basket.length > 0 && currentOperator) {
       console.log('[POS] Saving table data before logout...');
-      await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
+      await tableDataService.saveTableDataLocally(currentTable, basket, currentOperator, vatRates);
     }
+    
+    console.log('[POS] Syncing all table data to server...');
+    await tableDataService.syncAllTableDataToServer();
     
     setCurrentOperator(null);
     setCurrentTable(null);
@@ -338,8 +341,11 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     }
     
     if (currentTable) {
-      await tableDataService.clearTableData(currentTable.id, currentTable);
-      console.log('[POS] Cleared table data from CSV and synced to server for table:', currentTable.id);
+      await tableDataService.clearTableDataLocally(currentTable.id);
+      console.log('[POS] Cleared table data from CSV locally for table:', currentTable.id);
+      
+      console.log('[POS] Syncing all table data to server (including clear)...');
+      await tableDataService.syncAllTableDataToServer();
     }
     
     setBasketDiscount(0);
@@ -379,7 +385,10 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     
     if (previousTable && previousBasket.length > 0 && currentOperator) {
       console.log(`[POS] Saving previous table ${previousTable.name} with ${previousBasket.length} items before switching`);
-      await tableDataService.saveTableData(previousTable, previousBasket, currentOperator, vatRates);
+      await tableDataService.saveTableDataLocally(previousTable, previousBasket, currentOperator, vatRates);
+      
+      console.log('[POS] Syncing all table data to server...');
+      await tableDataService.syncAllTableDataToServer();
     }
     
     setCurrentTable(table);
@@ -446,8 +455,11 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     }
 
     try {
-      await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
-      console.log('[POS] Successfully saved table tab to CSV');
+      await tableDataService.saveTableDataLocally(currentTable, basket, currentOperator, vatRates);
+      console.log('[POS] Successfully saved table tab to CSV locally');
+      
+      console.log('[POS] Syncing all table data to server...');
+      await tableDataService.syncAllTableDataToServer();
       
       setCurrentTable(null);
       setBasket([]);
