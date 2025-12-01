@@ -1860,6 +1860,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 500,
     maxHeight: '80%',
+    height: '80%',
   },
   modalHeader: {
     flexDirection: 'row' as const,

@@ -1578,6 +1578,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 500,
     maxHeight: '90%',
+    height: '90%',
   },
   screenReceiptHeader: {
     flexDirection: 'row',
