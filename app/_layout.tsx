@@ -26,17 +26,33 @@ export default function RootLayout() {
   useEffect(() => {
     const initApp = async () => {
       try {
+        console.log('[App] Starting app initialization...');
         if (!__DEV__) {
-          await Updates.checkForUpdateAsync();
+          try {
+            console.log('[App] Checking for updates...');
+            await Updates.checkForUpdateAsync();
+            console.log('[App] Update check completed');
+          } catch (updateError) {
+            console.error('[App] Update check failed:', updateError);
+          }
         }
       } catch (e) {
-        console.log('Update check failed:', e);
+        console.error('[App] App initialization error:', e);
       } finally {
-        await SplashScreen.hideAsync();
+        console.log('[App] Hiding splash screen...');
+        try {
+          await SplashScreen.hideAsync();
+          console.log('[App] Splash screen hidden successfully');
+        } catch (splashError) {
+          console.error('[App] Failed to hide splash screen:', splashError);
+        }
       }
     };
 
-    initApp();
+    setTimeout(() => {
+      console.log('[App] Starting initialization with timeout...');
+      initApp();
+    }, 100);
   }, []);
 
   return (
