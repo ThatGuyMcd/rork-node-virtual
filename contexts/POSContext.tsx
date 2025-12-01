@@ -1,7 +1,7 @@
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
-import type { BasketItem, Operator, Product, Tender, VATRate, Table, TableOrder, Transaction, DiscountSettings, GratuitySettings } from '@/types/pos';
+import type { BasketItem, Operator, Product, Tender, VATRate, Table, TableOrder, Transaction, DiscountSettings, GratuitySettings, ReceiptSettings } from '@/types/pos';
 import { dataSyncService } from '@/services/dataSync';
 import { tableDataService } from '@/services/tableDataService';
 import { transactionService } from '@/services/transactionService';
@@ -27,6 +27,8 @@ interface POSContextType {
   discountSettings: DiscountSettings;
   basketDiscount: number;
   gratuitySettings: GratuitySettings;
+  receiptSettings: ReceiptSettings;
+  updateReceiptSettings: (settings: ReceiptSettings) => Promise<void>;
   login: (operator: Operator) => Promise<void>;
   logout: () => Promise<void>;
   addToBasket: (product: Product, selectedPrice: any, quantity?: number, manualPrice?: number) => void;
@@ -75,6 +77,10 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   const [discountSettings, setDiscountSettings] = useState<DiscountSettings>({ presetPercentages: [5, 10, 15, 20, 25, 50] });
   const [basketDiscount, setBasketDiscount] = useState(0);
   const [gratuitySettings, setGratuitySettings] = useState<GratuitySettings>({ enabled: false, presetPercentages: [10, 15, 20] });
+  const [receiptSettings, setReceiptSettings] = useState<ReceiptSettings>({
+    headerLines: [],
+    footerLines: [{ text: 'Thank you for your visit!', size: 'normal' }],
+  });
 
   const [tenders, setTenders] = useState<Tender[]>([
     { id: '1', name: 'Cash', color: '#10b981' },
@@ -135,6 +141,11 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     });
     AsyncStorage.getItem('refundButtonEnabled').then((data) => {
       setRefundButtonEnabled(data !== 'false');
+    });
+    AsyncStorage.getItem('receiptSettings').then((data) => {
+      if (data) {
+        setReceiptSettings(JSON.parse(data));
+      }
     });
     dataSyncService.getStoredVATRates().then((rates) => {
       if (rates && rates.length > 0) {
@@ -556,6 +567,12 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     console.log('[POS] Refund button enabled updated:', enabled);
   }, []);
 
+  const updateReceiptSettings = useCallback(async (settings: ReceiptSettings) => {
+    setReceiptSettings(settings);
+    await AsyncStorage.setItem('receiptSettings', JSON.stringify(settings));
+    console.log('[POS] Receipt settings updated:', settings);
+  }, []);
+
   return {
     currentOperator,
     basket,
@@ -604,5 +621,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     applyDiscount,
     gratuitySettings,
     updateGratuitySettings,
+    receiptSettings,
+    updateReceiptSettings,
   };
 });

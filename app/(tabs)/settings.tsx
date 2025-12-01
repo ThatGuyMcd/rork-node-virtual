@@ -17,7 +17,7 @@ import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGri
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
 import { printerService } from '@/services/printerService';
 import { useRouter } from 'expo-router';
-import type { ProductDisplaySettings, ProductGroup, Department, DiscountSettings, GratuitySettings, PrinterSettings } from '@/types/pos';
+import type { ProductDisplaySettings, ProductGroup, Department, DiscountSettings, GratuitySettings, PrinterSettings, ReceiptSettings, ReceiptLine, ReceiptLineSize } from '@/types/pos';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -32,7 +32,7 @@ export default function SettingsScreen() {
   const [tableSelectionRequired, setTableSelectionRequired] = useState(false);
   const [productViewLayout, setProductViewLayout] = useState<'compact' | 'standard' | 'large'>('standard');
   const [productViewMode, setProductViewMode] = useState<'group-department' | 'all-departments' | 'all-items'>('group-department');
-  const { updateTableSelectionRequired, updateProductViewLayout, updateProductViewMode, isInitialSetupComplete, completeInitialSetup, cardPaymentEnabled, cashPaymentEnabled, cardMachineProvider, splitPaymentsEnabled, updateCardPaymentEnabled, updateCashPaymentEnabled, updateCardMachineProvider, updateSplitPaymentsEnabled, refundButtonEnabled, updateRefundButtonEnabled, discountSettings, updateDiscountSettings, gratuitySettings, updateGratuitySettings } = usePOS();
+  const { updateTableSelectionRequired, updateProductViewLayout, updateProductViewMode, isInitialSetupComplete, completeInitialSetup, cardPaymentEnabled, cashPaymentEnabled, cardMachineProvider, splitPaymentsEnabled, updateCardPaymentEnabled, updateCashPaymentEnabled, updateCardMachineProvider, updateSplitPaymentsEnabled, refundButtonEnabled, updateRefundButtonEnabled, discountSettings, updateDiscountSettings, gratuitySettings, updateGratuitySettings, receiptSettings, updateReceiptSettings } = usePOS();
   const router = useRouter();
   const { theme, themePreference, colors, setTheme } = useTheme();
 
@@ -71,6 +71,11 @@ export default function SettingsScreen() {
   const [printerIPInput, setPrinterIPInput] = useState('');
   const [printerPortInput, setPrinterPortInput] = useState('9100');
   const [isConnectingPrinter, setIsConnectingPrinter] = useState(false);
+  const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+  const [editingReceiptSection, setEditingReceiptSection] = useState<'header' | 'footer'>('header');
+  const [editingReceiptLineIndex, setEditingReceiptLineIndex] = useState<number | null>(null);
+  const [receiptLineText, setReceiptLineText] = useState('');
+  const [receiptLineSize, setReceiptLineSize] = useState<ReceiptLineSize>('normal');
   
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     account: true,
@@ -83,6 +88,7 @@ export default function SettingsScreen() {
     initialSetup: false,
     danger: false,
     printer: false,
+    receipt: false,
   });
 
   useEffect(() => {
@@ -1453,6 +1459,93 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
           )}
+        </CollapsibleSection>
+
+        <CollapsibleSection 
+          id="receipt" 
+          icon={FileText} 
+          title="Receipt Settings" 
+          iconColor={colors.primary}
+        >
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>Customize the header and footer text on receipts and bills</Text>
+            
+            <Text style={[styles.filterSectionTitle, { color: colors.text, marginBottom: 12 }]}>Header Lines ({receiptSettings.headerLines.length}/7)</Text>
+            {receiptSettings.headerLines.map((line, index) => (
+              <View key={`header-${index}`} style={[styles.receiptLineItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.receiptLineText, { color: colors.text }]}>{line.text}</Text>
+                  <Text style={[styles.receiptLineSize, { color: colors.textTertiary }]}>Size: {line.size}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setEditingReceiptSection('header');
+                    setEditingReceiptLineIndex(index);
+                    setReceiptLineText(line.text);
+                    setReceiptLineSize(line.size);
+                    setReceiptModalVisible(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.editButton, { color: colors.primary }]}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            
+            {receiptSettings.headerLines.length < 7 && (
+              <TouchableOpacity
+                style={[styles.addDiscountButton, { backgroundColor: colors.primary, marginTop: 12 }]}
+                onPress={() => {
+                  setEditingReceiptSection('header');
+                  setEditingReceiptLineIndex(null);
+                  setReceiptLineText('');
+                  setReceiptLineSize('normal');
+                  setReceiptModalVisible(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.addDiscountText}>Add Header Line</Text>
+              </TouchableOpacity>
+            )}
+
+            <Text style={[styles.filterSectionTitle, { color: colors.text, marginBottom: 12, marginTop: 24 }]}>Footer Lines ({receiptSettings.footerLines.length}/7)</Text>
+            {receiptSettings.footerLines.map((line, index) => (
+              <View key={`footer-${index}`} style={[styles.receiptLineItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.receiptLineText, { color: colors.text }]}>{line.text}</Text>
+                  <Text style={[styles.receiptLineSize, { color: colors.textTertiary }]}>Size: {line.size}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setEditingReceiptSection('footer');
+                    setEditingReceiptLineIndex(index);
+                    setReceiptLineText(line.text);
+                    setReceiptLineSize(line.size);
+                    setReceiptModalVisible(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.editButton, { color: colors.primary }]}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            
+            {receiptSettings.footerLines.length < 7 && (
+              <TouchableOpacity
+                style={[styles.addDiscountButton, { backgroundColor: colors.primary, marginTop: 12 }]}
+                onPress={() => {
+                  setEditingReceiptSection('footer');
+                  setEditingReceiptLineIndex(null);
+                  setReceiptLineText('');
+                  setReceiptLineSize('normal');
+                  setReceiptModalVisible(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.addDiscountText}>Add Footer Line</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </CollapsibleSection>
 
         <CollapsibleSection 

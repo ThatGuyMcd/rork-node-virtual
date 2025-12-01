@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, Alert } from 'react-native';
-import type { PrinterSettings, PrinterDevice, Transaction } from '@/types/pos';
+import type { PrinterSettings, PrinterDevice, Transaction, ReceiptSettings } from '@/types/pos';
 import { ESCPOSGenerator } from './escpos';
 
 const PRINTER_SETTINGS_KEY = 'printerSettings';
@@ -124,13 +124,13 @@ class PrinterService {
     }
   }
 
-  async printReceipt(transaction: Transaction, siteName?: string, isReprint: boolean = false): Promise<void> {
+  async printReceipt(transaction: Transaction, siteName?: string, isReprint: boolean = false, receiptSettings?: ReceiptSettings): Promise<void> {
     if (!this.settings.isConnected) {
       throw new Error('Printer not connected');
     }
 
     const generator = new ESCPOSGenerator(this.settings.paperWidth);
-    const receiptData = generator.generateReceipt(transaction, siteName, isReprint);
+    const receiptData = generator.generateReceipt(transaction, siteName, isReprint, receiptSettings);
 
     try {
       await this.sendData(receiptData);

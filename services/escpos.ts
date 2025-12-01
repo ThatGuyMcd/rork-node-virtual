@@ -1,4 +1,4 @@
-import type { Transaction, PrinterPaperWidth } from '@/types/pos';
+import type { Transaction, PrinterPaperWidth, ReceiptSettings, ReceiptLineSize } from '@/types/pos';
 
 export class ESCPOSGenerator {
   private commands = {
@@ -48,6 +48,17 @@ export class ESCPOSGenerator {
     return this.commands.ESC + '!' + (enable ? '\x30' : '\x00');
   }
 
+  private setTextSize(size: ReceiptLineSize): string {
+    switch (size) {
+      case 'small':
+        return this.commands.ESC + '!' + '\x00';
+      case 'normal':
+        return this.commands.ESC + '!' + '\x00';
+      case 'large':
+        return this.commands.ESC + '!' + '\x30';
+    }
+  }
+
   private underline(enable: boolean): string {
     return this.commands.ESC + '-' + (enable ? '\x01' : '\x00');
   }
@@ -89,14 +100,23 @@ export class ESCPOSGenerator {
     return char.repeat(this.charsPerLine) + this.commands.LF;
   }
 
-  generateReceipt(transaction: Transaction, siteName?: string, isReprint: boolean = false): Uint8Array {
+  generateReceipt(transaction: Transaction, siteName?: string, isReprint: boolean = false, customSettings?: ReceiptSettings): Uint8Array {
     let receipt = '';
 
     receipt += this.init();
     receipt += this.alignCenter();
-    receipt += this.doubleSize(true);
-    receipt += (siteName || 'RECEIPT') + this.commands.LF;
-    receipt += this.doubleSize(false);
+
+    if (customSettings && customSettings.headerLines.length > 0) {
+      customSettings.headerLines.forEach((line) => {
+        receipt += this.setTextSize(line.size);
+        receipt += line.text + this.commands.LF;
+      });
+      receipt += this.setTextSize('normal');
+    } else {
+      receipt += this.doubleSize(true);
+      receipt += (siteName || 'RECEIPT') + this.commands.LF;
+      receipt += this.doubleSize(false);
+    }
     
     if (isReprint) {
       receipt += this.bold(true);
@@ -190,7 +210,17 @@ export class ESCPOSGenerator {
 
     receipt += this.feed(1);
     receipt += this.alignCenter();
-    receipt += 'Thank you for your visit!' + this.commands.LF;
+
+    if (customSettings && customSettings.footerLines.length > 0) {
+      customSettings.footerLines.forEach((line) => {
+        receipt += this.setTextSize(line.size);
+        receipt += line.text + this.commands.LF;
+      });
+      receipt += this.setTextSize('normal');
+    } else {
+      receipt += 'Thank you for your visit!' + this.commands.LF;
+    }
+
     receipt += this.feed(3);
 
     receipt += this.cutPaper();

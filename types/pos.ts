@@ -166,3 +166,15 @@ export interface PrinterDevice {
   address: string;
   type: 'bluetooth' | 'network';
 }
+
+export type ReceiptLineSize = 'small' | 'normal' | 'large';
+
+export interface ReceiptLine {
+  text: string;
+  size: ReceiptLineSize;
+}
+
+export interface ReceiptSettings {
+  headerLines: ReceiptLine[];
+  footerLines: ReceiptLine[];
+}
