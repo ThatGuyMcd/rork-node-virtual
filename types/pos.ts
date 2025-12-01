@@ -65,6 +65,7 @@ export interface Table {
   tabCode: string;
   area: string;
   color?: string;
+  isLocked?: boolean;
 }
 
 export interface TableOrder {

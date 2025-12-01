@@ -380,10 +380,13 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     if (previousTable && previousBasket.length > 0 && currentOperator) {
       console.log(`[POS] Saving previous table ${previousTable.name} with ${previousBasket.length} items before switching`);
       await tableDataService.saveTableData(previousTable, previousBasket, currentOperator, vatRates);
+      await tableDataService.unlockTable(previousTable);
     }
     
     setCurrentTable(table);
     if (table) {
+      await tableDataService.lockTable(table);
+      
       const csvRows = await tableDataService.loadTableData(table.id);
       if (csvRows.length > 0) {
         console.log(`[POS] Loading basket from CSV... Found ${csvRows.length} rows`);
@@ -448,6 +451,9 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     try {
       await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
       console.log('[POS] Successfully saved table tab and synced to server');
+      
+      await tableDataService.unlockTable(currentTable);
+      console.log('[POS] Successfully unlocked table:', currentTable.name);
       
       setCurrentTable(null);
       setBasket([]);
