@@ -135,15 +135,15 @@ export default function BasketScreen() {
       const newRemaining = remainingTotal - amount;
       
       if (Math.abs(newRemaining) < 0.01) {
-        await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined);
-        setSplitPayments([]);
-        setSplitPaymentAmount('');
-        setGratuityAmount(0);
-        const allTransactions = await transactionService.getAllTransactions();
-        const lastTxn = allTransactions[allTransactions.length - 1];
-        setLastTransaction(lastTxn || null);
-        console.log('[Basket] Showing receipt print modal after split payment completion');
-        closePaymentModal(() => {
+        closePaymentModal(async () => {
+          await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined);
+          setSplitPayments([]);
+          setSplitPaymentAmount('');
+          setGratuityAmount(0);
+          const allTransactions = await transactionService.getAllTransactions();
+          const lastTxn = allTransactions[allTransactions.length - 1];
+          setLastTransaction(lastTxn || null);
+          console.log('[Basket] Showing receipt print modal after split payment completion');
           setReceiptPrintModalVisible(true);
         });
         return;
@@ -156,15 +156,15 @@ export default function BasketScreen() {
         return;
       }
     }
-    await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined);
-    setSplitPayments([]);
-    setSplitPaymentAmount('');
-    setGratuityAmount(0);
-    const allTransactions = await transactionService.getAllTransactions();
-    const lastTxn = allTransactions[allTransactions.length - 1];
-    setLastTransaction(lastTxn || null);
-    console.log('[Basket] Showing receipt print modal after payment completion');
-    closePaymentModal(() => {
+    closePaymentModal(async () => {
+      await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined);
+      setSplitPayments([]);
+      setSplitPaymentAmount('');
+      setGratuityAmount(0);
+      const allTransactions = await transactionService.getAllTransactions();
+      const lastTxn = allTransactions[allTransactions.length - 1];
+      setLastTransaction(lastTxn || null);
+      console.log('[Basket] Showing receipt print modal after payment completion');
       setReceiptPrintModalVisible(true);
     });
   };
@@ -255,7 +255,7 @@ export default function BasketScreen() {
     setScreenReceiptModalVisible(false);
   };
 
-  if (basket.length === 0) {
+  if (basket.length === 0 && !receiptPrintModalVisible) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
