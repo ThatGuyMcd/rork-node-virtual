@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,12 @@ import {
   Alert,
 } from 'react-native';
 
-import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare, RotateCcw, Percent } from 'lucide-react-native';
+import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare, RotateCcw, Percent, Printer } from 'lucide-react-native';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { printerService } from '@/services/printerService';
+import { transactionService } from '@/services/transactionService';
+import type { Transaction } from '@/types/pos';
 
 export default function BasketScreen() {
   const {
@@ -50,8 +53,21 @@ export default function BasketScreen() {
   const [gratuityModalVisible, setGratuityModalVisible] = useState(false);
   const [gratuityAmount, setGratuityAmount] = useState<number>(0);
   const [customGratuityInput, setCustomGratuityInput] = useState('');
+  const [receiptPrintModalVisible, setReceiptPrintModalVisible] = useState(false);
+  const [printerConnected, setPrinterConnected] = useState(false);
+  const [lastTransaction, setLastTransaction] = useState<Transaction | null>(null);
   const scaleAnim = useState(new Animated.Value(0))[0];
   const availableTenders = getAvailableTenders();
+
+  useEffect(() => {
+    const checkPrinterConnection = async () => {
+      await printerService.loadSettings();
+      const connected = printerService.isConnected();
+      setPrinterConnected(connected);
+      console.log('[Basket] Printer connected:', connected);
+    };
+    checkPrinterConnection();
+  }, []);
 
   const { subtotal, discount, vatBreakdown, total } = calculateTotals();
   const paidAmount = splitPayments.reduce((sum, payment) => sum + payment.amount, 0);
@@ -120,6 +136,12 @@ export default function BasketScreen() {
         setSplitPaymentAmount('');
         setGratuityAmount(0);
         closePaymentModal();
+        if (printerConnected) {
+          const allTransactions = await transactionService.getAllTransactions();
+          const lastTxn = allTransactions[allTransactions.length - 1];
+          setLastTransaction(lastTxn || null);
+          setReceiptPrintModalVisible(true);
+        }
         return;
       }
       
@@ -135,6 +157,12 @@ export default function BasketScreen() {
     setSplitPaymentAmount('');
     setGratuityAmount(0);
     closePaymentModal();
+    if (printerConnected) {
+      const allTransactions = await transactionService.getAllTransactions();
+      const lastTxn = allTransactions[allTransactions.length - 1];
+      setLastTransaction(lastTxn || null);
+      setReceiptPrintModalVisible(true);
+    }
   };
 
   const handleKeypadPress = (value: string) => {
@@ -190,6 +218,68 @@ export default function BasketScreen() {
     setDiscountModalVisible(false);
   };
 
+  const handlePrintBill = async () => {
+    if (!printerConnected) {
+      Alert.alert('Printer Not Connected', 'Please connect a printer in settings.');
+      return;
+    }
+
+    if (!currentOperator) {
+      Alert.alert('Error', 'No operator logged in');
+      return;
+    }
+
+    const totals = calculateTotals();
+    const billTransaction = {
+      id: `bill_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date().toISOString(),
+      operatorId: currentOperator.id,
+      operatorName: currentOperator.name,
+      tableId: currentTable?.id,
+      tableName: currentTable?.name,
+      items: [...basket],
+      subtotal: totals.subtotal,
+      vatBreakdown: totals.vatBreakdown,
+      total: totals.total + gratuityAmount,
+      tenderId: '',
+      tenderName: 'BILL',
+      paymentMethod: 'BILL',
+      isRefund: basket.some(item => item.quantity < 0),
+      discount: totals.discount > 0 ? totals.discount : undefined,
+      gratuity: gratuityAmount > 0 ? gratuityAmount : undefined,
+    };
+
+    try {
+      await printerService.printReceipt(billTransaction);
+      Alert.alert('Success', 'Bill printed successfully');
+    } catch (error) {
+      console.error('[Basket] Failed to print bill:', error);
+      Alert.alert('Print Error', 'Failed to print bill. Please check printer connection.');
+    }
+  };
+
+  const handlePrintReceipt = async () => {
+    if (!lastTransaction) {
+      Alert.alert('Error', 'No transaction found to print');
+      setReceiptPrintModalVisible(false);
+      return;
+    }
+
+    try {
+      await printerService.printReceipt(lastTransaction);
+      setReceiptPrintModalVisible(false);
+      Alert.alert('Success', 'Receipt printed successfully');
+    } catch (error) {
+      console.error('[Basket] Failed to print receipt:', error);
+      setReceiptPrintModalVisible(false);
+      Alert.alert('Print Error', 'Failed to print receipt. Please check printer connection.');
+    }
+  };
+
+  const handleSkipReceipt = () => {
+    setReceiptPrintModalVisible(false);
+  };
+
   if (basket.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -224,6 +314,15 @@ export default function BasketScreen() {
           )}
         </View>
         <View style={styles.headerActions}>
+          {printerConnected && (
+            <TouchableOpacity
+              style={[styles.printBillButton, { backgroundColor: colors.cardBackground, borderColor: colors.primary }]}
+              onPress={handlePrintBill}
+              activeOpacity={0.7}
+            >
+              <Printer size={20} color={colors.primary} />
+            </TouchableOpacity>
+          )}
           {currentOperator?.isManager && refundButtonEnabled && (
             <TouchableOpacity
               style={[
@@ -732,6 +831,43 @@ export default function BasketScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        transparent
+        visible={receiptPrintModalVisible}
+        onRequestClose={() => setReceiptPrintModalVisible(false)}
+        animationType="fade"
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+          <View style={[styles.receiptModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={[styles.receiptModalIconContainer, { backgroundColor: colors.success + '20' }]}>
+              <Printer size={48} color={colors.success} />
+            </View>
+            
+            <Text style={[styles.receiptModalTitle, { color: colors.text }]}>Transaction Complete!</Text>
+            <Text style={[styles.receiptModalSubtitle, { color: colors.textSecondary }]}>Would you like to print a receipt?</Text>
+
+            <View style={styles.receiptModalButtons}>
+              <TouchableOpacity
+                style={[styles.receiptModalButton, { backgroundColor: colors.primary }]}
+                onPress={handlePrintReceipt}
+                activeOpacity={0.8}
+              >
+                <Printer size={20} color="#fff" />
+                <Text style={styles.receiptModalButtonText}>Print Receipt</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.receiptModalButtonSecondary, { backgroundColor: colors.background, borderColor: colors.border }]}
+                onPress={handleSkipReceipt}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.receiptModalButtonSecondaryText, { color: colors.textSecondary }]}>Skip</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -802,6 +938,15 @@ const styles = StyleSheet.create({
   gratuityButtonBottomText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  printBillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 2,
   },
   refundButton: {
     flexDirection: 'row',
@@ -1254,6 +1399,59 @@ const styles = StyleSheet.create({
   },
   skipGratuityText: {
     fontSize: 15,
+    fontWeight: '600',
+  },
+  receiptModal: {
+    borderRadius: 20,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  receiptModalIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  receiptModalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  receiptModalSubtitle: {
+    fontSize: 16,
+    marginBottom: 32,
+    textAlign: 'center',
+  },
+  receiptModalButtons: {
+    width: '100%',
+    gap: 12,
+  },
+  receiptModalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 16,
+    borderRadius: 12,
+  },
+  receiptModalButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  receiptModalButtonSecondary: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+  },
+  receiptModalButtonSecondaryText: {
+    fontSize: 16,
     fontWeight: '600',
   },
 });
