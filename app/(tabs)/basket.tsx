@@ -107,13 +107,16 @@ export default function BasketScreen() {
     setGratuityModalVisible(false);
   };
 
-  const closePaymentModal = () => {
+  const closePaymentModal = (callback?: () => void) => {
     Animated.timing(scaleAnim, {
       toValue: 0,
       duration: 200,
       useNativeDriver: true,
     }).start(() => {
       setPaymentModalVisible(false);
+      if (callback) {
+        setTimeout(callback, 100);
+      }
     });
   };
 
@@ -136,11 +139,13 @@ export default function BasketScreen() {
         setSplitPayments([]);
         setSplitPaymentAmount('');
         setGratuityAmount(0);
-        closePaymentModal();
         const allTransactions = await transactionService.getAllTransactions();
         const lastTxn = allTransactions[allTransactions.length - 1];
         setLastTransaction(lastTxn || null);
-        setReceiptPrintModalVisible(true);
+        console.log('[Basket] Showing receipt print modal after split payment completion');
+        closePaymentModal(() => {
+          setReceiptPrintModalVisible(true);
+        });
         return;
       }
       
@@ -155,11 +160,13 @@ export default function BasketScreen() {
     setSplitPayments([]);
     setSplitPaymentAmount('');
     setGratuityAmount(0);
-    closePaymentModal();
     const allTransactions = await transactionService.getAllTransactions();
     const lastTxn = allTransactions[allTransactions.length - 1];
     setLastTransaction(lastTxn || null);
-    setReceiptPrintModalVisible(true);
+    console.log('[Basket] Showing receipt print modal after payment completion');
+    closePaymentModal(() => {
+      setReceiptPrintModalVisible(true);
+    });
   };
 
   const handleKeypadPress = (value: string) => {
@@ -522,7 +529,7 @@ export default function BasketScreen() {
       <Modal
         transparent
         visible={paymentModalVisible}
-        onRequestClose={closePaymentModal}
+        onRequestClose={() => closePaymentModal()}
         animationType="none"
       >
         <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
@@ -537,7 +544,7 @@ export default function BasketScreen() {
           >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Select Payment Method</Text>
-              <TouchableOpacity onPress={closePaymentModal}>
+              <TouchableOpacity onPress={() => closePaymentModal()}>
                 <X size={24} color={colors.textTertiary} />
               </TouchableOpacity>
             </View>
