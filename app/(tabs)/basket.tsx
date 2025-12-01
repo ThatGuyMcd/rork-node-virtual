@@ -56,6 +56,7 @@ export default function BasketScreen() {
   const [receiptPrintModalVisible, setReceiptPrintModalVisible] = useState(false);
   const [printerConnected, setPrinterConnected] = useState(false);
   const [lastTransaction, setLastTransaction] = useState<Transaction | null>(null);
+  const [screenReceiptModalVisible, setScreenReceiptModalVisible] = useState(false);
   const scaleAnim = useState(new Animated.Value(0))[0];
   const availableTenders = getAvailableTenders();
 
@@ -136,12 +137,10 @@ export default function BasketScreen() {
         setSplitPaymentAmount('');
         setGratuityAmount(0);
         closePaymentModal();
-        if (printerConnected) {
-          const allTransactions = await transactionService.getAllTransactions();
-          const lastTxn = allTransactions[allTransactions.length - 1];
-          setLastTransaction(lastTxn || null);
-          setReceiptPrintModalVisible(true);
-        }
+        const allTransactions = await transactionService.getAllTransactions();
+        const lastTxn = allTransactions[allTransactions.length - 1];
+        setLastTransaction(lastTxn || null);
+        setReceiptPrintModalVisible(true);
         return;
       }
       
@@ -157,12 +156,10 @@ export default function BasketScreen() {
     setSplitPaymentAmount('');
     setGratuityAmount(0);
     closePaymentModal();
-    if (printerConnected) {
-      const allTransactions = await transactionService.getAllTransactions();
-      const lastTxn = allTransactions[allTransactions.length - 1];
-      setLastTransaction(lastTxn || null);
-      setReceiptPrintModalVisible(true);
-    }
+    const allTransactions = await transactionService.getAllTransactions();
+    const lastTxn = allTransactions[allTransactions.length - 1];
+    setLastTransaction(lastTxn || null);
+    setReceiptPrintModalVisible(true);
   };
 
   const handleKeypadPress = (value: string) => {
@@ -278,6 +275,15 @@ export default function BasketScreen() {
 
   const handleSkipReceipt = () => {
     setReceiptPrintModalVisible(false);
+  };
+
+  const handlePrintToScreen = () => {
+    setReceiptPrintModalVisible(false);
+    setScreenReceiptModalVisible(true);
+  };
+
+  const handleCloseScreenReceipt = () => {
+    setScreenReceiptModalVisible(false);
   };
 
   if (basket.length === 0) {
@@ -855,12 +861,32 @@ export default function BasketScreen() {
 
             <View style={styles.receiptModalButtons}>
               <TouchableOpacity
-                style={[styles.receiptModalButton, { backgroundColor: colors.primary }]}
+                style={[
+                  styles.receiptModalButton,
+                  { 
+                    backgroundColor: printerConnected ? colors.primary : colors.cardBackground,
+                    borderColor: printerConnected ? colors.primary : colors.border,
+                    borderWidth: printerConnected ? 0 : 2,
+                    borderStyle: printerConnected ? 'solid' : 'dotted',
+                  }
+                ]}
                 onPress={handlePrintReceipt}
+                activeOpacity={printerConnected ? 0.8 : 1}
+                disabled={!printerConnected}
+              >
+                <Printer size={20} color={printerConnected ? "#fff" : colors.textTertiary} />
+                <Text style={[
+                  styles.receiptModalButtonText,
+                  { color: printerConnected ? "#fff" : colors.textTertiary }
+                ]}>Print Receipt</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.receiptModalButtonSecondary, { backgroundColor: colors.background, borderColor: colors.border }]}
+                onPress={handlePrintToScreen}
                 activeOpacity={0.8}
               >
-                <Printer size={20} color="#fff" />
-                <Text style={styles.receiptModalButtonText}>Print Receipt</Text>
+                <Text style={[styles.receiptModalButtonSecondaryText, { color: colors.text }]}>Print to Screen</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -871,6 +897,123 @@ export default function BasketScreen() {
                 <Text style={[styles.receiptModalButtonSecondaryText, { color: colors.textSecondary }]}>Skip</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        transparent
+        visible={screenReceiptModalVisible}
+        onRequestClose={handleCloseScreenReceipt}
+        animationType="slide"
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+          <View style={[styles.screenReceiptModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.screenReceiptHeader}>
+              <Text style={[styles.screenReceiptTitle, { color: colors.text }]}>Receipt</Text>
+              <TouchableOpacity onPress={handleCloseScreenReceipt}>
+                <X size={24} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.screenReceiptContent} showsVerticalScrollIndicator={false}>
+              {lastTransaction && (
+                <View style={styles.receiptContainer}>
+                  <Text style={[styles.receiptHeader, { color: colors.text }]}>RECEIPT</Text>
+                  <Text style={[styles.receiptSubheader, { color: colors.textSecondary }]}>Transaction #{lastTransaction.id.slice(-8)}</Text>
+                  <Text style={[styles.receiptDate, { color: colors.textSecondary }]}>{new Date(lastTransaction.timestamp).toLocaleString()}</Text>
+                  
+                  <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
+                  
+                  <View style={styles.receiptSection}>
+                    <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>Operator:</Text>
+                    <Text style={[styles.receiptValue, { color: colors.text }]}>{lastTransaction.operatorName}</Text>
+                  </View>
+
+                  {lastTransaction.tableName && (
+                    <View style={styles.receiptSection}>
+                      <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>Table:</Text>
+                      <Text style={[styles.receiptValue, { color: colors.text }]}>{lastTransaction.tableName}</Text>
+                    </View>
+                  )}
+
+                  <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
+
+                  <Text style={[styles.receiptSectionTitle, { color: colors.text }]}>Items:</Text>
+                  {lastTransaction.items.map((item, index) => (
+                    <View key={index} style={styles.receiptItemRow}>
+                      <View style={styles.receiptItemInfo}>
+                        <Text style={[styles.receiptItemName, { color: colors.text }]}>{item.product.name}</Text>
+                        <Text style={[styles.receiptItemDetails, { color: colors.textSecondary }]}>
+                          {Math.abs(item.quantity)} x £{item.selectedPrice.price.toFixed(2)}
+                        </Text>
+                      </View>
+                      <Text style={[styles.receiptItemTotal, { color: colors.text }]}>£{Math.abs(item.lineTotal).toFixed(2)}</Text>
+                    </View>
+                  ))}
+
+                  <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
+
+                  <View style={styles.receiptTotalsSection}>
+                    <View style={styles.receiptTotalRow}>
+                      <Text style={[styles.receiptTotalLabel, { color: colors.textSecondary }]}>Subtotal:</Text>
+                      <Text style={[styles.receiptTotalValue, { color: colors.text }]}>£{lastTransaction.subtotal.toFixed(2)}</Text>
+                    </View>
+
+                    {lastTransaction.discount && lastTransaction.discount > 0 && (
+                      <View style={styles.receiptTotalRow}>
+                        <Text style={[styles.receiptTotalLabel, { color: colors.accent }]}>Discount:</Text>
+                        <Text style={[styles.receiptTotalValue, { color: colors.accent }]}>-£{lastTransaction.discount.toFixed(2)}</Text>
+                      </View>
+                    )}
+
+                    {Object.entries(lastTransaction.vatBreakdown).map(([code, amount]) => (
+                      <View key={code} style={styles.receiptTotalRow}>
+                        <Text style={[styles.receiptTotalLabel, { color: colors.textTertiary }]}>VAT ({code}):</Text>
+                        <Text style={[styles.receiptTotalValue, { color: colors.textSecondary }]}>£{amount.toFixed(2)}</Text>
+                      </View>
+                    ))}
+
+                    {lastTransaction.gratuity && lastTransaction.gratuity > 0 && (
+                      <View style={styles.receiptTotalRow}>
+                        <Text style={[styles.receiptTotalLabel, { color: colors.success }]}>Gratuity:</Text>
+                        <Text style={[styles.receiptTotalValue, { color: colors.success }]}>£{lastTransaction.gratuity.toFixed(2)}</Text>
+                      </View>
+                    )}
+
+                    <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
+
+                    <View style={styles.receiptTotalRow}>
+                      <Text style={[styles.receiptTotalLabelBold, { color: colors.text }]}>Total:</Text>
+                      <Text style={[styles.receiptTotalValueBold, { color: colors.primary }]}>£{lastTransaction.total.toFixed(2)}</Text>
+                    </View>
+
+                    <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
+
+                    <View style={styles.receiptTotalRow}>
+                      <Text style={[styles.receiptTotalLabel, { color: colors.textSecondary }]}>Payment Method:</Text>
+                      <Text style={[styles.receiptTotalValue, { color: colors.text }]}>{lastTransaction.paymentMethod}</Text>
+                    </View>
+                  </View>
+
+                  {lastTransaction.isRefund && (
+                    <View style={[styles.receiptRefundBanner, { backgroundColor: colors.error + '20', borderColor: colors.error }]}>
+                      <Text style={[styles.receiptRefundText, { color: colors.error }]}>REFUND</Text>
+                    </View>
+                  )}
+
+                  <Text style={[styles.receiptFooter, { color: colors.textTertiary }]}>Thank you for your business!</Text>
+                </View>
+              )}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.closeScreenReceiptButton, { backgroundColor: colors.primary }]}
+              onPress={handleCloseScreenReceipt}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.closeScreenReceiptButtonText}>Close</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1460,5 +1603,137 @@ const styles = StyleSheet.create({
   receiptModalButtonSecondaryText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  screenReceiptModal: {
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '90%',
+  },
+  screenReceiptHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  screenReceiptTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  screenReceiptContent: {
+    flex: 1,
+  },
+  receiptContainer: {
+    paddingBottom: 20,
+  },
+  receiptHeader: {
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  receiptSubheader: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  receiptDate: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  receiptDivider: {
+    height: 1,
+    marginVertical: 12,
+  },
+  receiptSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 4,
+  },
+  receiptLabel: {
+    fontSize: 14,
+  },
+  receiptValue: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  receiptSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  receiptItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 6,
+  },
+  receiptItemInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  receiptItemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  receiptItemDetails: {
+    fontSize: 12,
+  },
+  receiptItemTotal: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  receiptTotalsSection: {
+    marginTop: 8,
+  },
+  receiptTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 4,
+  },
+  receiptTotalLabel: {
+    fontSize: 14,
+  },
+  receiptTotalValue: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  receiptTotalLabelBold: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  receiptTotalValueBold: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  receiptRefundBanner: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  receiptRefundText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  receiptFooter: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  closeScreenReceiptButton: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  closeScreenReceiptButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
   },
 });
