@@ -338,8 +338,8 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     }
     
     if (currentTable) {
-      await tableDataService.clearTableData(currentTable.id);
-      console.log('[POS] Cleared table data from CSV for table:', currentTable.id);
+      await tableDataService.clearTableData(currentTable.id, currentTable);
+      console.log('[POS] Cleared table data from CSV and synced to server for table:', currentTable.id);
     }
     
     setBasketDiscount(0);

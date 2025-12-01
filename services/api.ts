@@ -156,6 +156,54 @@ export class PositronAPI {
     }
   }
 
+  async saveTableData(siteId: string, area: string, tableName: string, tableData: string): Promise<{ success: boolean }> {
+    try {
+      console.log(`[API] Saving table data for ${area}/${tableName}`);
+      
+      const url = `${API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/table`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          area,
+          table: tableName,
+          data: tableData,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('[API] Save table data error response:', text);
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
+
+      console.log('[API] Successfully saved table data');
+      return { success: true };
+    } catch (error: any) {
+      console.error('[API] Save table data error:', error);
+      
+      if (error.name === 'AbortError') {
+        throw new Error('Connection timeout while saving table data.');
+      }
+      
+      if (error.message === 'Failed to fetch' || error.message === 'Network request failed') {
+        throw new Error('Unable to connect to server. Please check your internet connection.');
+      }
+      
+      throw error;
+    }
+  }
+
   private normalizePath(path: string): string {
     return String(path || '')
       .replace(/^[.\\/]+/, '')

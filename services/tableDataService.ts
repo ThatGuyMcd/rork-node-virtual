@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import type { BasketItem, Operator, Table } from '@/types/pos';
 import { dataParser } from './dataParser';
 import { trpcClient } from '@/lib/trpc';
+import { dataSyncService } from './dataSync';
 
 export interface TableDataRow {
   quantity: number;
@@ -96,13 +97,29 @@ class TableDataService {
 
     try {
       console.log('[TableDataService] Syncing table data to server...');
+      
+      const siteInfo = await dataSyncService.getSiteInfo();
+      if (!siteInfo) {
+        console.warn('[TableDataService] No site info available, skipping server sync');
+        return;
+      }
+      
       const result = await trpcClient.tabledata.sync.mutate({
+        siteId: siteInfo.siteId,
+        area: table.area,
+        tableName: table.name,
         tableId: table.id,
         tableData: rows,
       });
-      console.log('[TableDataService] Server sync successful:', result);
+      
+      if (result.success) {
+        console.log('[TableDataService] Server sync successful:', result);
+      } else {
+        console.warn('[TableDataService] Server sync reported failure:', result.error);
+      }
     } catch (error) {
       console.error('[TableDataService] Server sync failed:', error);
+      // Don't throw - allow local save to succeed even if server sync fails
     }
   }
 
@@ -174,52 +191,80 @@ class TableDataService {
     }
   }
 
-  async clearTableData(tableId: string): Promise<void> {
+  async clearTableData(tableId: string, table?: Table): Promise<void> {
     console.log('[TableDataService] Clearing table data for table ID:', tableId);
 
     try {
       if (!this.isFileSystemAvailable()) {
         console.log('[TableDataService] Clearing from in-memory storage');
         this.data.delete(tableId);
-        return;
-      }
-      
-      const filePath = this.getFilePath();
-      if (!filePath) {
-        return;
-      }
-      const fileInfo = await FileSystem.getInfoAsync(filePath);
-      
-      if (!fileInfo.exists) {
-        console.log('[TableDataService] CSV file does not exist');
-        return;
-      }
-
-      const content = await FileSystem.readAsStringAsync(filePath);
-      const rows = dataParser.parseCSV(content);
-
-      if (rows.length <= 1) {
-        return;
-      }
-
-      const header = rows[0];
-      const tableIdIndex = header.findIndex(h => /table.*id/i.test(h.trim()));
-      
-      const filteredRows = [header];
-      
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        const rowTableId = tableIdIndex >= 0 ? row[tableIdIndex]?.trim() : '';
+      } else {
+        const filePath = this.getFilePath();
+        if (!filePath) {
+          return;
+        }
+        const fileInfo = await FileSystem.getInfoAsync(filePath);
         
-        if (rowTableId !== tableId) {
-          filteredRows.push(row);
+        if (!fileInfo.exists) {
+          console.log('[TableDataService] CSV file does not exist');
+          return;
+        }
+
+        const content = await FileSystem.readAsStringAsync(filePath);
+        const rows = dataParser.parseCSV(content);
+
+        if (rows.length <= 1) {
+          return;
+        }
+
+        const header = rows[0];
+        const tableIdIndex = header.findIndex(h => /table.*id/i.test(h.trim()));
+        
+        const filteredRows = [header];
+        
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          const rowTableId = tableIdIndex >= 0 ? row[tableIdIndex]?.trim() : '';
+          
+          if (rowTableId !== tableId) {
+            filteredRows.push(row);
+          }
+        }
+
+        const csvContent = this.rowsToCSV(filteredRows);
+        await FileSystem.writeAsStringAsync(filePath, csvContent);
+        
+        console.log('[TableDataService] Successfully cleared table data from local storage');
+      }
+      
+      // Sync empty table data to server (clears the table on server)
+      if (table) {
+        try {
+          console.log('[TableDataService] Syncing table clear to server...');
+          
+          const siteInfo = await dataSyncService.getSiteInfo();
+          if (!siteInfo) {
+            console.warn('[TableDataService] No site info available, skipping server sync');
+            return;
+          }
+          
+          const result = await trpcClient.tabledata.sync.mutate({
+            siteId: siteInfo.siteId,
+            area: table.area,
+            tableName: table.name,
+            tableId: table.id,
+            tableData: [],
+          });
+          
+          if (result.success) {
+            console.log('[TableDataService] Server clear sync successful:', result);
+          } else {
+            console.warn('[TableDataService] Server clear sync reported failure:', result.error);
+          }
+        } catch (error) {
+          console.error('[TableDataService] Server clear sync failed:', error);
         }
       }
-
-      const csvContent = this.rowsToCSV(filteredRows);
-      await FileSystem.writeAsStringAsync(filePath, csvContent);
-      
-      console.log('[TableDataService] Successfully cleared table data');
     } catch (error) {
       console.error('[TableDataService] Error clearing table data:', error);
     }
