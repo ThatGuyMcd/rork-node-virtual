@@ -1244,12 +1244,15 @@ export default function ProductsScreen() {
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                     <Text style={[styles.areaTitle, { color: colors.text }]}>{selectedArea} Tables</Text>
-                    {loadingAreaData && (
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    )}
                   </View>
 
-                  <View style={styles.tableGrid}>
+                  {loadingAreaData ? (
+                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                      <ActivityIndicator size="large" color={colors.primary} />
+                      <Text style={[styles.loadingText, { color: colors.textSecondary, marginTop: 16 }]}>Loading tables...</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.tableGrid}>
                     {tables
                       .filter(table => table.area === selectedArea)
                       .map((table) => {
@@ -1294,7 +1297,8 @@ export default function ProductsScreen() {
                           </TouchableOpacity>
                         );
                       })}
-                  </View>
+                    </View>
+                  )}
                 </>
               )}
             </ScrollView>
