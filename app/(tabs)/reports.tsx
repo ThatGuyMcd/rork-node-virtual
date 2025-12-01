@@ -13,12 +13,13 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar, RotateCcw, Search, Percent, Gift, Trophy, Clock, Zap, Star, DollarSign } from 'lucide-react-native';
+import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar, RotateCcw, Search, Percent, Gift, Trophy, Clock, Zap, Star, DollarSign, Printer } from 'lucide-react-native';
 import { transactionService } from '@/services/transactionService';
 import type { Transaction, TransactionReport } from '@/types/pos';
 import { useTheme } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
 import { useFocusEffect } from 'expo-router';
+import { printerService } from '@/services/printerService';
 
 type DateRange = 'today' | 'week' | 'month' | 'all' | 'custom';
 
@@ -75,16 +76,25 @@ export default function ReportsScreen() {
   const [showSearchStartTimePicker, setShowSearchStartTimePicker] = useState(false);
   const [showSearchEndDatePicker, setShowSearchEndDatePicker] = useState(false);
   const [showSearchEndTimePicker, setShowSearchEndTimePicker] = useState(false);
+  const [isPrinterConnected, setIsPrinterConnected] = useState(false);
 
   useEffect(() => {
     loadOperators();
     loadGroupsAndDepartments();
+    checkPrinterConnection();
   }, []);
+
+  const checkPrinterConnection = async () => {
+    const connected = printerService.isConnected();
+    setIsPrinterConnected(connected);
+    console.log('[Reports] Printer connected:', connected);
+  };
 
   useFocusEffect(
     useCallback(() => {
       console.log('[Reports] Tab focused - reloading transactions');
       filterTransactionsByDateRange();
+      checkPrinterConnection();
       return () => {};
     }, [dateRange, customStartDate, customEndDate])
   );
@@ -196,6 +206,18 @@ export default function ReportsScreen() {
   const viewTransactionDetail = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setDetailModalVisible(true);
+  };
+
+  const handlePrintReceipt = async () => {
+    if (!selectedTransaction) return;
+
+    try {
+      await printerService.printReceipt(selectedTransaction, 'Your Business Name');
+      Alert.alert('Success', 'Receipt printed successfully');
+    } catch (error) {
+      console.error('[Reports] Error printing receipt:', error);
+      Alert.alert('Error', 'Failed to print receipt: ' + (error as Error).message);
+    }
   };
 
   const handleSearchTransactions = async () => {
@@ -1185,6 +1207,17 @@ export default function ReportsScreen() {
                 </View>
               </ScrollView>
             )}
+
+            {isPrinterConnected && (
+              <TouchableOpacity
+                style={[styles.printReceiptButton, { backgroundColor: colors.primary }]}
+                onPress={handlePrintReceipt}
+                activeOpacity={0.8}
+              >
+                <Printer size={20} color="#fff" />
+                <Text style={styles.printReceiptButtonText}>Print Receipt</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Modal>
@@ -2072,5 +2105,19 @@ const styles = StyleSheet.create({
   operatorStatSubtext: {
     fontSize: 11,
     textAlign: 'center' as const,
+  },
+  printReceiptButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 10,
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 16,
+  },
+  printReceiptButtonText: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#fff',
   },
 });
