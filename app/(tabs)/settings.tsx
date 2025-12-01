@@ -1878,6 +1878,143 @@ export default function SettingsScreen() {
             </View>
           </View>
         </Modal>
+
+        <Modal
+          transparent
+          visible={receiptModalVisible}
+          onRequestClose={() => setReceiptModalVisible(false)}
+          animationType="fade"
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.colorPickerModal, { backgroundColor: colors.cardBackground }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  {editingReceiptLineIndex !== null ? 'Edit' : 'Add'} {editingReceiptSection === 'header' ? 'Header' : 'Footer'} Line
+                </Text>
+                <TouchableOpacity onPress={() => setReceiptModalVisible(false)}>
+                  <X size={24} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 8 }]}>Text</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text, marginBottom: 16 }]}
+                value={receiptLineText}
+                onChangeText={setReceiptLineText}
+                placeholder="Enter line text"
+                placeholderTextColor={colors.textTertiary}
+                autoFocus
+                multiline
+              />
+
+              <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 8 }]}>Size</Text>
+              <View style={styles.layoutOptions}>
+                <TouchableOpacity
+                  style={[
+                    styles.layoutOption,
+                    { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                    receiptLineSize === 'small' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                  ]}
+                  onPress={() => setReceiptLineSize('small')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Small</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.layoutOption,
+                    { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                    receiptLineSize === 'normal' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                  ]}
+                  onPress={() => setReceiptLineSize('normal')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Normal</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.layoutOption,
+                    { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                    receiptLineSize === 'large' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                  ]}
+                  onPress={() => setReceiptLineSize('large')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Large</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, marginTop: 20 }]}
+                onPress={() => {
+                  if (!receiptLineText.trim()) {
+                    Alert.alert('Error', 'Please enter some text');
+                    return;
+                  }
+
+                  const newLine = { text: receiptLineText, size: receiptLineSize };
+                  const newSettings = { ...receiptSettings };
+
+                  if (editingReceiptSection === 'header') {
+                    if (editingReceiptLineIndex !== null) {
+                      newSettings.headerLines[editingReceiptLineIndex] = newLine;
+                    } else {
+                      if (newSettings.headerLines.length >= 7) {
+                        Alert.alert('Maximum Reached', 'You can only have up to 7 header lines');
+                        return;
+                      }
+                      newSettings.headerLines.push(newLine);
+                    }
+                  } else {
+                    if (editingReceiptLineIndex !== null) {
+                      newSettings.footerLines[editingReceiptLineIndex] = newLine;
+                    } else {
+                      if (newSettings.footerLines.length >= 7) {
+                        Alert.alert('Maximum Reached', 'You can only have up to 7 footer lines');
+                        return;
+                      }
+                      newSettings.footerLines.push(newLine);
+                    }
+                  }
+
+                  updateReceiptSettings(newSettings);
+                  setReceiptModalVisible(false);
+                  setReceiptLineText('');
+                  setReceiptLineSize('normal');
+                  setEditingReceiptLineIndex(null);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+
+              {editingReceiptLineIndex !== null && (
+                <TouchableOpacity
+                  style={[styles.deleteDiscountButton, { backgroundColor: colors.error + '20', borderColor: colors.error, marginTop: 12 }]}
+                  onPress={() => {
+                    const newSettings = { ...receiptSettings };
+                    if (editingReceiptSection === 'header') {
+                      newSettings.headerLines = newSettings.headerLines.filter((_, i) => i !== editingReceiptLineIndex);
+                    } else {
+                      newSettings.footerLines = newSettings.footerLines.filter((_, i) => i !== editingReceiptLineIndex);
+                    }
+                    updateReceiptSettings(newSettings);
+                    setReceiptModalVisible(false);
+                    setReceiptLineText('');
+                    setReceiptLineSize('normal');
+                    setEditingReceiptLineIndex(null);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Trash2 size={18} color={colors.error} />
+                  <Text style={[styles.deleteDiscountText, { color: colors.error }]}>Delete Line</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </View>
   );
