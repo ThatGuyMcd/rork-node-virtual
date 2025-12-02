@@ -958,7 +958,7 @@ export default function SettingsScreen() {
 
               <View style={{ marginTop: 24 }}>
                 <Text style={[styles.filterSectionTitle, { color: colors.text }]}>Visible Departments ({departments.length - productSettings.hiddenDepartmentIds.length}/{departments.length})</Text>
-                <ScrollView style={{ maxHeight: 450 }} nestedScrollEnabled>
+                <ScrollView style={{ maxHeight: 600 }} nestedScrollEnabled>
                   {departments.map((department) => {
                     const isHidden = productSettings.hiddenDepartmentIds.includes(department.id);
                     const group = groups.find(g => g.id === department.groupId);
