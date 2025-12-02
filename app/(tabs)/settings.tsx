@@ -637,8 +637,8 @@ export default function SettingsScreen() {
       </View>
 
       {syncProgress && (
-        <View style={[styles.progressCard, { backgroundColor: colors.cardBackground }]}>
-          <Text style={styles.progressPhase}>
+        <View style={[styles.progressCard, { backgroundColor: colors.cardBackground, borderColor: '#f97316', borderWidth: 2, borderStyle: 'dotted' }]}>
+          <Text style={[styles.progressPhase, { color: '#f97316' }]}>
             {syncProgress.message}
           </Text>
           
