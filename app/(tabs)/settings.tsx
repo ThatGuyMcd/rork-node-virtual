@@ -1253,7 +1253,7 @@ export default function SettingsScreen() {
         <CollapsibleSection 
           id="printer" 
           icon={Printer} 
-          title="Printer Settings" 
+          title="Printer & Receipt Settings" 
           iconColor={colors.primary}
         >
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
