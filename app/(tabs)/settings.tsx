@@ -1120,7 +1120,7 @@ export default function SettingsScreen() {
         <CollapsibleSection 
           id="pos" 
           icon={SettingsIcon} 
-          title="POS Settings" 
+          title="Basket Settings" 
           iconColor={colors.primary}
         >
 
