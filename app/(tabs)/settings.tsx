@@ -1156,6 +1156,89 @@ export default function SettingsScreen() {
           />
         </View>
       </View>
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Preset Discount Percentages</Text>
+        <View style={styles.discountPercentagesList}>
+          {discountPercentages.map((percentage, index) => (
+            <View key={index} style={[styles.discountPercentageItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={[styles.discountPercentageText, { color: colors.text }]}>{percentage}%</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  const newPercentages = discountPercentages.filter((_, i) => i !== index);
+                  setDiscountPercentages(newPercentages);
+                  updateDiscountSettings({ ...discountSettings, presetPercentages: newPercentages.map(Number) });
+                }}
+                activeOpacity={0.7}
+              >
+                <X size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
+          onPress={() => {
+            setEditingDiscountIndex(null);
+            setDiscountInputValue('');
+            setDiscountModalVisible(true);
+          }}
+          activeOpacity={0.8}
+        >
+          <Percent size={20} color="#ffffff" />
+          <Text style={styles.buttonText}>Add Discount Percentage</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Enable Gratuity</Text>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Allow adding tips to transactions</Text>
+          </View>
+          <Switch
+            value={gratuitySettings.enabled}
+            onValueChange={(value) => updateGratuitySettings({ ...gratuitySettings, enabled: value })}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor="#ffffff"
+          />
+        </View>
+      </View>
+
+      {gratuitySettings.enabled && (
+        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Preset Gratuity Percentages</Text>
+          <View style={styles.discountPercentagesList}>
+            {gratuityPercentages.map((percentage, index) => (
+              <View key={index} style={[styles.discountPercentageItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={[styles.discountPercentageText, { color: colors.text }]}>{percentage}%</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    const newPercentages = gratuityPercentages.filter((_, i) => i !== index);
+                    setGratuityPercentages(newPercentages);
+                    updateGratuitySettings({ ...gratuitySettings, presetPercentages: newPercentages.map(Number) });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <X size={18} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
+            onPress={() => {
+              setEditingGratuityIndex(null);
+              setGratuityInputValue('');
+              setGratuityModalVisible(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <Percent size={20} color="#ffffff" />
+            <Text style={styles.buttonText}>Add Gratuity Percentage</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </>
   );
 
@@ -1564,10 +1647,6 @@ export default function SettingsScreen() {
         return renderPaymentSettingsContent();
       case 'pos':
         return renderBasketSettingsContent();
-      case 'discount':
-        return renderDiscountContent();
-      case 'gratuity':
-        return renderGratuityContent();
       case 'printer':
         return renderPrinterContent();
       case 'initialSetup':
@@ -1586,11 +1665,9 @@ export default function SettingsScreen() {
     { id: 'appearance', icon: Palette, title: 'Appearance', color: '#8b5cf6', order: 4 },
     { id: 'payment', icon: CreditCard, title: 'Payment Settings', color: '#06b6d4', order: 5 },
     { id: 'pos', icon: LayoutGrid, title: 'Basket Settings', color: '#f59e0b', order: 6 },
-    { id: 'discount', icon: Percent, title: 'Discount Settings', color: '#ec4899', order: 7 },
-    { id: 'gratuity', icon: DollarSign, title: 'Gratuity Settings', color: '#14b8a6', order: 8 },
-    { id: 'printer', icon: Printer, title: 'Printer & Receipt Settings', color: '#6366f1', order: 9 },
-    { id: 'initialSetup', icon: SettingsIcon, title: 'Initial Setup', color: '#84cc16', order: 10 },
-    { id: 'danger', icon: Trash2, title: 'Danger Zone', color: '#ef4444', order: 11 },
+    { id: 'printer', icon: Printer, title: 'Printer & Receipt Settings', color: '#6366f1', order: 7 },
+    { id: 'initialSetup', icon: SettingsIcon, title: 'Initial Setup', color: '#84cc16', order: 8 },
+    { id: 'danger', icon: Trash2, title: 'Danger Zone', color: '#ef4444', order: 9 },
   ];
 
   const sortedSections = sections
