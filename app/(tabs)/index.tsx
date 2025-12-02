@@ -1090,12 +1090,22 @@ export default function ProductsScreen() {
                 activeOpacity={0.8}
               >
                 <Text
-                  style={[styles.productName, { color: product.fontColor }]}
+                  style={[
+                    productViewLayout === 'compact' ? styles.productNameCompact : 
+                    productViewLayout === 'large' ? styles.productNameLarge : 
+                    styles.productName,
+                    { color: product.fontColor }
+                  ]}
                 >
                   {product.name}
                 </Text>
                 <Text
-                  style={[styles.productPrice, { color: product.fontColor }]}
+                  style={[
+                    productViewLayout === 'compact' ? styles.productPriceCompact : 
+                    productViewLayout === 'large' ? styles.productPriceLarge : 
+                    styles.productPrice,
+                    { color: product.fontColor }
+                  ]}
                 >
                   {(() => {
                     if (product.prices.length === 0) return 'No price';
@@ -1156,12 +1166,22 @@ export default function ProductsScreen() {
                 activeOpacity={0.8}
               >
                 <Text
-                  style={[styles.productName, { color: product.fontColor }]}
+                  style={[
+                    productViewLayout === 'compact' ? styles.productNameCompact : 
+                    productViewLayout === 'large' ? styles.productNameLarge : 
+                    styles.productName,
+                    { color: product.fontColor }
+                  ]}
                 >
                   {product.name}
                 </Text>
                 <Text
-                  style={[styles.productPrice, { color: product.fontColor }]}
+                  style={[
+                    productViewLayout === 'compact' ? styles.productPriceCompact : 
+                    productViewLayout === 'large' ? styles.productPriceLarge : 
+                    styles.productPrice,
+                    { color: product.fontColor }
+                  ]}
                 >
                   {(() => {
                     if (product.prices.length === 0) return 'No price';
@@ -1645,8 +1665,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+  productNameCompact: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  productNameLarge: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
   productPrice: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  productPriceCompact: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  productPriceLarge: {
+    fontSize: 18,
     fontWeight: '600',
   },
   centerContent: {
