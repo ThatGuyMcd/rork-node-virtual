@@ -140,13 +140,16 @@ export default function TabLayout() {
           paddingTop: 8,
           position: 'absolute',
         },
-        tabBarBackground: () => (
-          <BlurView
-            intensity={80}
-            tint={theme === 'dark' ? 'dark' : 'light'}
-            style={{ flex: 1 }}
-          />
-        ),
+        tabBarBackground: () => {
+          const isLightTheme = theme === 'light' || theme.includes('Light');
+          return (
+            <BlurView
+              intensity={80}
+              tint={isLightTheme ? 'light' : 'dark'}
+              style={{ flex: 1, backgroundColor: colors.tabBarBackground }}
+            />
+          );
+        },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
