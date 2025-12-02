@@ -1490,7 +1490,7 @@ export default function ProductsScreen() {
                         const hasData = status?.hasData || false;
                         const isLocked = status?.isLocked || false;
                         const subtotal = status?.subtotal || 0;
-                        const statusColor = isLocked ? '#f97316' : (hasData ? '#991b1b' : '#047857');
+                        const statusColor = isLocked ? '#ea580c' : (hasData ? '#166534' : '#1e3a8a');
 
                         return (
                           <TouchableOpacity
