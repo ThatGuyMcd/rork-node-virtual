@@ -961,7 +961,7 @@ export default function ProductsScreen() {
 
       {productViewMode === 'group-department' && !selectedGroup && (
         <View style={styles.content}>
-          <Text style={styles.heading}>Select a Category</Text>
+          <Text style={[styles.heading, { color: colors.text }]}>Select a Category</Text>
           <ScrollView
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
@@ -1008,7 +1008,7 @@ export default function ProductsScreen() {
             <Text style={styles.backText}>Back to Categories</Text>
           </TouchableOpacity>
 
-          <Text style={styles.heading}>{group?.name ? trimName(group.name) : ''} Departments</Text>
+          <Text style={[styles.heading, { color: colors.text }]}>{group?.name ? trimName(group.name) : ''} Departments</Text>
           <ScrollView
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
@@ -1050,7 +1050,7 @@ export default function ProductsScreen() {
 
       {productViewMode === 'all-departments' && !selectedDepartment && (
         <View style={styles.content}>
-          <Text style={styles.heading}>All Departments</Text>
+          <Text style={[styles.heading, { color: colors.text }]}>All Departments</Text>
           <ScrollView
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
@@ -1084,7 +1084,7 @@ export default function ProductsScreen() {
 
       {productViewMode === 'all-items' && (
         <View style={styles.content}>
-          <Text style={styles.heading}>All Products</Text>
+          <Text style={[styles.heading, { color: colors.text }]}>All Products</Text>
           <ScrollView
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
@@ -1150,7 +1150,7 @@ export default function ProductsScreen() {
             </Text>
           </TouchableOpacity>
 
-          <Text style={styles.heading}>Products</Text>
+          <Text style={[styles.heading, { color: colors.text }]}>Products</Text>
           <ScrollView
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
@@ -1613,7 +1613,6 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
     marginBottom: 16,
   },
   backButton: {
