@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -91,6 +91,8 @@ export default function SettingsScreen() {
     printer: false,
     receipt: false,
   });
+
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     loadSiteInfo();
@@ -367,6 +369,7 @@ export default function SettingsScreen() {
         Object.keys(prev).forEach(key => {
           allClosed[key] = false;
         });
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
         return {
           ...allClosed,
           [section]: true,
@@ -1687,6 +1690,7 @@ export default function SettingsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
       <ScrollView 
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
