@@ -206,7 +206,6 @@ export default function ProductsScreen() {
       const areaTables: Table[] = [];
       const tableSet = new Map<string, { area: string; table: string; tableId: string }>();
       const tableDataMap = new Map<string, string>();
-      const tableLocksMap = new Map<string, boolean>();
 
       for (const [path, content] of files.entries()) {
         const upper = path.toUpperCase();
@@ -218,12 +217,6 @@ export default function ProductsScreen() {
         const areaName = parts[0];
         const table = parts[1];
         const fileName = parts[2];
-        
-        if (fileName.toUpperCase() === 'TABLEOPEN.INI' && content && content.trim().length > 0) {
-          const key = `${areaName}/${table}`;
-          tableLocksMap.set(key, true);
-          console.log(`[Products] Found lock file for table: ${table}`);
-        }
         
         if (upper.endsWith('.INI')) continue;
         
@@ -288,8 +281,6 @@ export default function ProductsScreen() {
             console.log(`[Products] No data in CSV for ${table.name}`);
             continue;
           }
-          
-          const header = rows[0].map((h: string) => h.trim());
           
           const tableDataRows = [];
           for (let i = 1; i < rows.length; i++) {
@@ -363,12 +354,7 @@ export default function ProductsScreen() {
       setTableStatuses(prevStatuses => {
         const newStatuses = new Map(prevStatuses);
         statuses.forEach((status, tableId) => {
-          const table = areaTables.find(t => t.id === tableId);
-          if (table) {
-            const key = `${table.area}/${table.name}`;
-            const isLocked = tableLocksMap.get(key) || false;
-            newStatuses.set(tableId, { ...status, isLocked });
-          }
+          newStatuses.set(tableId, { ...status, isLocked: false });
         });
         return newStatuses;
       });

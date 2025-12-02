@@ -4,7 +4,6 @@ import type { BasketItem, Operator, Table } from '@/types/pos';
 import { dataParser } from './dataParser';
 import { dataSyncService } from './dataSync';
 import { trpcClient } from '@/lib/trpc';
-import { apiClient } from './api';
 
 export interface TableDataRow {
   quantity: number;
@@ -517,86 +516,7 @@ class TableDataService {
     }
   }
 
-  async lockTable(table: Table): Promise<void> {
-    console.log('[TableDataService] Locking table:', table.name);
-    
-    const siteInfo = await dataSyncService.getSiteInfo();
-    if (!siteInfo) {
-      console.warn('[TableDataService] No site info available, cannot lock table');
-      return;
-    }
-    
-    const folderData: string[] = [];
-    const fileData: Record<string, string> = {};
-    
-    const tableFolderPath = `${table.area}/${table.name}`;
-    const lockFilePath = `${tableFolderPath}/tableopen.ini`;
-    
-    const timestamp = new Date().toISOString();
-    const lockFileContent = `LOCKED_AT = ${timestamp}\r\n`;
-    
-    fileData[lockFilePath] = lockFileContent;
-    
-    const payload = {
-      SITEID: siteInfo.siteId,
-      DESTINATIONWEBVIEWFOLDER: 'TABDATA',
-      FOLDERDATA: folderData,
-      FILEDATA: fileData,
-    };
-    
-    try {
-      await trpcClient.tabledata.upload.mutate(payload);
-      console.log('[TableDataService] Successfully locked table:', table.name);
-    } catch (error: any) {
-      console.error('[TableDataService] Failed to lock table:', error);
-      throw new Error(`Failed to lock table: ${error.message}`);
-    }
-  }
 
-  async unlockTable(table: Table): Promise<void> {
-    console.log('[TableDataService] Unlocking table:', table.name);
-    
-    const siteInfo = await dataSyncService.getSiteInfo();
-    if (!siteInfo) {
-      console.warn('[TableDataService] No site info available, cannot unlock table');
-      return;
-    }
-    
-    const folderData: string[] = [];
-    const fileData: Record<string, string> = {};
-    
-    const tableFolderPath = `${table.area}/${table.name}`;
-    const lockFilePath = `${tableFolderPath}/tableopen.ini`;
-    
-    fileData[lockFilePath] = '';
-    
-    const payload = {
-      SITEID: siteInfo.siteId,
-      DESTINATIONWEBVIEWFOLDER: 'TABDATA',
-      FOLDERDATA: folderData,
-      FILEDATA: fileData,
-    };
-    
-    try {
-      await trpcClient.tabledata.upload.mutate(payload);
-      console.log('[TableDataService] Successfully unlocked table:', table.name);
-    } catch (error: any) {
-      console.error('[TableDataService] Failed to unlock table:', error);
-      throw new Error(`Failed to unlock table: ${error.message}`);
-    }
-  }
-
-  async checkTableLock(area: string, tableName: string, siteId: string): Promise<boolean> {
-    try {
-      const lockFilePath = `TABDATA/${area}/${tableName}/tableopen.ini`;
-      const content = await apiClient.getFile(siteId, lockFilePath);
-      console.log(`[TableDataService] Table ${tableName} is locked (tableopen.ini exists)`);
-      return !!content && content.trim().length > 0;
-    } catch {
-      console.log(`[TableDataService] Table ${tableName} is not locked (tableopen.ini not found or empty)`);
-      return false;
-    }
-  }
 }
 
 export const tableDataService = new TableDataService();
