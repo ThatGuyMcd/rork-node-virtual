@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { POSProvider } from "@/contexts/POSContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { trpc, trpcClient } from "@/lib/trpc";
+import { dataSyncService } from "@/services/dataSync";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,6 +25,39 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   useEffect(() => {
+    const checkAndAutoSync = async () => {
+      try {
+        const syncInterval = await dataSyncService.getBackgroundSyncInterval();
+        if (syncInterval === 'disabled') {
+          console.log('[App] Auto-sync is disabled');
+          return;
+        }
+
+        const lastSyncTime = await dataSyncService.getLastSyncTime();
+        if (!lastSyncTime) {
+          console.log('[App] No previous sync found, skipping auto-sync');
+          return;
+        }
+
+        const lastSyncDate = new Date(lastSyncTime);
+        const now = new Date();
+        const hoursSinceSync = (now.getTime() - lastSyncDate.getTime()) / (1000 * 60 * 60);
+        const intervalHours = parseInt(syncInterval);
+
+        console.log(`[App] Last sync: ${hoursSinceSync.toFixed(1)} hours ago, interval: ${intervalHours} hours`);
+
+        if (hoursSinceSync >= intervalHours) {
+          console.log(`[App] Auto-sync triggered: ${hoursSinceSync.toFixed(1)}h >= ${intervalHours}h`);
+          await dataSyncService.syncData(undefined, true);
+          console.log('[App] Auto-sync completed successfully');
+        } else {
+          console.log(`[App] Auto-sync not needed: ${hoursSinceSync.toFixed(1)}h < ${intervalHours}h`);
+        }
+      } catch (error) {
+        console.error('[App] Auto-sync failed:', error);
+      }
+    };
+
     const initApp = async () => {
       try {
         console.log('[App] Starting app initialization...');
@@ -36,6 +70,8 @@ export default function RootLayout() {
             console.error('[App] Update check failed:', updateError);
           }
         }
+
+        await checkAndAutoSync();
       } catch (e) {
         console.error('[App] App initialization error:', e);
       } finally {
