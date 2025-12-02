@@ -1215,6 +1215,7 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: 0,
     gap: 12,
+    paddingBottom: 110,
   },
   basketItem: {
     borderRadius: 12,
@@ -1280,6 +1281,7 @@ const styles = StyleSheet.create({
   summary: {
     padding: 20,
     borderTopWidth: 1,
+    paddingBottom: 110,
   },
   summaryRow: {
     flexDirection: 'row',
