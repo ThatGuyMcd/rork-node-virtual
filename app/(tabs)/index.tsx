@@ -1647,7 +1647,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 12,
     fontWeight: '700',
     color: '#fff',
   },
@@ -1662,7 +1662,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   productName: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '700',
   },
   productNameCompact: {
