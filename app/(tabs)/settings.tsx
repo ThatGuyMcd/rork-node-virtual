@@ -991,6 +991,8 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
 
+          <Text style={[styles.colorSectionTitle, { color: colors.textSecondary, marginTop: 16, marginBottom: 8 }]}>Dark Themes</Text>
+
           <View style={[styles.layoutOptions, { marginTop: 8 }]}>
             <TouchableOpacity
               style={[
@@ -1079,7 +1081,7 @@ export default function SettingsScreen() {
               onPress={() => setTheme('sunsetLight')}
               activeOpacity={0.7}
             >
-              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Sunset Light</Text>
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Dawn</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1091,7 +1093,7 @@ export default function SettingsScreen() {
               onPress={() => setTheme('oceanLight')}
               activeOpacity={0.7}
             >
-              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Ocean Light</Text>
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Sky</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1103,7 +1105,7 @@ export default function SettingsScreen() {
               onPress={() => setTheme('forestLight')}
               activeOpacity={0.7}
             >
-              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Forest Light</Text>
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Meadow</Text>
             </TouchableOpacity>
           </View>
 
@@ -1117,7 +1119,7 @@ export default function SettingsScreen() {
               onPress={() => setTheme('midnightLight')}
               activeOpacity={0.7}
             >
-              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Midnight Light</Text>
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Twilight</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1129,7 +1131,7 @@ export default function SettingsScreen() {
               onPress={() => setTheme('roseLight')}
               activeOpacity={0.7}
             >
-              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Rose Light</Text>
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Blossom</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1141,7 +1143,7 @@ export default function SettingsScreen() {
               onPress={() => setTheme('lavenderLight')}
               activeOpacity={0.7}
             >
-              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Lavender Light</Text>
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Orchid</Text>
             </TouchableOpacity>
           </View>
         </View>
