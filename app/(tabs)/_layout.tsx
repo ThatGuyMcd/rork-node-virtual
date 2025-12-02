@@ -1,7 +1,7 @@
 import { Tabs, Redirect } from 'expo-router';
 import { ShoppingCart, Store, Settings, Search, LogOut, Printer } from 'lucide-react-native';
 import React, { useState, useEffect } from 'react';
-import { TouchableOpacity, View, Text, Image, Alert, Platform } from 'react-native';
+import { TouchableOpacity, View, Text, Image, Alert } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -132,7 +132,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.tabIconDefault,
         tabBarStyle: {
-          backgroundColor: Platform.OS === 'ios' ? 'transparent' : `${colors.tabBarBackground}cc`,
+          backgroundColor: 'transparent',
           borderTopColor: colors.primary,
           borderTopWidth: 2,
           height: 90,
@@ -140,13 +140,13 @@ export default function TabLayout() {
           paddingTop: 8,
           position: 'absolute',
         },
-        tabBarBackground: () => Platform.OS === 'ios' ? (
+        tabBarBackground: () => (
           <BlurView
             intensity={80}
             tint={theme === 'dark' ? 'dark' : 'light'}
             style={{ flex: 1 }}
           />
-        ) : null,
+        ),
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
