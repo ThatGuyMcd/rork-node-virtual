@@ -372,9 +372,33 @@ export default function ProductsScreen() {
 
   const group = groups.find((g) => g.id === selectedGroup);
   
-  const visibleGroups = groups.filter(g => !displaySettings.hiddenGroupIds.includes(g.id));
+  const visibleGroups = (() => {
+    const filtered = groups.filter(g => !displaySettings.hiddenGroupIds.includes(g.id));
+    if (displaySettings.sortOrder === 'custom' && displaySettings.customGroupOrder) {
+      return [...filtered].sort((a, b) => {
+        const aIndex = displaySettings.customGroupOrder!.indexOf(a.id);
+        const bIndex = displaySettings.customGroupOrder!.indexOf(b.id);
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+      });
+    }
+    return filtered;
+  })();
   
-  const visibleDepartments = departments.filter(d => !displaySettings.hiddenDepartmentIds.includes(d.id));
+  const visibleDepartments = (() => {
+    const filtered = departments.filter(d => !displaySettings.hiddenDepartmentIds.includes(d.id));
+    if (displaySettings.sortOrder === 'custom' && displaySettings.customDepartmentOrder) {
+      return [...filtered].sort((a, b) => {
+        const aIndex = displaySettings.customDepartmentOrder!.indexOf(a.id);
+        const bIndex = displaySettings.customDepartmentOrder!.indexOf(b.id);
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+      });
+    }
+    return filtered;
+  })();
   
   const filteredDepartments = visibleDepartments.filter((d) => d.groupId === selectedGroup);
   
