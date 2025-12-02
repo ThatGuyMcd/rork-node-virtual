@@ -134,6 +134,9 @@ export default function SettingsScreen() {
   const [editingReceiptLineIndex, setEditingReceiptLineIndex] = useState<number | null>(null);
   const [receiptLineText, setReceiptLineText] = useState('');
   const [receiptLineSize, setReceiptLineSize] = useState<ReceiptLineSize>('normal');
+  const redSliderWidth = useRef(300);
+  const greenSliderWidth = useRef(300);
+  const blueSliderWidth = useRef(300);
   
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     account: true,
@@ -1931,22 +1934,20 @@ export default function SettingsScreen() {
             >
               <View style={styles.colorGrid}>
                 {[
-                  '#ef4444', '#f97316', '#f59e0b', '#eab308',
-                  '#84cc16', '#22c55e', '#10b981', '#14b8a6',
-                  '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
-                  '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
-                  '#f43f5e', '#fb7185', '#fda4af', '#fecdd3',
-                  '#fbbf24', '#fcd34d', '#fde047', '#fef08a',
-                  '#a3e635', '#bef264', '#d9f99d', '#ecfccb',
-                  '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5',
-                  '#2dd4bf', '#5eead4', '#99f6e4', '#ccfbf1',
-                  '#22d3ee', '#67e8f9', '#a5f3fc', '#cffafe',
-                  '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe',
-                  '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff',
-                  '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe',
-                  '#c084fc', '#d8b4fe', '#e9d5ff', '#f3e8ff',
-                  '#e879f9', '#f0abfc', '#f5d0fe', '#fae8ff',
-                  '#f472b6', '#f9a8d4', '#fbcfe8', '#fce7f3',
+                  '#b91c1c', '#dc2626', '#ef4444', '#f87171',
+                  '#c2410c', '#ea580c', '#f97316', '#fb923c',
+                  '#b45309', '#d97706', '#f59e0b', '#fbbf24',
+                  '#4d7c0f', '#65a30d', '#84cc16', '#a3e635',
+                  '#15803d', '#16a34a', '#22c55e', '#4ade80',
+                  '#0f766e', '#14b8a6', '#2dd4bf', '#5eead4',
+                  '#0e7490', '#0891b2', '#06b6d4', '#22d3ee',
+                  '#0369a1', '#0284c7', '#0ea5e9', '#38bdf8',
+                  '#1d4ed8', '#2563eb', '#3b82f6', '#60a5fa',
+                  '#4338ca', '#4f46e5', '#6366f1', '#818cf8',
+                  '#6d28d9', '#7c3aed', '#8b5cf6', '#a78bfa',
+                  '#7e22ce', '#9333ea', '#a855f7', '#c084fc',
+                  '#a21caf', '#c026d3', '#d946ef', '#e879f9',
+                  '#be185d', '#db2777', '#ec4899', '#f472b6',
                 ].map((color) => (
                   <TouchableOpacity
                     key={color}
@@ -2001,7 +2002,19 @@ export default function SettingsScreen() {
                 </View>
                 <Text style={[styles.sliderValue, { color: colors.text }]}>{Math.round(customColorRgb.r)}</Text>
               </View>
-              <View style={[styles.sliderTrack, { backgroundColor: colors.border }]}>
+              <TouchableOpacity
+                style={[styles.sliderTrack, { backgroundColor: colors.border }]}
+                onLayout={(event) => {
+                  redSliderWidth.current = event.nativeEvent.layout.width;
+                }}
+                onPress={(event) => {
+                  const { locationX } = event.nativeEvent;
+                  const sliderWidth = redSliderWidth.current;
+                  const newValue = Math.round((locationX / sliderWidth) * 255);
+                  setCustomColorRgb(prev => ({ ...prev, r: Math.max(0, Math.min(255, newValue)) }));
+                }}
+                activeOpacity={1}
+              >
                 <View
                   style={[
                     styles.sliderThumb,
@@ -2011,7 +2024,7 @@ export default function SettingsScreen() {
                     },
                   ]}
                 />
-              </View>
+              </TouchableOpacity>
               <View style={styles.sliderInputContainer}>
                 <TouchableOpacity
                   style={[styles.sliderButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
@@ -2048,7 +2061,19 @@ export default function SettingsScreen() {
                 </View>
                 <Text style={[styles.sliderValue, { color: colors.text }]}>{Math.round(customColorRgb.g)}</Text>
               </View>
-              <View style={[styles.sliderTrack, { backgroundColor: colors.border }]}>
+              <TouchableOpacity
+                style={[styles.sliderTrack, { backgroundColor: colors.border }]}
+                onLayout={(event) => {
+                  greenSliderWidth.current = event.nativeEvent.layout.width;
+                }}
+                onPress={(event) => {
+                  const { locationX } = event.nativeEvent;
+                  const sliderWidth = greenSliderWidth.current;
+                  const newValue = Math.round((locationX / sliderWidth) * 255);
+                  setCustomColorRgb(prev => ({ ...prev, g: Math.max(0, Math.min(255, newValue)) }));
+                }}
+                activeOpacity={1}
+              >
                 <View
                   style={[
                     styles.sliderThumb,
@@ -2058,7 +2083,7 @@ export default function SettingsScreen() {
                     },
                   ]}
                 />
-              </View>
+              </TouchableOpacity>
               <View style={styles.sliderInputContainer}>
                 <TouchableOpacity
                   style={[styles.sliderButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
@@ -2095,7 +2120,19 @@ export default function SettingsScreen() {
                 </View>
                 <Text style={[styles.sliderValue, { color: colors.text }]}>{Math.round(customColorRgb.b)}</Text>
               </View>
-              <View style={[styles.sliderTrack, { backgroundColor: colors.border }]}>
+              <TouchableOpacity
+                style={[styles.sliderTrack, { backgroundColor: colors.border }]}
+                onLayout={(event) => {
+                  blueSliderWidth.current = event.nativeEvent.layout.width;
+                }}
+                onPress={(event) => {
+                  const { locationX } = event.nativeEvent;
+                  const sliderWidth = blueSliderWidth.current;
+                  const newValue = Math.round((locationX / sliderWidth) * 255);
+                  setCustomColorRgb(prev => ({ ...prev, b: Math.max(0, Math.min(255, newValue)) }));
+                }}
+                activeOpacity={1}
+              >
                 <View
                   style={[
                     styles.sliderThumb,
@@ -2105,7 +2142,7 @@ export default function SettingsScreen() {
                     },
                   ]}
                 />
-              </View>
+              </TouchableOpacity>
               <View style={styles.sliderInputContainer}>
                 <TouchableOpacity
                   style={[styles.sliderButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
@@ -2828,24 +2865,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sliderButton: {
-    width: 40,
-    height: 48,
+    width: 36,
+    height: 40,
     borderRadius: 8,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sliderButtonText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
   },
   sliderInput: {
     flex: 1,
-    height: 48,
+    height: 40,
     borderRadius: 8,
     borderWidth: 1,
-    paddingHorizontal: 16,
-    fontSize: 16,
+    paddingHorizontal: 12,
+    fontSize: 15,
     textAlign: 'center',
     fontWeight: '600',
   },
