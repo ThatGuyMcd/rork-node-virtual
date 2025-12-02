@@ -1066,6 +1066,84 @@ export default function SettingsScreen() {
               <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Lavender</Text>
             </TouchableOpacity>
           </View>
+
+          <Text style={[styles.colorSectionTitle, { color: colors.textSecondary, marginTop: 16, marginBottom: 8 }]}>Light Themes</Text>
+
+          <View style={styles.layoutOptions}>
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.background, borderColor: colors.border },
+                themePreference === 'sunsetLight' && [styles.layoutOptionSelected, { borderColor: '#f97316', backgroundColor: '#f9731620' }],
+              ]}
+              onPress={() => setTheme('sunsetLight')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Sunset Light</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.background, borderColor: colors.border },
+                themePreference === 'oceanLight' && [styles.layoutOptionSelected, { borderColor: '#0ea5e9', backgroundColor: '#0ea5e920' }],
+              ]}
+              onPress={() => setTheme('oceanLight')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Ocean Light</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.background, borderColor: colors.border },
+                themePreference === 'forestLight' && [styles.layoutOptionSelected, { borderColor: '#22c55e', backgroundColor: '#22c55e20' }],
+              ]}
+              onPress={() => setTheme('forestLight')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Forest Light</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.layoutOptions, { marginTop: 8 }]}>
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.background, borderColor: colors.border },
+                themePreference === 'midnightLight' && [styles.layoutOptionSelected, { borderColor: '#a855f7', backgroundColor: '#a855f720' }],
+              ]}
+              onPress={() => setTheme('midnightLight')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Midnight Light</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.background, borderColor: colors.border },
+                themePreference === 'roseLight' && [styles.layoutOptionSelected, { borderColor: '#f43f5e', backgroundColor: '#f43f5e20' }],
+              ]}
+              onPress={() => setTheme('roseLight')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Rose Light</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.background, borderColor: colors.border },
+                themePreference === 'lavenderLight' && [styles.layoutOptionSelected, { borderColor: '#c084fc', backgroundColor: '#c084fc20' }],
+              ]}
+              onPress={() => setTheme('lavenderLight')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Lavender Light</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 

@@ -4,7 +4,7 @@ import { Colors, type ThemeColors } from '@/constants/colors';
 import { dataSyncService } from '@/services/dataSync';
 import { useColorScheme } from 'react-native';
 
-export type ThemeName = 'light' | 'dark' | 'sunset' | 'ocean' | 'forest' | 'midnight' | 'rose' | 'lavender' | 'custom';
+export type ThemeName = 'light' | 'dark' | 'sunset' | 'ocean' | 'forest' | 'midnight' | 'rose' | 'lavender' | 'sunsetLight' | 'oceanLight' | 'forestLight' | 'midnightLight' | 'roseLight' | 'lavenderLight' | 'custom';
 export type ThemePreference = ThemeName | 'system';
 
 interface ThemeContextType {
