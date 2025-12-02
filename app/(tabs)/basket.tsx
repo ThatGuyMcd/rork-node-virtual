@@ -58,6 +58,9 @@ export default function BasketScreen() {
   const [printerConnected, setPrinterConnected] = useState(false);
   const [lastTransaction, setLastTransaction] = useState<Transaction | null>(null);
   const [screenReceiptModalVisible, setScreenReceiptModalVisible] = useState(false);
+  const [changeModalVisible, setChangeModalVisible] = useState(false);
+  const [changeAmount, setChangeAmount] = useState(0);
+  const [pendingTenderId, setPendingTenderId] = useState<string | null>(null);
   const scaleAnim = useState(new Animated.Value(0))[0];
   const availableTenders = getAvailableTenders();
 
@@ -147,6 +150,17 @@ export default function BasketScreen() {
           console.log('[Basket] Showing receipt print modal after split payment completion');
           setReceiptPrintModalVisible(true);
         });
+        return;
+      }
+      
+      if (amount > remainingTotal) {
+        const change = amount - remainingTotal;
+        setChangeAmount(change);
+        setPendingTenderId(tenderId);
+        closePaymentModal();
+        setTimeout(() => {
+          setChangeModalVisible(true);
+        }, 300);
         return;
       }
       
@@ -268,6 +282,30 @@ export default function BasketScreen() {
       selectTable(null);
       console.log('[Basket] Table deselected after closing screen receipt');
     }
+  };
+
+  const handleConfirmChange = async () => {
+    if (!pendingTenderId) return;
+
+    setChangeModalVisible(false);
+    const updatedSplitPayments = [...splitPayments, {
+      tenderId: pendingTenderId,
+      tenderName: availableTenders.find(t => t.id === pendingTenderId)?.name || '',
+      amount: remainingTotal,
+    }];
+    
+    await completeSale(pendingTenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined);
+    setSplitPayments([]);
+    setSplitPaymentAmount('');
+    setGratuityAmount(0);
+    setPendingTenderId(null);
+    setChangeAmount(0);
+    
+    const allTransactions = await transactionService.getAllTransactions();
+    const lastTxn = allTransactions[allTransactions.length - 1];
+    setLastTransaction(lastTxn || null);
+    console.log('[Basket] Showing receipt print modal after change confirmation');
+    setReceiptPrintModalVisible(true);
   };
 
   if (basket.length === 0 && !receiptPrintModalVisible && !screenReceiptModalVisible) {
@@ -998,6 +1036,33 @@ export default function BasketScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        transparent
+        visible={changeModalVisible}
+        onRequestClose={() => setChangeModalVisible(false)}
+        animationType="fade"
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+          <View style={[styles.changeModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={[styles.changeIconContainer, { backgroundColor: colors.success + '20' }]}>
+              <DollarSign size={48} color={colors.success} />
+            </View>
+            
+            <Text style={[styles.changeModalTitle, { color: colors.text }]}>Change Due</Text>
+            <Text style={[styles.changeAmount, { color: colors.success }]}>£{changeAmount.toFixed(2)}</Text>
+            <Text style={[styles.changeModalSubtitle, { color: colors.textSecondary }]}>Change will be given in cash</Text>
+
+            <TouchableOpacity
+              style={[styles.confirmChangeButton, { backgroundColor: colors.primary }]}
+              onPress={handleConfirmChange}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.confirmChangeButtonText}>Confirm</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1715,6 +1780,49 @@ const styles = StyleSheet.create({
   },
   closeScreenReceiptButtonText: {
     fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  changeModal: {
+    borderRadius: 20,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  changeIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  changeModalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  changeAmount: {
+    fontSize: 48,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  changeModalSubtitle: {
+    fontSize: 16,
+    marginBottom: 32,
+    textAlign: 'center',
+  },
+  confirmChangeButton: {
+    width: '100%',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  confirmChangeButtonText: {
+    fontSize: 18,
     fontWeight: '700',
     color: '#fff',
   },
