@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Transaction, TransactionReport } from '@/types/pos';
+import * as XLSX from 'xlsx';
 
 const TRANSACTIONS_KEY = 'transactions';
 
@@ -198,6 +199,117 @@ class TransactionService {
     });
 
     return [headers.join(','), ...rows].join('\n');
+  }
+
+  async exportTransactionsExcel(transactions: Transaction[]): Promise<ArrayBuffer> {
+    const workbook = XLSX.utils.book_new();
+
+    const transactionData = transactions.map(transaction => {
+      const date = new Date(transaction.timestamp);
+      const totalVAT = Object.values(transaction.vatBreakdown).reduce((sum, vat) => sum + vat, 0);
+      
+      let paymentMethod = transaction.tenderName;
+      if (transaction.payments && transaction.payments.length > 1) {
+        paymentMethod = transaction.payments.map(p => `${p.tenderName} (£${p.amount.toFixed(2)})`).join(', ');
+      }
+
+      let changeOrCashback = '';
+      if (transaction.cashback && transaction.cashback > 0) {
+        let tender = transaction.tenderName;
+        if (transaction.payments && transaction.payments.length > 0) {
+          const lastPayment = transaction.payments[transaction.payments.length - 1];
+          tender = lastPayment.tenderName;
+        }
+        const isCash = tender === 'Cash';
+        changeOrCashback = isCash ? `Change: £${transaction.cashback.toFixed(2)}` : `Cashback: £${transaction.cashback.toFixed(2)}`;
+      }
+
+      return {
+        'Transaction ID': transaction.id,
+        'Date': date.toLocaleDateString('en-GB'),
+        'Time': date.toLocaleTimeString('en-GB'),
+        'Operator': transaction.operatorName,
+        'Table': transaction.tableName || 'N/A',
+        'Items Count': transaction.items.length,
+        'Subtotal': transaction.subtotal,
+        'Discount': transaction.discount || 0,
+        'VAT': totalVAT,
+        'Gratuity': transaction.gratuity || 0,
+        'Total': transaction.total,
+        'Payment Method': paymentMethod,
+        'Change/Cashback': changeOrCashback,
+        'Is Refund': transaction.isRefund ? 'Yes' : 'No',
+      };
+    });
+
+    const transactionSheet = XLSX.utils.json_to_sheet(transactionData);
+    
+    transactionSheet['!cols'] = [
+      { wch: 20 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 30 },
+      { wch: 20 },
+      { wch: 10 },
+    ];
+
+    XLSX.utils.book_append_sheet(workbook, transactionSheet, 'Transactions');
+
+    const itemsData: {
+      'Transaction ID': string;
+      'Date': string;
+      'Time': string;
+      'Product Name': string;
+      'Quantity': number;
+      'Unit Price': number;
+      'Line Total': number;
+      'VAT Code': string;
+      'VAT Percentage': number;
+    }[] = [];
+
+    transactions.forEach(transaction => {
+      const date = new Date(transaction.timestamp);
+      transaction.items.forEach(item => {
+        itemsData.push({
+          'Transaction ID': transaction.id,
+          'Date': date.toLocaleDateString('en-GB'),
+          'Time': date.toLocaleTimeString('en-GB'),
+          'Product Name': item.product.name,
+          'Quantity': item.quantity,
+          'Unit Price': item.selectedPrice.price,
+          'Line Total': item.lineTotal,
+          'VAT Code': item.product.vatCode,
+          'VAT Percentage': item.product.vatPercentage,
+        });
+      });
+    });
+
+    if (itemsData.length > 0) {
+      const itemsSheet = XLSX.utils.json_to_sheet(itemsData);
+      itemsSheet['!cols'] = [
+        { wch: 20 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 30 },
+        { wch: 10 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 10 },
+        { wch: 15 },
+      ];
+      XLSX.utils.book_append_sheet(workbook, itemsSheet, 'Items Detail');
+    }
+
+    const buffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+    return buffer as ArrayBuffer;
   }
 }
 

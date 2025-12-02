@@ -9,7 +9,6 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
-  Share,
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -84,49 +83,6 @@ export default function ReportsScreen() {
     checkPrinterConnection();
   }, []);
 
-  const checkPrinterConnection = async () => {
-    const connected = printerService.isConnected();
-    setIsPrinterConnected(connected);
-    console.log('[Reports] Printer connected:', connected);
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      console.log('[Reports] Tab focused - reloading transactions');
-      filterTransactionsByDateRange();
-      checkPrinterConnection();
-      return () => {};
-    }, [dateRange, customStartDate, customEndDate])
-  );
-
-  const loadOperators = async () => {
-    const ops = await dataSyncService.getStoredOperators();
-    const operatorMap: Record<string, string> = {};
-    ops.forEach(op => {
-      operatorMap[op.id] = op.name;
-    });
-    setOperators(operatorMap);
-  };
-
-  const loadGroupsAndDepartments = async () => {
-    const loadedGroups = await dataSyncService.getStoredGroups();
-    const loadedDepartments = await dataSyncService.getStoredDepartments();
-    
-    const groupMap: Record<string, string> = {};
-    loadedGroups.forEach(group => {
-      groupMap[group.id] = group.name;
-    });
-    setGroups(groupMap);
-
-    const departmentMap: Record<string, string> = {};
-    loadedDepartments.forEach(dept => {
-      departmentMap[dept.id] = dept.name;
-    });
-    setDepartments(departmentMap);
-  };
-
-
-
   const filterTransactionsByDateRange = useCallback(async () => {
     setLoading(true);
     try {
@@ -167,9 +123,50 @@ export default function ReportsScreen() {
     }
   }, [dateRange, customStartDate, customEndDate]);
 
+  const checkPrinterConnection = async () => {
+    const connected = printerService.isConnected();
+    setIsPrinterConnected(connected);
+    console.log('[Reports] Printer connected:', connected);
+  };
+
+  const loadOperators = async () => {
+    const ops = await dataSyncService.getStoredOperators();
+    const operatorMap: Record<string, string> = {};
+    ops.forEach(op => {
+      operatorMap[op.id] = op.name;
+    });
+    setOperators(operatorMap);
+  };
+
+  const loadGroupsAndDepartments = async () => {
+    const loadedGroups = await dataSyncService.getStoredGroups();
+    const loadedDepartments = await dataSyncService.getStoredDepartments();
+    
+    const groupMap: Record<string, string> = {};
+    loadedGroups.forEach(group => {
+      groupMap[group.id] = group.name;
+    });
+    setGroups(groupMap);
+
+    const departmentMap: Record<string, string> = {};
+    loadedDepartments.forEach(dept => {
+      departmentMap[dept.id] = dept.name;
+    });
+    setDepartments(departmentMap);
+  };
+
   useEffect(() => {
     filterTransactionsByDateRange();
   }, [filterTransactionsByDateRange]);
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log('[Reports] Tab focused - reloading transactions');
+      filterTransactionsByDateRange();
+      checkPrinterConnection();
+      return () => {};
+    }, [filterTransactionsByDateRange])
+  );
 
   const exportReport = async () => {
     if (filteredTransactions.length === 0) {
@@ -178,24 +175,21 @@ export default function ReportsScreen() {
     }
 
     try {
-      const csv = await transactionService.exportTransactionsCSV(filteredTransactions);
+      const excelBuffer = await transactionService.exportTransactionsExcel(filteredTransactions);
       
       if (Platform.OS === 'web') {
-        const blob = new Blob([csv], { type: 'text/csv' });
+        const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `transactions_${dateRange}_${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `transactions_${dateRange}_${new Date().toISOString().split('T')[0]}.xlsx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         Alert.alert('Success', 'Report exported successfully');
       } else {
-        await Share.share({
-          message: csv,
-          title: 'Transaction Report',
-        });
+        Alert.alert('Export', 'Excel export is only available on web. Please use the web version to export reports.');
       }
     } catch (error) {
       console.error('[Reports] Error exporting report:', error);
@@ -1131,7 +1125,7 @@ export default function ReportsScreen() {
               activeOpacity={0.8}
             >
               <Download size={20} color="#fff" />
-              <Text style={styles.exportButtonText}>Export Report (CSV)</Text>
+              <Text style={styles.exportButtonText}>Export Report (Excel)</Text>
             </TouchableOpacity>
           </>
         ) : (
