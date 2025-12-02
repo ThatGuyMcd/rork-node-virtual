@@ -20,7 +20,8 @@ import { printerService } from '@/services/printerService';
 import { useRouter } from 'expo-router';
 import type { ProductDisplaySettings, ProductGroup, Department, DiscountSettings, GratuitySettings, PrinterSettings, ReceiptLineSize } from '@/types/pos';
 import { usePOS } from '@/contexts/POSContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme, type ThemeName, type ThemePreference } from '@/contexts/ThemeContext';
+import { Colors, type ThemeColors } from '@/constants/colors';
 import { hexToRgb, rgbToHex } from '@/utils/colorUtils';
 
 const CollapsibleSection = React.memo(({ 
@@ -89,7 +90,10 @@ export default function SettingsScreen() {
   const [productViewMode, setProductViewMode] = useState<'group-department' | 'all-departments' | 'all-items'>('group-department');
   const { updateTableSelectionRequired, updateProductViewLayout, updateProductViewMode, isInitialSetupComplete, completeInitialSetup, cardPaymentEnabled, cashPaymentEnabled, cardMachineProvider, splitPaymentsEnabled, updateCardPaymentEnabled, updateCashPaymentEnabled, updateCardMachineProvider, updateSplitPaymentsEnabled, refundButtonEnabled, updateRefundButtonEnabled, discountSettings, updateDiscountSettings, gratuitySettings, updateGratuitySettings, receiptSettings, updateReceiptSettings, changeAllowed, cashbackAllowed, updateChangeAllowed, updateCashbackAllowed } = usePOS();
   const router = useRouter();
-  const { theme, themePreference, colors, setTheme } = useTheme();
+  const { theme, themePreference, colors, setTheme, customColors, setCustomColors } = useTheme();
+  const [customThemeColors, setCustomThemeColors] = useState<ThemeColors>(customColors || Colors.dark);
+  const [customThemeModalVisible, setCustomThemeModalVisible] = useState(false);
+  const [editingColorKey, setEditingColorKey] = useState<keyof ThemeColors | null>(null);
 
 
   const [showProviderDropdown, setShowProviderDropdown] = useState(false);
@@ -911,6 +915,21 @@ export default function SettingsScreen() {
     </>
   );
 
+  const openCustomThemeModal = () => {
+    setCustomThemeColors(customColors || colors);
+    setCustomThemeModalVisible(true);
+  };
+
+  const saveCustomTheme = async () => {
+    await setCustomColors(customThemeColors);
+    await setTheme('custom');
+    setCustomThemeModalVisible(false);
+  };
+
+  const editColorInCustomTheme = (key: keyof ThemeColors, color: string) => {
+    setCustomThemeColors(prev => ({ ...prev, [key]: color }));
+  };
+
   const renderAppearanceContent = () => (
     <>
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -937,7 +956,7 @@ export default function SettingsScreen() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Sun size={16} color={themePreference === 'light' ? colors.primary : colors.textSecondary} />
-                <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Light Mode</Text>
+                <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Light</Text>
               </View>
             </TouchableOpacity>
 
@@ -952,7 +971,7 @@ export default function SettingsScreen() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Moon size={16} color={themePreference === 'dark' ? colors.primary : colors.textSecondary} />
-                <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Dark Mode</Text>
+                <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Dark</Text>
               </View>
             </TouchableOpacity>
 
@@ -968,6 +987,85 @@ export default function SettingsScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <MonitorSmartphone size={16} color={themePreference === 'system' ? colors.primary : colors.textSecondary} />
                 <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>System</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.layoutOptions, { marginTop: 8 }]}>
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.background, borderColor: colors.border },
+                themePreference === 'sunset' && [styles.layoutOptionSelected, { borderColor: '#f97316', backgroundColor: '#f9731620' }],
+              ]}
+              onPress={() => setTheme('sunset')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Sunset</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.background, borderColor: colors.border },
+                themePreference === 'ocean' && [styles.layoutOptionSelected, { borderColor: '#0ea5e9', backgroundColor: '#0ea5e920' }],
+              ]}
+              onPress={() => setTheme('ocean')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Ocean</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.background, borderColor: colors.border },
+                themePreference === 'forest' && [styles.layoutOptionSelected, { borderColor: '#22c55e', backgroundColor: '#22c55e20' }],
+              ]}
+              onPress={() => setTheme('forest')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Forest</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.layoutOptions, { marginTop: 8 }]}>
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.background, borderColor: colors.border },
+                themePreference === 'midnight' && [styles.layoutOptionSelected, { borderColor: '#a855f7', backgroundColor: '#a855f720' }],
+              ]}
+              onPress={() => setTheme('midnight')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Midnight</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.background, borderColor: colors.border },
+                themePreference === 'rose' && [styles.layoutOptionSelected, { borderColor: '#f43f5e', backgroundColor: '#f43f5e20' }],
+              ]}
+              onPress={() => setTheme('rose')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Rose</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.background, borderColor: colors.border },
+                themePreference === 'custom' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+              ]}
+              onPress={openCustomThemeModal}
+              activeOpacity={0.7}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Paintbrush size={16} color={themePreference === 'custom' ? colors.primary : colors.textSecondary} />
+                <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Custom</Text>
               </View>
             </TouchableOpacity>
           </View>

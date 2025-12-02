@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from './api';
 import { dataParser } from './dataParser';
 import type { Operator, Product, ProductGroup, Department, Tender, VATRate, Table, ProductDisplaySettings, MenuData } from '@/types/pos';
+import type { ThemeColors } from '@/constants/colors';
 
 const STORAGE_KEYS = {
   SITE_ID: 'pos_site_id',
@@ -22,6 +23,7 @@ const STORAGE_KEYS = {
   PRODUCT_VIEW_MODE: 'pos_product_view_mode',
   THEME: 'pos_theme',
   THEME_PREFERENCE: 'pos_theme_preference',
+  CUSTOM_THEME_COLORS: 'pos_custom_theme_colors',
   PRODUCT_DISPLAY_SETTINGS: 'pos_product_display_settings',
   MENU_DATA: 'pos_menu_data',
   BACKGROUND_SYNC_INTERVAL: 'pos_background_sync_interval',
@@ -659,22 +661,31 @@ export class DataSyncService {
     return (data as 'group-department' | 'all-departments' | 'all-items') || 'group-department';
   }
 
-  async setTheme(theme: 'light' | 'dark'): Promise<void> {
+  async setTheme(theme: string): Promise<void> {
     await AsyncStorage.setItem(STORAGE_KEYS.THEME, theme);
   }
 
-  async getTheme(): Promise<'light' | 'dark'> {
+  async getTheme(): Promise<string> {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.THEME);
-    return (data as 'light' | 'dark') || 'dark';
+    return data || 'dark';
   }
 
-  async setThemePreference(preference: 'light' | 'dark' | 'system'): Promise<void> {
+  async setThemePreference(preference: string): Promise<void> {
     await AsyncStorage.setItem(STORAGE_KEYS.THEME_PREFERENCE, preference);
   }
 
-  async getThemePreference(): Promise<'light' | 'dark' | 'system'> {
+  async getThemePreference(): Promise<string> {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.THEME_PREFERENCE);
-    return (data as 'light' | 'dark' | 'system') || 'system';
+    return data || 'system';
+  }
+
+  async setCustomThemeColors(colors: ThemeColors): Promise<void> {
+    await AsyncStorage.setItem(STORAGE_KEYS.CUSTOM_THEME_COLORS, JSON.stringify(colors));
+  }
+
+  async getCustomThemeColors(): Promise<ThemeColors | null> {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.CUSTOM_THEME_COLORS);
+    return data ? JSON.parse(data) : null;
   }
 
   async setProductDisplaySettings(settings: ProductDisplaySettings): Promise<void> {
