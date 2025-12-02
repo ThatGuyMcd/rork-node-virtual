@@ -48,7 +48,7 @@ export default function RootLayout() {
 
         if (hoursSinceSync >= intervalHours) {
           console.log(`[App] Auto-sync triggered: ${hoursSinceSync.toFixed(1)}h >= ${intervalHours}h`);
-          await dataSyncService.syncData(undefined, true);
+          await dataSyncService.syncData(undefined, false);
           console.log('[App] Auto-sync completed successfully');
         } else {
           console.log(`[App] Auto-sync not needed: ${hoursSinceSync.toFixed(1)}h < ${intervalHours}h`);
