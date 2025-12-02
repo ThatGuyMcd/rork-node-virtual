@@ -1,14 +1,15 @@
 import { Tabs, Redirect } from 'expo-router';
 import { ShoppingCart, Store, Settings, Search, LogOut, Printer } from 'lucide-react-native';
 import React, { useState, useEffect } from 'react';
-import { TouchableOpacity, View, Text, Image, Alert } from 'react-native';
+import { TouchableOpacity, View, Text, Image, Alert, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { printerService } from '@/services/printerService';
 
 export default function TabLayout() {
   const { currentOperator, logout, isInitialSetupComplete, basket, calculateTotals } = usePOS();
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
   const [printerConnected, setPrinterConnected] = useState(false);
 
   useEffect(() => {
@@ -131,23 +132,39 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.tabIconDefault,
         tabBarStyle: {
-          backgroundColor: colors.tabBarBackground,
+          backgroundColor: Platform.OS === 'ios' ? 'transparent' : `${colors.tabBarBackground}cc`,
           borderTopColor: colors.primary,
           borderTopWidth: 2,
           height: 90,
           paddingBottom: 25,
           paddingTop: 8,
+          position: 'absolute',
         },
+        tabBarBackground: () => Platform.OS === 'ios' ? (
+          <BlurView
+            intensity={80}
+            tint={theme === 'dark' ? 'dark' : 'light'}
+            style={{ flex: 1 }}
+          />
+        ) : null,
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
           marginTop: 4,
         },
         headerStyle: {
-          backgroundColor: colors.headerBackground,
+          backgroundColor: Platform.OS === 'ios' ? 'transparent' : `${colors.headerBackground}cc`,
           borderBottomColor: colors.primary,
           borderBottomWidth: 2,
         },
+        headerTransparent: Platform.OS === 'ios',
+        headerBackground: () => Platform.OS === 'ios' ? (
+          <BlurView
+            intensity={80}
+            tint={theme === 'dark' ? 'dark' : 'light'}
+            style={{ flex: 1 }}
+          />
+        ) : null,
         headerTintColor: colors.text,
         headerTitleStyle: {
           fontWeight: '700',

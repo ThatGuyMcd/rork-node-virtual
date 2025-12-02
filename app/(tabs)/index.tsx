@@ -1685,6 +1685,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+    paddingTop: 16,
   },
   heading: {
     fontSize: 24,
@@ -1706,7 +1707,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 16,
-    paddingBottom: 20,
+    paddingBottom: 110,
   },
   card: {
     borderRadius: 16,
