@@ -11,6 +11,7 @@ import {
   Switch,
   StatusBar,
   Modal,
+  PanResponder,
 } from 'react-native';
 
 import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, DollarSign, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown } from 'lucide-react-native';
@@ -137,6 +138,9 @@ export default function SettingsScreen() {
   const redSliderWidth = useRef(300);
   const greenSliderWidth = useRef(300);
   const blueSliderWidth = useRef(300);
+  const [isDraggingRed, setIsDraggingRed] = useState(false);
+  const [isDraggingGreen, setIsDraggingGreen] = useState(false);
+  const [isDraggingBlue, setIsDraggingBlue] = useState(false);
   
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     account: true,
@@ -2002,18 +2006,31 @@ export default function SettingsScreen() {
                 </View>
                 <Text style={[styles.sliderValue, { color: colors.text }]}>{Math.round(customColorRgb.r)}</Text>
               </View>
-              <TouchableOpacity
+              <View
                 style={[styles.sliderTrack, { backgroundColor: colors.border }]}
                 onLayout={(event) => {
                   redSliderWidth.current = event.nativeEvent.layout.width;
                 }}
-                onPress={(event) => {
-                  const { locationX } = event.nativeEvent;
-                  const sliderWidth = redSliderWidth.current;
-                  const newValue = Math.round((locationX / sliderWidth) * 255);
-                  setCustomColorRgb(prev => ({ ...prev, r: Math.max(0, Math.min(255, newValue)) }));
-                }}
-                activeOpacity={1}
+                {...PanResponder.create({
+                  onStartShouldSetPanResponder: () => true,
+                  onMoveShouldSetPanResponder: () => true,
+                  onPanResponderGrant: (event) => {
+                    setIsDraggingRed(true);
+                    const locationX = event.nativeEvent.locationX;
+                    const sliderWidth = redSliderWidth.current;
+                    const newValue = Math.round((locationX / sliderWidth) * 255);
+                    setCustomColorRgb(prev => ({ ...prev, r: Math.max(0, Math.min(255, newValue)) }));
+                  },
+                  onPanResponderMove: (event) => {
+                    const locationX = event.nativeEvent.locationX;
+                    const sliderWidth = redSliderWidth.current;
+                    const newValue = Math.round((locationX / sliderWidth) * 255);
+                    setCustomColorRgb(prev => ({ ...prev, r: Math.max(0, Math.min(255, newValue)) }));
+                  },
+                  onPanResponderRelease: () => {
+                    setIsDraggingRed(false);
+                  },
+                }).panHandlers}
               >
                 <View
                   style={[
@@ -2024,7 +2041,7 @@ export default function SettingsScreen() {
                     },
                   ]}
                 />
-              </TouchableOpacity>
+              </View>
               <View style={styles.sliderInputContainer}>
                 <TouchableOpacity
                   style={[styles.sliderButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
@@ -2061,18 +2078,31 @@ export default function SettingsScreen() {
                 </View>
                 <Text style={[styles.sliderValue, { color: colors.text }]}>{Math.round(customColorRgb.g)}</Text>
               </View>
-              <TouchableOpacity
+              <View
                 style={[styles.sliderTrack, { backgroundColor: colors.border }]}
                 onLayout={(event) => {
                   greenSliderWidth.current = event.nativeEvent.layout.width;
                 }}
-                onPress={(event) => {
-                  const { locationX } = event.nativeEvent;
-                  const sliderWidth = greenSliderWidth.current;
-                  const newValue = Math.round((locationX / sliderWidth) * 255);
-                  setCustomColorRgb(prev => ({ ...prev, g: Math.max(0, Math.min(255, newValue)) }));
-                }}
-                activeOpacity={1}
+                {...PanResponder.create({
+                  onStartShouldSetPanResponder: () => true,
+                  onMoveShouldSetPanResponder: () => true,
+                  onPanResponderGrant: (event) => {
+                    setIsDraggingGreen(true);
+                    const locationX = event.nativeEvent.locationX;
+                    const sliderWidth = greenSliderWidth.current;
+                    const newValue = Math.round((locationX / sliderWidth) * 255);
+                    setCustomColorRgb(prev => ({ ...prev, g: Math.max(0, Math.min(255, newValue)) }));
+                  },
+                  onPanResponderMove: (event) => {
+                    const locationX = event.nativeEvent.locationX;
+                    const sliderWidth = greenSliderWidth.current;
+                    const newValue = Math.round((locationX / sliderWidth) * 255);
+                    setCustomColorRgb(prev => ({ ...prev, g: Math.max(0, Math.min(255, newValue)) }));
+                  },
+                  onPanResponderRelease: () => {
+                    setIsDraggingGreen(false);
+                  },
+                }).panHandlers}
               >
                 <View
                   style={[
@@ -2083,7 +2113,7 @@ export default function SettingsScreen() {
                     },
                   ]}
                 />
-              </TouchableOpacity>
+              </View>
               <View style={styles.sliderInputContainer}>
                 <TouchableOpacity
                   style={[styles.sliderButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
@@ -2120,18 +2150,31 @@ export default function SettingsScreen() {
                 </View>
                 <Text style={[styles.sliderValue, { color: colors.text }]}>{Math.round(customColorRgb.b)}</Text>
               </View>
-              <TouchableOpacity
+              <View
                 style={[styles.sliderTrack, { backgroundColor: colors.border }]}
                 onLayout={(event) => {
                   blueSliderWidth.current = event.nativeEvent.layout.width;
                 }}
-                onPress={(event) => {
-                  const { locationX } = event.nativeEvent;
-                  const sliderWidth = blueSliderWidth.current;
-                  const newValue = Math.round((locationX / sliderWidth) * 255);
-                  setCustomColorRgb(prev => ({ ...prev, b: Math.max(0, Math.min(255, newValue)) }));
-                }}
-                activeOpacity={1}
+                {...PanResponder.create({
+                  onStartShouldSetPanResponder: () => true,
+                  onMoveShouldSetPanResponder: () => true,
+                  onPanResponderGrant: (event) => {
+                    setIsDraggingBlue(true);
+                    const locationX = event.nativeEvent.locationX;
+                    const sliderWidth = blueSliderWidth.current;
+                    const newValue = Math.round((locationX / sliderWidth) * 255);
+                    setCustomColorRgb(prev => ({ ...prev, b: Math.max(0, Math.min(255, newValue)) }));
+                  },
+                  onPanResponderMove: (event) => {
+                    const locationX = event.nativeEvent.locationX;
+                    const sliderWidth = blueSliderWidth.current;
+                    const newValue = Math.round((locationX / sliderWidth) * 255);
+                    setCustomColorRgb(prev => ({ ...prev, b: Math.max(0, Math.min(255, newValue)) }));
+                  },
+                  onPanResponderRelease: () => {
+                    setIsDraggingBlue(false);
+                  },
+                }).panHandlers}
               >
                 <View
                   style={[
@@ -2142,7 +2185,7 @@ export default function SettingsScreen() {
                     },
                   ]}
                 />
-              </TouchableOpacity>
+              </View>
               <View style={styles.sliderInputContainer}>
                 <TouchableOpacity
                   style={[styles.sliderButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
