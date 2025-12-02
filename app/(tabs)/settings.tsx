@@ -2020,7 +2020,7 @@ export default function SettingsScreen() {
                     styles.sliderThumb,
                     {
                       backgroundColor: '#ef4444',
-                      left: `${(customColorRgb.r / 255) * 100}%`,
+                      left: `${((customColorRgb.r || 0) / 255) * 100}%`,
                     },
                   ]}
                 />
@@ -2079,7 +2079,7 @@ export default function SettingsScreen() {
                     styles.sliderThumb,
                     {
                       backgroundColor: '#22c55e',
-                      left: `${(customColorRgb.g / 255) * 100}%`,
+                      left: `${((customColorRgb.g || 0) / 255) * 100}%`,
                     },
                   ]}
                 />
@@ -2138,7 +2138,7 @@ export default function SettingsScreen() {
                     styles.sliderThumb,
                     {
                       backgroundColor: '#3b82f6',
-                      left: `${(customColorRgb.b / 255) * 100}%`,
+                      left: `${((customColorRgb.b || 0) / 255) * 100}%`,
                     },
                   ]}
                 />
