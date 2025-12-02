@@ -1903,7 +1903,7 @@ const styles = StyleSheet.create({
   },
   notification: {
     position: 'absolute',
-    bottom: 60,
+    bottom: 100,
     left: 20,
     right: 20,
     borderRadius: 12,
