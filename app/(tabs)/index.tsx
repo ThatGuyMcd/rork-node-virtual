@@ -1352,25 +1352,27 @@ export default function ProductsScreen() {
 
             <ScrollView style={styles.tableList}>
               {!selectedArea ? (
-                (() => {
-                  const areas = Array.from(new Set(tables.map(t => t.area))).sort();
-                  return areas.map((area) => (
-                    <TouchableOpacity
-                      key={area}
-                      style={[styles.areaCard, { backgroundColor: colors.background, borderColor: colors.border }]}
-                      onPress={async () => {
-                        setSelectedArea(area);
-                        await loadAreaData(area);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.areaCardTitle, { color: colors.text }]}>{area}</Text>
-                      <Text style={[styles.areaCardCount, { color: colors.textSecondary }]}>
-                        {tables.filter(t => t.area === area).length} tables
-                      </Text>
-                    </TouchableOpacity>
-                  ));
-                })()
+                <View style={styles.tableGrid}>
+                  {(() => {
+                    const areas = Array.from(new Set(tables.map(t => t.area))).sort();
+                    return areas.map((area) => (
+                      <TouchableOpacity
+                        key={area}
+                        style={[styles.areaCard, { backgroundColor: colors.background, borderColor: colors.border }]}
+                        onPress={async () => {
+                          setSelectedArea(area);
+                          await loadAreaData(area);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.areaCardTitle, { color: colors.text }]}>{area}</Text>
+                        <Text style={[styles.areaCardCount, { color: colors.textSecondary }]}>
+                          {tables.filter(t => t.area === area).length} tables
+                        </Text>
+                      </TouchableOpacity>
+                    ));
+                  })()}
+                </View>
               ) : (
                 <>
                   <TouchableOpacity
@@ -1916,10 +1918,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   areaCard: {
+    width: '48%',
     padding: 20,
     borderRadius: 12,
-    marginBottom: 12,
     borderWidth: 1,
+    minHeight: 80,
   },
   areaCardTitle: {
     fontSize: 18,
