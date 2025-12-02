@@ -84,6 +84,7 @@ export interface ProductDisplaySettings {
   customDepartmentOrder?: string[];
   groupColors?: Record<string, string>;
   departmentColors?: Record<string, string>;
+  departmentSortOrders?: Record<string, 'plu' | 'alphabetical'>;
 }
 
 export interface MenuData {

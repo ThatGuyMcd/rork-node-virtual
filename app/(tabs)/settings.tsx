@@ -395,6 +395,16 @@ export default function SettingsScreen() {
     await dataSyncService.setProductDisplaySettings(newSettings);
   };
 
+  const changeDepartmentSortOrder = async (departmentId: string, sortOrder: 'plu' | 'alphabetical') => {
+    const newSettings = { ...productSettings };
+    if (!newSettings.departmentSortOrders) {
+      newSettings.departmentSortOrders = {};
+    }
+    newSettings.departmentSortOrders[departmentId] = sortOrder;
+    setProductSettings(newSettings);
+    await dataSyncService.setProductDisplaySettings(newSettings);
+  };
+
   const openColorPicker = (type: 'group' | 'department', id: string) => {
     setColorPickerTarget({ type, id });
     setColorPickerVisible(true);
@@ -952,71 +962,74 @@ export default function SettingsScreen() {
                   {departments.map((department) => {
                     const isHidden = productSettings.hiddenDepartmentIds.includes(department.id);
                     const group = groups.find(g => g.id === department.groupId);
+                    const departmentSortOrder = productSettings.departmentSortOrders?.[department.id] || 'plu';
                     return (
-                      <TouchableOpacity
-                        key={department.id}
-                        style={[
-                          styles.filterItem,
-                          { backgroundColor: colors.background, borderColor: colors.border },
-                          isHidden && { opacity: 0.5 },
-                        ]}
-                        onPress={() => toggleDepartmentVisibility(department.id)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.filterItemText, { color: colors.text }]}>{department.name}</Text>
-                          {group && (
-                            <Text style={[styles.filterItemSubtext, { color: colors.textTertiary }]}>in {group.name}</Text>
-                          )}
-                        </View>
+                      <View key={department.id}>
                         <TouchableOpacity
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            openColorPicker('department', department.id);
-                          }}
-                          style={[styles.colorButton, getItemColor('department', department.id) && { backgroundColor: getItemColor('department', department.id) + '20', borderRadius: 6 }]}
+                          style={[
+                            styles.filterItem,
+                            { backgroundColor: colors.background, borderColor: colors.border },
+                            isHidden && { opacity: 0.5 },
+                          ]}
+                          onPress={() => toggleDepartmentVisibility(department.id)}
                           activeOpacity={0.7}
                         >
-                          <Paintbrush size={18} color={getItemColor('department', department.id) || colors.primary} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.filterItemText, { color: colors.text }]}>{department.name}</Text>
+                            {group && (
+                              <Text style={[styles.filterItemSubtext, { color: colors.textTertiary }]}>in {group.name}</Text>
+                            )}
+                          </View>
+                          <TouchableOpacity
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              openColorPicker('department', department.id);
+                            }}
+                            style={[styles.colorButton, getItemColor('department', department.id) && { backgroundColor: getItemColor('department', department.id) + '20', borderRadius: 6 }]}
+                            activeOpacity={0.7}
+                          >
+                            <Paintbrush size={18} color={getItemColor('department', department.id) || colors.primary} />
+                          </TouchableOpacity>
+                          {isHidden ? (
+                            <EyeOff size={20} color={colors.textTertiary} />
+                          ) : (
+                            <Eye size={20} color={colors.primary} />
+                          )}
                         </TouchableOpacity>
-                        {isHidden ? (
-                          <EyeOff size={20} color={colors.textTertiary} />
-                        ) : (
-                          <Eye size={20} color={colors.primary} />
+                        {!isHidden && (
+                          <View style={{ marginLeft: 12, marginTop: 8, marginBottom: 8 }}>
+                            <Text style={[styles.filterItemSubtext, { color: colors.textSecondary, marginBottom: 8 }]}>Sort Order</Text>
+                            <View style={styles.layoutOptions}>
+                              <TouchableOpacity
+                                style={[
+                                  styles.layoutOption,
+                                  { backgroundColor: colors.inputBackground, borderColor: colors.border, flex: 1 },
+                                  departmentSortOrder === 'plu' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                                ]}
+                                onPress={() => changeDepartmentSortOrder(department.id, 'plu')}
+                                activeOpacity={0.7}
+                              >
+                                <Text style={[styles.layoutOptionTitle, { color: colors.text, fontSize: 13 }]}>By PLU</Text>
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={[
+                                  styles.layoutOption,
+                                  { backgroundColor: colors.inputBackground, borderColor: colors.border, flex: 1 },
+                                  departmentSortOrder === 'alphabetical' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                                ]}
+                                onPress={() => changeDepartmentSortOrder(department.id, 'alphabetical')}
+                                activeOpacity={0.7}
+                              >
+                                <Text style={[styles.layoutOptionTitle, { color: colors.text, fontSize: 13 }]}>Alphabetical</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
                         )}
-                      </TouchableOpacity>
+                      </View>
                     );
                   })}
                 </ScrollView>
-              </View>
-
-              <View style={{ marginTop: 24 }}>
-                <Text style={[styles.filterSectionTitle, { color: colors.text }]}>Sort Order</Text>
-                <View style={styles.layoutOptions}>
-                  <TouchableOpacity
-                    style={[
-                      styles.layoutOption,
-                      { backgroundColor: colors.inputBackground, borderColor: colors.border },
-                      productSettings.sortOrder === 'filename' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
-                    ]}
-                    onPress={() => changeSortOrder('filename')}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Filename Order</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.layoutOption,
-                      { backgroundColor: colors.inputBackground, borderColor: colors.border },
-                      productSettings.sortOrder === 'alphabetical' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
-                    ]}
-                    onPress={() => changeSortOrder('alphabetical')}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Alphabetical</Text>
-                  </TouchableOpacity>
-                </View>
               </View>
             </>
           )}
