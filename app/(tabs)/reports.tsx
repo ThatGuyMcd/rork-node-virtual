@@ -919,25 +919,6 @@ export default function ReportsScreen() {
                     </View>
                   ))}
 
-                  <Text style={[styles.sectionSubtitle, { color: colors.text }]}>By Payment Method</Text>
-                  {Object.entries(cashbackByPaymentMethod)
-                    .filter(([method]) => method !== 'Split Payment')
-                    .map(([method, data]) => (
-                    <View key={method} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.breakdownLabel, { color: colors.text }]}>{method}</Text>
-                        {data.count > 0 && (
-                          <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
-                            {data.count} transaction{data.count !== 1 ? 's' : ''}
-                          </Text>
-                        )}
-                      </View>
-                      <Text style={[styles.breakdownValue, { color: '#3b82f6' }]}>
-                        £{data.total.toFixed(2)}
-                      </Text>
-                    </View>
-                  ))}
-
                   <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Recent Cashback Transactions</Text>
                   {transactionsWithCashback.slice(0, 5).map((transaction) => (
                     <TouchableOpacity
