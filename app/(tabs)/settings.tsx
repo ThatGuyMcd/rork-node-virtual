@@ -1058,15 +1058,12 @@ export default function SettingsScreen() {
               style={[
                 styles.layoutOption,
                 { backgroundColor: colors.background, borderColor: colors.border },
-                themePreference === 'custom' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                themePreference === 'lavender' && [styles.layoutOptionSelected, { borderColor: '#c084fc', backgroundColor: '#c084fc20' }],
               ]}
-              onPress={openCustomThemeModal}
+              onPress={() => setTheme('lavender')}
               activeOpacity={0.7}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Paintbrush size={16} color={themePreference === 'custom' ? colors.primary : colors.textSecondary} />
-                <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Custom</Text>
-              </View>
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Lavender</Text>
             </TouchableOpacity>
           </View>
         </View>
