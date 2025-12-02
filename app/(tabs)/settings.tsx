@@ -840,10 +840,10 @@ export default function SettingsScreen() {
             </View>
           </View>
           
-          <View style={styles.layoutOptions}>
+          <View style={styles.syncIntervalOptions}>
             <TouchableOpacity
               style={[
-                styles.layoutOption,
+                styles.syncIntervalOption,
                 { backgroundColor: colors.inputBackground, borderColor: colors.border },
                 backgroundSyncInterval === 'disabled' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
               ]}
@@ -855,7 +855,7 @@ export default function SettingsScreen() {
 
             <TouchableOpacity
               style={[
-                styles.layoutOption,
+                styles.syncIntervalOption,
                 { backgroundColor: colors.inputBackground, borderColor: colors.border },
                 backgroundSyncInterval === '6' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
               ]}
@@ -867,7 +867,7 @@ export default function SettingsScreen() {
 
             <TouchableOpacity
               style={[
-                styles.layoutOption,
+                styles.syncIntervalOption,
                 { backgroundColor: colors.inputBackground, borderColor: colors.border },
                 backgroundSyncInterval === '12' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
               ]}
@@ -879,7 +879,7 @@ export default function SettingsScreen() {
 
             <TouchableOpacity
               style={[
-                styles.layoutOption,
+                styles.syncIntervalOption,
                 { backgroundColor: colors.inputBackground, borderColor: colors.border },
                 backgroundSyncInterval === '24' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
               ]}
@@ -2759,7 +2759,21 @@ const styles = StyleSheet.create({
   },
   layoutOption: {
     flex: 1,
-    minWidth: 100,
+    minWidth: 90,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  syncIntervalOptions: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  syncIntervalOption: {
+    flexBasis: '48%',
+    minWidth: 0,
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
