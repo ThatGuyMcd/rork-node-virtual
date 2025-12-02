@@ -974,7 +974,11 @@ export default function ProductsScreen() {
                 ) : (
                   <View style={[StyleSheet.absoluteFill, { backgroundColor: getGroupColor(group.id), opacity: 0.9 }]} />
                 )}
-                <Text style={styles.cardTitle}>{trimName(group.name)}</Text>
+                <Text style={[
+                  styles.cardTitle,
+                  productViewLayout === 'compact' && styles.cardTitleCompact,
+                  productViewLayout === 'large' && styles.cardTitleLarge,
+                ]}>{trimName(group.name)}</Text>
                 <Text style={styles.cardCount}>
                   {visibleDepartments.filter((d) => d.groupId === group.id).length} departments
                 </Text>
@@ -1021,7 +1025,11 @@ export default function ProductsScreen() {
                 ) : (
                   <View style={[StyleSheet.absoluteFill, { backgroundColor: getDepartmentColor(dept.id), opacity: 0.9 }]} />
                 )}
-                <Text style={styles.cardTitle}>{trimName(dept.name)}</Text>
+                <Text style={[
+                  styles.cardTitle,
+                  productViewLayout === 'compact' && styles.cardTitleCompact,
+                  productViewLayout === 'large' && styles.cardTitleLarge,
+                ]}>{trimName(dept.name)}</Text>
                 <Text style={styles.cardCount}>
                   {products.filter((p) => {
                     const matchingDept = departments.find(d => d.name === p.departmentId);
@@ -1055,7 +1063,11 @@ export default function ProductsScreen() {
                 onPress={() => setSelectedDepartment(dept.id)}
                 activeOpacity={0.8}
               >
-                <Text style={styles.cardTitle}>{trimName(dept.name)}</Text>
+                <Text style={[
+                  styles.cardTitle,
+                  productViewLayout === 'compact' && styles.cardTitleCompact,
+                  productViewLayout === 'large' && styles.cardTitleLarge,
+                ]}>{trimName(dept.name)}</Text>
                 <Text style={styles.cardCount}>
                   {products.filter((p) => {
                     const matchingDept = departments.find(d => d.name === p.departmentId);
@@ -1647,9 +1659,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: '#fff',
+  },
+  cardTitleCompact: {
+    fontSize: 14,
+  },
+  cardTitleLarge: {
+    fontSize: 18,
   },
   cardCount: {
     fontSize: 13,
