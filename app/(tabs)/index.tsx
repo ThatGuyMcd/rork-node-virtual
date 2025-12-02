@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 import { ChevronLeft, X, RefreshCw, Grid3x3, Save } from 'lucide-react-native';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
@@ -91,6 +92,7 @@ export default function ProductsScreen() {
   const [productMsgPrice, setProductMsgPrice] = useState<PriceOption | null>(null);
   const { addToBasket, currentTable, selectTable, isTableSelectionRequired, productViewLayout, productViewMode, saveTableTab } = usePOS();
   const { colors, theme } = useTheme();
+  const navigation = useNavigation();
 
   const scaleAnim = useState(new Animated.Value(0))[0];
   const notificationOpacity = useState(new Animated.Value(0))[0];
@@ -100,6 +102,16 @@ export default function ProductsScreen() {
     loadData();
     loadDisplaySettings();
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('tabPress' as any, () => {
+      console.log('[Products] Tab pressed, resetting to default view');
+      setSelectedDepartment(null);
+      setSelectedGroup(null);
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   useEffect(() => {
     if (tableModalVisible && tables.length > 0) {
