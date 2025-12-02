@@ -964,42 +964,39 @@ export default function SettingsScreen() {
                     const group = groups.find(g => g.id === department.groupId);
                     const departmentSortOrder = productSettings.departmentSortOrders?.[department.id] || 'plu';
                     return (
-                      <View key={department.id}>
-                        <TouchableOpacity
-                          style={[
-                            styles.filterItem,
-                            { backgroundColor: colors.background, borderColor: colors.border },
-                            isHidden && { opacity: 0.5 },
-                          ]}
-                          onPress={() => toggleDepartmentVisibility(department.id)}
-                          activeOpacity={0.7}
-                        >
-                          <View style={{ flex: 1 }}>
-                            <Text style={[styles.filterItemText, { color: colors.text }]}>{department.name}</Text>
-                            {group && (
-                              <Text style={[styles.filterItemSubtext, { color: colors.textTertiary }]}>in {group.name}</Text>
-                            )}
-                          </View>
+                      <View key={department.id} style={[styles.departmentCard, { backgroundColor: colors.background, borderColor: colors.border }, isHidden && { opacity: 0.5 }]}>
+                        <View style={styles.departmentHeader}>
                           <TouchableOpacity
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              openColorPicker('department', department.id);
-                            }}
-                            style={[styles.colorButton, getItemColor('department', department.id) && { backgroundColor: getItemColor('department', department.id) + '20', borderRadius: 6 }]}
+                            style={styles.departmentNameContainer}
+                            onPress={() => toggleDepartmentVisibility(department.id)}
+                            activeOpacity={0.7}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <Text style={[styles.filterItemText, { color: colors.text }]}>{department.name}</Text>
+                              {group && (
+                                <Text style={[styles.filterItemSubtext, { color: colors.textTertiary }]}>in {group.name}</Text>
+                              )}
+                            </View>
+                            {isHidden ? (
+                              <EyeOff size={20} color={colors.textTertiary} />
+                            ) : (
+                              <Eye size={20} color={colors.primary} />
+                            )}
+                          </TouchableOpacity>
+                          
+                          <TouchableOpacity
+                            onPress={() => openColorPicker('department', department.id)}
+                            style={[styles.colorButtonLarge, { backgroundColor: getItemColor('department', department.id) ? getItemColor('department', department.id) + '20' : colors.inputBackground, borderColor: getItemColor('department', department.id) || colors.border }]}
                             activeOpacity={0.7}
                           >
                             <Paintbrush size={18} color={getItemColor('department', department.id) || colors.primary} />
                           </TouchableOpacity>
-                          {isHidden ? (
-                            <EyeOff size={20} color={colors.textTertiary} />
-                          ) : (
-                            <Eye size={20} color={colors.primary} />
-                          )}
-                        </TouchableOpacity>
+                        </View>
+                        
                         {!isHidden && (
-                          <View style={{ marginLeft: 12, marginTop: 8, marginBottom: 8 }}>
-                            <Text style={[styles.filterItemSubtext, { color: colors.textSecondary, marginBottom: 8 }]}>Sort Order</Text>
-                            <View style={styles.layoutOptions}>
+                          <View style={styles.departmentSortSection}>
+                            <Text style={[styles.departmentSortLabel, { color: colors.textSecondary }]}>Sort Order:</Text>
+                            <View style={[styles.layoutOptions, { flex: 1 }]}>
                               <TouchableOpacity
                                 style={[
                                   styles.layoutOption,
@@ -2326,6 +2323,41 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   receiptLineText: {
+    fontWeight: '500',
+  },
+  departmentCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+    padding: 12,
+    gap: 12,
+  },
+  departmentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  departmentNameContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  colorButtonLarge: {
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  departmentSortSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  departmentSortLabel: {
+    fontSize: 13,
     fontWeight: '500',
   },
 });
