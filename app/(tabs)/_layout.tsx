@@ -153,18 +153,10 @@ export default function TabLayout() {
           marginTop: 4,
         },
         headerStyle: {
-          backgroundColor: Platform.OS === 'ios' ? 'transparent' : `${colors.headerBackground}cc`,
+          backgroundColor: colors.headerBackground,
           borderBottomColor: colors.primary,
           borderBottomWidth: 2,
         },
-        headerTransparent: Platform.OS === 'ios',
-        headerBackground: () => Platform.OS === 'ios' ? (
-          <BlurView
-            intensity={80}
-            tint={theme === 'dark' ? 'dark' : 'light'}
-            style={{ flex: 1 }}
-          />
-        ) : null,
         headerTintColor: colors.text,
         headerTitleStyle: {
           fontWeight: '700',
