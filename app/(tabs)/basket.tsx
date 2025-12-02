@@ -1039,6 +1039,7 @@ export default function BasketScreen() {
                       }
                       const isCash = lastPaymentTender === 'Cash';
                       const label = isCash ? 'Change' : 'Cashback';
+                      console.log('[Basket Receipt] Displaying cashback:', lastTransaction.cashback, 'Label:', label, 'Tender:', lastPaymentTender, 'Full transaction:', JSON.stringify(lastTransaction, null, 2));
                       return (
                         <>
                           <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
