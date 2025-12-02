@@ -355,8 +355,12 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       await tableDataService.clearTableData(currentTable.id, currentTable);
       console.log('[POS] Cleared table data locally and synced to server for table:', currentTable.id);
       
-      await tableDataService.unlockTable(currentTable);
-      console.log('[POS] Successfully unlocked table after payment:', currentTable.name);
+      try {
+        await tableDataService.unlockTable(currentTable);
+        console.log('[POS] Successfully unlocked table after payment:', currentTable.name);
+      } catch (error) {
+        console.warn('[POS] Failed to unlock table after payment (continuing anyway):', error);
+      }
     }
     
     setBasketDiscount(0);
@@ -398,12 +402,20 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     if (previousTable && previousBasket.length > 0 && currentOperator) {
       console.log(`[POS] Saving previous table ${previousTable.name} with ${previousBasket.length} items before switching`);
       await tableDataService.saveTableData(previousTable, previousBasket, currentOperator, vatRates);
-      await tableDataService.unlockTable(previousTable);
+      try {
+        await tableDataService.unlockTable(previousTable);
+      } catch (error) {
+        console.warn('[POS] Failed to unlock previous table (continuing anyway):', error);
+      }
     }
     
     setCurrentTable(table);
     if (table) {
-      await tableDataService.lockTable(table);
+      try {
+        await tableDataService.lockTable(table);
+      } catch (error) {
+        console.warn('[POS] Failed to lock table (continuing anyway):', error);
+      }
       
       const csvRows = await tableDataService.loadTableData(table.id);
       if (csvRows.length > 0) {
@@ -470,8 +482,12 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
       console.log('[POS] Successfully saved table tab and synced to server');
       
-      await tableDataService.unlockTable(currentTable);
-      console.log('[POS] Successfully unlocked table:', currentTable.name);
+      try {
+        await tableDataService.unlockTable(currentTable);
+        console.log('[POS] Successfully unlocked table:', currentTable.name);
+      } catch (unlockError) {
+        console.warn('[POS] Failed to unlock table after saving (continuing anyway):', unlockError);
+      }
       
       setCurrentTable(null);
       setBasket([]);
