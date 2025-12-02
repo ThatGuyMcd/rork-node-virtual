@@ -1033,6 +1033,20 @@ export default function BasketScreen() {
                         <Text style={[styles.receiptValue, { color: colors.text }]}>{lastTransaction.paymentMethod}</Text>
                       </View>
                     )}
+
+                    {lastTransaction.cashback && lastTransaction.cashback > 0 && (() => {
+                      const tender = lastTransaction.payments && lastTransaction.payments.length > 0
+                        ? lastTransaction.payments.find(p => p.tenderId)?.tenderName
+                        : lastTransaction.tenderName;
+                      const isCash = tender === 'Cash';
+                      const label = isCash ? 'Change' : 'Cashback';
+                      return (
+                        <View style={styles.receiptInfoRow}>
+                          <Text style={[styles.receiptLabel, { color: colors.success, fontWeight: '700' as const }]}>{label}</Text>
+                          <Text style={[styles.receiptValue, { color: colors.success, fontWeight: '700' as const }]}>£{lastTransaction.cashback.toFixed(2)}</Text>
+                        </View>
+                      );
+                    })()}
                   </View>
 
                   {lastTransaction.isRefund && (

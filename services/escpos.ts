@@ -199,6 +199,18 @@ export class ESCPOSGenerator {
       receipt += this.bold(false);
     }
 
+    if (transaction.cashback && transaction.cashback > 0) {
+      receipt += this.feed(1);
+      const tender = transaction.payments && transaction.payments.length > 0
+        ? transaction.payments.find(p => p.tenderId)?.tenderName
+        : transaction.tenderName;
+      const isCash = tender === 'Cash';
+      const label = isCash ? 'CHANGE' : 'CASHBACK';
+      receipt += this.bold(true);
+      receipt += this.formatLine(label, `£${transaction.cashback.toFixed(2)}`) + this.commands.LF;
+      receipt += this.bold(false);
+    }
+
     if (transaction.isRefund) {
       receipt += this.feed(1);
       receipt += this.alignCenter();

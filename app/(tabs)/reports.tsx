@@ -1327,6 +1327,21 @@ export default function ReportsScreen() {
                       £{selectedTransaction.total.toFixed(2)}
                     </Text>
                   </View>
+                  {selectedTransaction.cashback && selectedTransaction.cashback > 0 && (() => {
+                    const tender = selectedTransaction.payments && selectedTransaction.payments.length > 0
+                      ? selectedTransaction.payments.find(p => p.tenderId)?.tenderName
+                      : selectedTransaction.tenderName;
+                    const isCash = tender === 'Cash';
+                    const label = isCash ? 'Change' : 'Cashback';
+                    return (
+                      <View style={[styles.totalRow, { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }]}>
+                        <Text style={[styles.totalLabelBold, { color: '#10b981' }]}>{label}</Text>
+                        <Text style={[styles.totalValueBold, { color: '#10b981' }]}>
+                          £{selectedTransaction.cashback.toFixed(2)}
+                        </Text>
+                      </View>
+                    );
+                  })()}
                 </View>
               </ScrollView>
             )}
