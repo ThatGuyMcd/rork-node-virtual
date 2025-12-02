@@ -21,6 +21,57 @@ import type { ProductDisplaySettings, ProductGroup, Department, DiscountSettings
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
+const CollapsibleSection = ({ 
+  id, 
+  icon: Icon, 
+  title, 
+  iconColor, 
+  children,
+  expandedSections,
+  toggleSection,
+  colors
+}: { 
+  id: string; 
+  icon: any; 
+  title: string; 
+  iconColor: string; 
+  children: React.ReactNode;
+  expandedSections: Record<string, boolean>;
+  toggleSection: (section: string) => void;
+  colors: any;
+}) => {
+  const isExpanded = expandedSections[id];
+  
+  return (
+    <View style={[styles.section, styles.sectionFixedWidth, isExpanded && styles.sectionExpanded]}>
+      <TouchableOpacity
+        style={[styles.collapsibleHeader, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+        onPress={() => toggleSection(id)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.sectionHeaderContent}>
+          <View style={[styles.iconCircle, { backgroundColor: iconColor + '20' }]}>
+            <Icon size={28} color={iconColor} />
+          </View>
+          <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={2}>{title}</Text>
+        </View>
+        <View style={styles.chevronContainer}>
+          {isExpanded ? (
+            <ChevronUp size={20} color={colors.textSecondary} />
+          ) : (
+            <ChevronDown size={20} color={colors.textSecondary} />
+          )}
+        </View>
+      </TouchableOpacity>
+      {isExpanded && (
+        <View style={styles.collapsibleContent}>
+          {children}
+        </View>
+      )}
+    </View>
+  );
+};
+
 export default function SettingsScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -381,51 +432,6 @@ export default function SettingsScreen() {
   const expandedSection = useMemo(() => {
     return Object.keys(expandedSections).find(key => expandedSections[key]) || null;
   }, [expandedSections]);
-
-  const CollapsibleSection = ({ 
-    id, 
-    icon: Icon, 
-    title, 
-    iconColor, 
-    children 
-  }: { 
-    id: string; 
-    icon: any; 
-    title: string; 
-    iconColor: string; 
-    children: React.ReactNode;
-  }) => {
-    const isExpanded = expandedSections[id];
-    
-    return (
-      <View style={[styles.section, styles.sectionFixedWidth, isExpanded && styles.sectionExpanded]}>
-        <TouchableOpacity
-          style={[styles.collapsibleHeader, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
-          onPress={() => toggleSection(id)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.sectionHeaderContent}>
-            <View style={[styles.iconCircle, { backgroundColor: iconColor + '20' }]}>
-              <Icon size={28} color={iconColor} />
-            </View>
-            <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={2}>{title}</Text>
-          </View>
-          <View style={styles.chevronContainer}>
-            {isExpanded ? (
-              <ChevronUp size={20} color={colors.textSecondary} />
-            ) : (
-              <ChevronDown size={20} color={colors.textSecondary} />
-            )}
-          </View>
-        </TouchableOpacity>
-        {isExpanded && (
-          <View style={styles.collapsibleContent}>
-            {children}
-          </View>
-        )}
-      </View>
-    );
-  };
 
   const applyCustomColor = () => {
     let colorValue = customColorInput.trim();
@@ -1703,6 +1709,9 @@ export default function SettingsScreen() {
               icon={section.icon}
               title={section.title}
               iconColor={section.color}
+              expandedSections={expandedSections}
+              toggleSection={toggleSection}
+              colors={colors}
             >
               {renderSectionContent(section.id)}
             </CollapsibleSection>
