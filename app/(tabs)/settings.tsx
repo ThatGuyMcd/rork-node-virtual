@@ -1927,10 +1927,10 @@ export default function SettingsScreen() {
   };
 
   const sections = [
-    { id: 'account', icon: LogIn, title: 'Account', color: '#3b82f6', order: siteInfo ? 1 : 1 },
-    { id: 'dataSync', icon: Database, title: 'Sync Data', color: '#10b981', order: siteInfo ? 2 : 999 },
+    { id: 'account', icon: LogIn, title: 'Account Site Settings', color: '#3b82f6', order: siteInfo ? 1 : 1 },
+    { id: 'dataSync', icon: Database, title: 'Server Sync Settings', color: '#10b981', order: siteInfo ? 2 : 999 },
     { id: 'reportsConsolidation', icon: FileText, title: 'Sales & Reports', color: '#f97316', order: siteInfo ? 3 : 2 },
-    { id: 'appearance', icon: Palette, title: 'Appearance', color: '#8b5cf6', order: 4 },
+    { id: 'appearance', icon: Palette, title: 'Appearance Settings', color: '#8b5cf6', order: 4 },
     { id: 'payment', icon: CreditCard, title: 'Payment Settings', color: '#06b6d4', order: 5 },
     { id: 'pos', icon: LayoutGrid, title: 'Basket Settings', color: '#f59e0b', order: 6 },
     { id: 'printer', icon: Printer, title: 'Printer Settings', color: '#6366f1', order: 7 },
