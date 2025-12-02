@@ -1874,6 +1874,7 @@ export default function SettingsScreen() {
   const sortedSections = sections
     .filter(section => {
       if (section.id === 'dataSync' && !siteInfo) return false;
+      if (section.id === 'initialSetup' && isInitialSetupComplete) return false;
       return true;
     })
     .sort((a, b) => {
