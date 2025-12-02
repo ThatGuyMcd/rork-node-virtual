@@ -1923,12 +1923,12 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
             
+            <Text style={[styles.colorSectionTitle, { color: colors.textSecondary }]}>Preset Colors</Text>
             <ScrollView 
               style={styles.colorPickerScroll}
               contentContainerStyle={styles.colorPickerScrollContent}
               showsVerticalScrollIndicator={true}
             >
-              <Text style={[styles.colorSectionTitle, { color: colors.textSecondary }]}>Preset Colors</Text>
               <View style={styles.colorGrid}>
                 {[
                   '#ef4444', '#f97316', '#f59e0b', '#eab308',
@@ -1956,26 +1956,26 @@ export default function SettingsScreen() {
                   />
                 ))}
               </View>
-
-              <Text style={[styles.colorSectionTitle, { color: colors.textSecondary, marginTop: 16 }]}>Custom Color</Text>
-              <TouchableOpacity
-                style={[styles.customColorButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
-                onPress={() => {
-                  setCustomColorModalVisible(true);
-                  if (customColorInput) {
-                    const rgb = hexToRgb(customColorInput);
-                    if (rgb) {
-                      setCustomColorRgb(rgb);
-                    }
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.customColorPreview, { backgroundColor: rgbToHex(customColorRgb.r, customColorRgb.g, customColorRgb.b) }]} />
-                <Text style={[styles.customColorButtonText, { color: colors.text }]}>Create Custom Color</Text>
-                <Palette size={20} color={colors.primary} />
-              </TouchableOpacity>
             </ScrollView>
+
+            <Text style={[styles.colorSectionTitle, { color: colors.textSecondary, marginTop: 16 }]}>Custom Color</Text>
+            <TouchableOpacity
+              style={[styles.customColorButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+              onPress={() => {
+                setCustomColorModalVisible(true);
+                if (customColorInput) {
+                  const rgb = hexToRgb(customColorInput);
+                  if (rgb) {
+                    setCustomColorRgb(rgb);
+                  }
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.customColorPreview, { backgroundColor: rgbToHex(customColorRgb.r, customColorRgb.g, customColorRgb.b) }]} />
+              <Text style={[styles.customColorButtonText, { color: colors.text }]}>Create Custom Color</Text>
+              <Palette size={20} color={colors.primary} />
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -2599,10 +2599,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   colorPickerScroll: {
-    maxHeight: 500,
+    maxHeight: 300,
   },
   colorPickerScrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 10,
   },
   colorSectionTitle: {
     fontSize: 14,
@@ -2828,7 +2828,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sliderButton: {
-    width: 48,
+    width: 40,
     height: 48,
     borderRadius: 8,
     borderWidth: 1,
