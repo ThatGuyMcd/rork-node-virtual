@@ -1952,8 +1952,8 @@ const styles = StyleSheet.create({
   sectionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    columnGap: 16,
-    rowGap: 8,
+    columnGap: 18,
+    rowGap: 5,
   },
   section: {
     marginBottom: 16,
