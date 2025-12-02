@@ -1526,6 +1526,11 @@ export default function ProductsScreen() {
                                     <Text style={styles.tableInUseText}>IN USE</Text>
                                   </View>
                                 )}
+                                {!hasData && !isLocked && (
+                                  <View style={[styles.tableFreeIndicator, { backgroundColor: '#10b981' }]}>
+                                    <Text style={styles.tableFreeText}>FREE</Text>
+                                  </View>
+                                )}
                               </View>
                               {hasData && !isLocked && (
                                 <Text style={[styles.tableSubtotal, { color: 'rgba(255, 255, 255, 0.9)' }]}>Subtotal: £{subtotal.toFixed(2)}</Text>
@@ -2149,5 +2154,15 @@ const styles = StyleSheet.create({
   },
   tableLockedItem: {
     opacity: 0.6,
+  },
+  tableFreeIndicator: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  tableFreeText: {
+    fontSize: 9,
+    fontWeight: '700' as const,
+    color: '#fff',
   },
 });
