@@ -1336,12 +1336,14 @@ export default function ReportsScreen() {
                     const isCash = tender === 'Cash';
                     const label = isCash ? 'Change' : 'Cashback';
                     return (
-                      <View style={[styles.totalRow, { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }]}>
-                        <Text style={[styles.totalLabelBold, { color: '#10b981' }]}>{label}</Text>
-                        <Text style={[styles.totalValueBold, { color: '#10b981' }]}>
-                          £{selectedTransaction.cashback.toFixed(2)}
-                        </Text>
-                      </View>
+                      <>
+                        <View style={styles.totalRow}>
+                          <Text style={[styles.totalLabelBold, { color: '#10b981' }]}>{label}</Text>
+                          <Text style={[styles.totalValueBold, { color: '#10b981' }]}>
+                            £{selectedTransaction.cashback.toFixed(2)}
+                          </Text>
+                        </View>
+                      </>
                     );
                   })()}
                 </View>

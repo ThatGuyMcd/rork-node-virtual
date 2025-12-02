@@ -319,6 +319,7 @@ export default function BasketScreen() {
     
     const allTransactions = await transactionService.getAllTransactions();
     const lastTxn = allTransactions[allTransactions.length - 1];
+    console.log('[Basket] Last transaction after change:', lastTxn?.id, 'cashback:', lastTxn?.cashback);
     setLastTransaction(lastTxn || null);
     console.log('[Basket] Showing receipt print modal after change confirmation');
     setReceiptPrintModalVisible(true);
@@ -1039,10 +1040,13 @@ export default function BasketScreen() {
                       const isCash = lastPaymentTender === 'Cash';
                       const label = isCash ? 'Change' : 'Cashback';
                       return (
-                        <View style={styles.receiptInfoRow}>
-                          <Text style={[styles.receiptLabel, { color: colors.success, fontWeight: '700' as const }]}>{label}</Text>
-                          <Text style={[styles.receiptValue, { color: colors.success, fontWeight: '700' as const }]}>£{lastTransaction.cashback.toFixed(2)}</Text>
-                        </View>
+                        <>
+                          <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
+                          <View style={styles.receiptInfoRow}>
+                            <Text style={[styles.receiptLabel, { color: colors.success, fontWeight: '700' as const }]}>{label}</Text>
+                            <Text style={[styles.receiptValue, { color: colors.success, fontWeight: '700' as const }]}>£{lastTransaction.cashback.toFixed(2)}</Text>
+                          </View>
+                        </>
                       );
                     })()}
                   </View>

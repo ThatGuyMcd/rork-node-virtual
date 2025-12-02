@@ -307,6 +307,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         gratuity,
         cashback: cashback && cashback > 0 ? cashback : undefined,
       };
+      console.log('[POS] Split payment transaction cashback:', cashback, 'transaction.cashback:', transaction.cashback);
       await transactionService.saveTransaction(transaction);
       console.log('[POS] Split payment transaction recorded:', transaction.id, allPayments);
       
