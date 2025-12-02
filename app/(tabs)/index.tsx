@@ -404,7 +404,23 @@ export default function ProductsScreen() {
     return true;
   });
   
-  const sortProducts = (products: Product[]): Product[] => {
+  const sortProducts = (products: Product[], departmentId?: string): Product[] => {
+    // Check if we have a department-specific sort order
+    if (departmentId && displaySettings.departmentSortOrders?.[departmentId]) {
+      const sortOrder = displaySettings.departmentSortOrders[departmentId];
+      if (sortOrder === 'alphabetical') {
+        return [...products].sort((a, b) => a.name.localeCompare(b.name));
+      } else if (sortOrder === 'plu') {
+        // Sort by PLU (filename)
+        return [...products].sort((a, b) => {
+          const aFilename = a.filename || '';
+          const bFilename = b.filename || '';
+          return aFilename.localeCompare(bFilename);
+        });
+      }
+    }
+    
+    // Fall back to global sort order
     if (displaySettings.sortOrder === 'alphabetical') {
       return [...products].sort((a, b) => a.name.localeCompare(b.name));
     }
@@ -1087,7 +1103,7 @@ export default function ProductsScreen() {
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
           >
-            {sortProducts(allVisibleProducts).map((product) => (
+            {sortProducts(allVisibleProducts, undefined).map((product) => (
               <TouchableOpacity
                 key={product.id}
                 style={[
@@ -1163,7 +1179,7 @@ export default function ProductsScreen() {
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
           >
-            {sortProducts(filteredProducts).map((product) => (
+            {sortProducts(filteredProducts, selectedDepartment || undefined).map((product) => (
               <TouchableOpacity
                 key={product.id}
                 style={[
