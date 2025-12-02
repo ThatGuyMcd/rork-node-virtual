@@ -1328,9 +1328,11 @@ export default function ReportsScreen() {
                     </Text>
                   </View>
                   {selectedTransaction.cashback && selectedTransaction.cashback > 0 && (() => {
-                    const tender = selectedTransaction.payments && selectedTransaction.payments.length > 0
-                      ? selectedTransaction.payments.find(p => p.tenderId)?.tenderName
-                      : selectedTransaction.tenderName;
+                    let tender = selectedTransaction.tenderName;
+                    if (selectedTransaction.payments && selectedTransaction.payments.length > 0) {
+                      const lastPayment = selectedTransaction.payments[selectedTransaction.payments.length - 1];
+                      tender = lastPayment.tenderName;
+                    }
                     const isCash = tender === 'Cash';
                     const label = isCash ? 'Change' : 'Cashback';
                     return (
