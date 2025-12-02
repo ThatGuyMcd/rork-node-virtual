@@ -1666,7 +1666,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   productNameCompact: {
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: '700',
   },
   productNameLarge: {
