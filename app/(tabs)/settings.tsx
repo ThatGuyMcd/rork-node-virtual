@@ -1958,7 +1958,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionFixedWidth: {
-    width: '48%',
+    width: '47%',
   },
   sectionExpanded: {
     width: '100%',
