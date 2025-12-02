@@ -14,7 +14,7 @@ import {
   PanResponder,
 } from 'react-native';
 
-import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, DollarSign, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown } from 'lucide-react-native';
+import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, DollarSign, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
 import { printerService } from '@/services/printerService';
 import { useRouter } from 'expo-router';
@@ -152,6 +152,7 @@ export default function SettingsScreen() {
     discount: false,
     gratuity: false,
     initialSetup: false,
+    about: false,
     danger: false,
     printer: false,
     receipt: false,
@@ -1818,6 +1819,37 @@ export default function SettingsScreen() {
     </>
   );
 
+  const renderAboutContent = () => (
+    <>
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>App Name</Text>
+        <Text style={[styles.value, { color: colors.text }]}>NODE Virtual</Text>
+      </View>
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Version</Text>
+        <Text style={[styles.value, { color: colors.text }]}>1.0.0</Text>
+      </View>
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Developer</Text>
+        <Text style={[styles.value, { color: colors.text }]}>Limitless-Tech</Text>
+      </View>
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 8 }]}>Description</Text>
+        <Text style={[styles.infoText, { color: colors.text }]}>
+          A modern Point of Sale (POS) system featuring real-time product management, flexible payment options, detailed reporting, and seamless data synchronization. Built for businesses that need reliable and intuitive transaction management.
+        </Text>
+      </View>
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Platform</Text>
+        <Text style={[styles.value, { color: colors.text }]}>React Native (Expo SDK 54)</Text>
+      </View>
+    </>
+  );
+
   const renderDangerZoneContent = () => (
     <>
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -1852,6 +1884,8 @@ export default function SettingsScreen() {
         return renderPrinterContent();
       case 'initialSetup':
         return renderInitialSetupContent();
+      case 'about':
+        return renderAboutContent();
       case 'danger':
         return renderDangerZoneContent();
       default:
@@ -1868,7 +1902,8 @@ export default function SettingsScreen() {
     { id: 'pos', icon: LayoutGrid, title: 'Basket Settings', color: '#f59e0b', order: 6 },
     { id: 'printer', icon: Printer, title: 'Printer Settings', color: '#6366f1', order: 7 },
     { id: 'initialSetup', icon: SettingsIcon, title: 'Initial Setup', color: '#84cc16', order: 8 },
-    { id: 'danger', icon: Trash2, title: 'Danger Zone', color: '#ef4444', order: 9 },
+    { id: 'about', icon: Info, title: 'About this App', color: '#06b6d4', order: 9 },
+    { id: 'danger', icon: Trash2, title: 'Danger Zone', color: '#ef4444', order: 10 },
   ];
 
   const sortedSections = sections
