@@ -1429,22 +1429,37 @@ export default function ProductsScreen() {
                 <View style={styles.tableGrid}>
                   {(() => {
                     const areas = Array.from(new Set(tables.map(t => t.area))).sort();
-                    return areas.map((area) => (
-                      <TouchableOpacity
-                        key={area}
-                        style={[styles.areaCard, { backgroundColor: colors.background, borderColor: colors.border }]}
-                        onPress={async () => {
-                          setSelectedArea(area);
-                          await loadAreaData(area);
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.areaCardTitle, { color: colors.text }]}>{area}</Text>
-                        <Text style={[styles.areaCardCount, { color: colors.textSecondary }]}>
-                          {tables.filter(t => t.area === area).length} tables
-                        </Text>
-                      </TouchableOpacity>
-                    ));
+                    const areaColors = [
+                      '#8b5cf6',
+                      '#06b6d4',
+                      '#10b981',
+                      '#f59e0b',
+                      '#ec4899',
+                      '#6366f1',
+                      '#14b8a6',
+                      '#f97316',
+                      '#a855f7',
+                      '#3b82f6',
+                    ];
+                    return areas.map((area, index) => {
+                      const areaColor = areaColors[index % areaColors.length];
+                      return (
+                        <TouchableOpacity
+                          key={area}
+                          style={[styles.areaCard, { backgroundColor: areaColor, borderColor: areaColor }]}
+                          onPress={async () => {
+                            setSelectedArea(area);
+                            await loadAreaData(area);
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.areaCardTitle, { color: '#ffffff' }]}>{area}</Text>
+                          <Text style={[styles.areaCardCount, { color: 'rgba(255, 255, 255, 0.8)' }]}>
+                            {tables.filter(t => t.area === area).length} tables
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    });
                   })()}
                 </View>
               ) : (
