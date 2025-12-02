@@ -1490,15 +1490,14 @@ export default function ProductsScreen() {
                         const hasData = status?.hasData || false;
                         const isLocked = status?.isLocked || false;
                         const subtotal = status?.subtotal || 0;
-                        const statusColor = isLocked ? '#f97316' : (hasData ? '#ef4444' : '#10b981');
+                        const statusColor = isLocked ? '#f97316' : (hasData ? '#991b1b' : '#047857');
 
                         return (
                           <TouchableOpacity
                             key={table.id}
                             style={[
                               styles.tableGridItem,
-                              { backgroundColor: colors.background, borderColor: colors.border },
-                              { borderLeftWidth: 4, borderLeftColor: statusColor },
+                              { backgroundColor: statusColor, borderColor: statusColor },
                               currentTable?.id === table.id && styles.tableOptionSelected,
                               isLocked && styles.tableLockedItem,
                             ]}
@@ -1516,7 +1515,7 @@ export default function ProductsScreen() {
                           >
                             <View style={{ flex: 1 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                <Text style={[styles.tableOptionText, { color: isLocked ? colors.textTertiary : colors.text }]}>{table.name}</Text>
+                                <Text style={[styles.tableOptionText, { color: '#ffffff' }]}>{table.name}</Text>
                                 {isLocked && (
                                   <View style={[styles.tableInUseIndicator, { backgroundColor: '#f97316' }]}>
                                     <Text style={styles.tableInUseText}>LOCKED</Text>
@@ -1529,7 +1528,7 @@ export default function ProductsScreen() {
                                 )}
                               </View>
                               {hasData && !isLocked && (
-                                <Text style={[styles.tableSubtotal, { color: colors.primary }]}>Subtotal: £{subtotal.toFixed(2)}</Text>
+                                <Text style={[styles.tableSubtotal, { color: 'rgba(255, 255, 255, 0.9)' }]}>Subtotal: £{subtotal.toFixed(2)}</Text>
                               )}
                             </View>
                             {currentTable?.id === table.id && (
