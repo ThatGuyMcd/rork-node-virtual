@@ -2658,6 +2658,338 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={customThemeModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCustomThemeModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.customThemeModalContent, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Custom Theme</Text>
+              <TouchableOpacity
+                onPress={() => setCustomThemeModalVisible(false)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.themeColorsList}
+              showsVerticalScrollIndicator={true}
+            >
+              {Object.entries(customThemeColors).map(([key, value]) => (
+                <View key={key} style={[styles.themeColorItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <View style={styles.themeColorInfo}>
+                    <Text style={[styles.themeColorKey, { color: colors.text }]}>
+                      {key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+                    </Text>
+                    <Text style={[styles.themeColorValue, { color: colors.textSecondary }]}>{value}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.themeColorPreview, { backgroundColor: value, borderColor: colors.border }]}
+                    onPress={() => {
+                      setEditingColorKey(key as keyof ThemeColors);
+                      const rgb = hexToRgb(value);
+                      if (rgb) {
+                        setCustomColorRgb(rgb);
+                      }
+                    }}
+                    activeOpacity={0.7}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.textTertiary, flex: 1 }]}
+                onPress={() => setCustomThemeModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, flex: 1 }]}
+                onPress={saveCustomTheme}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Save & Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={editingColorKey !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditingColorKey(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {editingColorKey ? editingColorKey.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase()) : 'Edit Color'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setEditingColorKey(null)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={[styles.customColorPreviewLarge, { backgroundColor: rgbToHex(customColorRgb.r, customColorRgb.g, customColorRgb.b) }]} />
+            <Text style={[styles.hexDisplay, { color: colors.text }]}>{rgbToHex(customColorRgb.r, customColorRgb.g, customColorRgb.b).toUpperCase()}</Text>
+
+            <View style={styles.sliderContainer}>
+              <View style={styles.sliderRow}>
+                <View style={styles.sliderLabelContainer}>
+                  <View style={[styles.sliderColorDot, { backgroundColor: '#ef4444' }]} />
+                  <Text style={[styles.sliderLabel, { color: colors.text }]}>Red</Text>
+                </View>
+                <Text style={[styles.sliderValue, { color: colors.text }]}>{Math.round(customColorRgb.r)}</Text>
+              </View>
+              <View
+                style={[styles.sliderTrack, { backgroundColor: colors.border }]}
+                onLayout={(event) => {
+                  redSliderWidth.current = event.nativeEvent.layout.width;
+                }}
+                {...PanResponder.create({
+                  onStartShouldSetPanResponder: () => true,
+                  onMoveShouldSetPanResponder: () => true,
+                  onPanResponderGrant: (event) => {
+                    setIsDraggingRed(true);
+                    const locationX = event.nativeEvent.locationX;
+                    const sliderWidth = redSliderWidth.current;
+                    const newValue = Math.round((locationX / sliderWidth) * 255);
+                    setCustomColorRgb(prev => ({ ...prev, r: Math.max(0, Math.min(255, newValue)) }));
+                  },
+                  onPanResponderMove: (event) => {
+                    const locationX = event.nativeEvent.locationX;
+                    const sliderWidth = redSliderWidth.current;
+                    const newValue = Math.round((locationX / sliderWidth) * 255);
+                    setCustomColorRgb(prev => ({ ...prev, r: Math.max(0, Math.min(255, newValue)) }));
+                  },
+                  onPanResponderRelease: () => {
+                    setIsDraggingRed(false);
+                  },
+                }).panHandlers}
+              >
+                <View
+                  style={[
+                    styles.sliderThumb,
+                    {
+                      backgroundColor: '#ef4444',
+                      left: `${((customColorRgb.r || 0) / 255) * 100}%`,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.sliderInputContainer}>
+                <TouchableOpacity
+                  style={[styles.sliderButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                  onPress={() => setCustomColorRgb(prev => ({ ...prev, r: Math.max(0, prev.r - 10) }))}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.sliderButtonText, { color: colors.text }]}>-</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={[styles.sliderInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                  value={String(Math.round(customColorRgb.r))}
+                  onChangeText={(text) => {
+                    const val = parseInt(text) || 0;
+                    setCustomColorRgb(prev => ({ ...prev, r: Math.max(0, Math.min(255, val)) }));
+                  }}
+                  keyboardType="numeric"
+                  maxLength={3}
+                />
+                <TouchableOpacity
+                  style={[styles.sliderButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                  onPress={() => setCustomColorRgb(prev => ({ ...prev, r: Math.min(255, prev.r + 10) }))}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.sliderButtonText, { color: colors.text }]}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.sliderContainer}>
+              <View style={styles.sliderRow}>
+                <View style={styles.sliderLabelContainer}>
+                  <View style={[styles.sliderColorDot, { backgroundColor: '#22c55e' }]} />
+                  <Text style={[styles.sliderLabel, { color: colors.text }]}>Green</Text>
+                </View>
+                <Text style={[styles.sliderValue, { color: colors.text }]}>{Math.round(customColorRgb.g)}</Text>
+              </View>
+              <View
+                style={[styles.sliderTrack, { backgroundColor: colors.border }]}
+                onLayout={(event) => {
+                  greenSliderWidth.current = event.nativeEvent.layout.width;
+                }}
+                {...PanResponder.create({
+                  onStartShouldSetPanResponder: () => true,
+                  onMoveShouldSetPanResponder: () => true,
+                  onPanResponderGrant: (event) => {
+                    setIsDraggingGreen(true);
+                    const locationX = event.nativeEvent.locationX;
+                    const sliderWidth = greenSliderWidth.current;
+                    const newValue = Math.round((locationX / sliderWidth) * 255);
+                    setCustomColorRgb(prev => ({ ...prev, g: Math.max(0, Math.min(255, newValue)) }));
+                  },
+                  onPanResponderMove: (event) => {
+                    const locationX = event.nativeEvent.locationX;
+                    const sliderWidth = greenSliderWidth.current;
+                    const newValue = Math.round((locationX / sliderWidth) * 255);
+                    setCustomColorRgb(prev => ({ ...prev, g: Math.max(0, Math.min(255, newValue)) }));
+                  },
+                  onPanResponderRelease: () => {
+                    setIsDraggingGreen(false);
+                  },
+                }).panHandlers}
+              >
+                <View
+                  style={[
+                    styles.sliderThumb,
+                    {
+                      backgroundColor: '#22c55e',
+                      left: `${((customColorRgb.g || 0) / 255) * 100}%`,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.sliderInputContainer}>
+                <TouchableOpacity
+                  style={[styles.sliderButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                  onPress={() => setCustomColorRgb(prev => ({ ...prev, g: Math.max(0, prev.g - 10) }))}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.sliderButtonText, { color: colors.text }]}>-</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={[styles.sliderInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                  value={String(Math.round(customColorRgb.g))}
+                  onChangeText={(text) => {
+                    const val = parseInt(text) || 0;
+                    setCustomColorRgb(prev => ({ ...prev, g: Math.max(0, Math.min(255, val)) }));
+                  }}
+                  keyboardType="numeric"
+                  maxLength={3}
+                />
+                <TouchableOpacity
+                  style={[styles.sliderButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                  onPress={() => setCustomColorRgb(prev => ({ ...prev, g: Math.min(255, prev.g + 10) }))}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.sliderButtonText, { color: colors.text }]}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.sliderContainer}>
+              <View style={styles.sliderRow}>
+                <View style={styles.sliderLabelContainer}>
+                  <View style={[styles.sliderColorDot, { backgroundColor: '#3b82f6' }]} />
+                  <Text style={[styles.sliderLabel, { color: colors.text }]}>Blue</Text>
+                </View>
+                <Text style={[styles.sliderValue, { color: colors.text }]}>{Math.round(customColorRgb.b)}</Text>
+              </View>
+              <View
+                style={[styles.sliderTrack, { backgroundColor: colors.border }]}
+                onLayout={(event) => {
+                  blueSliderWidth.current = event.nativeEvent.layout.width;
+                }}
+                {...PanResponder.create({
+                  onStartShouldSetPanResponder: () => true,
+                  onMoveShouldSetPanResponder: () => true,
+                  onPanResponderGrant: (event) => {
+                    setIsDraggingBlue(true);
+                    const locationX = event.nativeEvent.locationX;
+                    const sliderWidth = blueSliderWidth.current;
+                    const newValue = Math.round((locationX / sliderWidth) * 255);
+                    setCustomColorRgb(prev => ({ ...prev, b: Math.max(0, Math.min(255, newValue)) }));
+                  },
+                  onPanResponderMove: (event) => {
+                    const locationX = event.nativeEvent.locationX;
+                    const sliderWidth = blueSliderWidth.current;
+                    const newValue = Math.round((locationX / sliderWidth) * 255);
+                    setCustomColorRgb(prev => ({ ...prev, b: Math.max(0, Math.min(255, newValue)) }));
+                  },
+                  onPanResponderRelease: () => {
+                    setIsDraggingBlue(false);
+                  },
+                }).panHandlers}
+              >
+                <View
+                  style={[
+                    styles.sliderThumb,
+                    {
+                      backgroundColor: '#3b82f6',
+                      left: `${((customColorRgb.b || 0) / 255) * 100}%`,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.sliderInputContainer}>
+                <TouchableOpacity
+                  style={[styles.sliderButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                  onPress={() => setCustomColorRgb(prev => ({ ...prev, b: Math.max(0, prev.b - 10) }))}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.sliderButtonText, { color: colors.text }]}>-</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={[styles.sliderInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                  value={String(Math.round(customColorRgb.b))}
+                  onChangeText={(text) => {
+                    const val = parseInt(text) || 0;
+                    setCustomColorRgb(prev => ({ ...prev, b: Math.max(0, Math.min(255, val)) }));
+                  }}
+                  keyboardType="numeric"
+                  maxLength={3}
+                />
+                <TouchableOpacity
+                  style={[styles.sliderButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                  onPress={() => setCustomColorRgb(prev => ({ ...prev, b: Math.min(255, prev.b + 10) }))}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.sliderButtonText, { color: colors.text }]}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.textTertiary, flex: 1 }]}
+                onPress={() => setEditingColorKey(null)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, flex: 1 }]}
+                onPress={() => {
+                  if (editingColorKey) {
+                    const hexColor = rgbToHex(customColorRgb.r, customColorRgb.g, customColorRgb.b);
+                    editColorInCustomTheme(editingColorKey, hexColor);
+                    setEditingColorKey(null);
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -3193,5 +3525,42 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
     fontWeight: '600',
+  },
+  customThemeModalContent: {
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '85%',
+    borderRadius: 16,
+    padding: 20,
+  },
+  themeColorsList: {
+    maxHeight: 400,
+  },
+  themeColorItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  themeColorInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  themeColorKey: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  themeColorValue: {
+    fontSize: 13,
+    fontFamily: 'monospace',
+  },
+  themeColorPreview: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 2,
   },
 });
