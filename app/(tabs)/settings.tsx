@@ -391,22 +391,26 @@ export default function SettingsScreen() {
     const hasAnyExpanded = Object.values(expandedSections).some(val => val);
     
     return (
-      <View style={[styles.section, !hasAnyExpanded && styles.sectionHalfWidth]}>
+      <View style={[styles.section, !hasAnyExpanded && styles.sectionHalfWidth, isExpanded && styles.sectionExpanded]}>
         <TouchableOpacity
-          style={[styles.collapsibleHeader, { borderColor: colors.border }]}
+          style={[styles.collapsibleHeader, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
           onPress={() => toggleSection(id)}
           activeOpacity={0.7}
           disabled={false}
         >
-          <View style={styles.sectionHeader}>
-            <Icon size={20} color={iconColor} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+          <View style={styles.sectionHeaderContent}>
+            <View style={[styles.iconCircle, { backgroundColor: iconColor + '20' }]}>
+              <Icon size={28} color={iconColor} />
+            </View>
+            <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={2}>{title}</Text>
           </View>
-          {isExpanded ? (
-            <ChevronUp size={20} color={colors.textSecondary} />
-          ) : (
-            <ChevronDown size={20} color={colors.textSecondary} />
-          )}
+          <View style={styles.chevronContainer}>
+            {isExpanded ? (
+              <ChevronUp size={20} color={colors.textSecondary} />
+            ) : (
+              <ChevronDown size={20} color={colors.textSecondary} />
+            )}
+          </View>
         </TouchableOpacity>
         {isExpanded && (
           <View style={styles.collapsibleContent}>
@@ -2100,24 +2104,39 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   section: {
-    marginBottom: 16,
-    flex: 1,
-    minWidth: '100%',
+    marginBottom: 0,
   },
   sectionHalfWidth: {
-    flex: 1,
-    minWidth: '47%',
-    maxWidth: '50%',
+    width: '48%',
   },
-  sectionHeader: {
-    flexDirection: 'row',
+  sectionExpanded: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  sectionHeaderContent: {
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+    paddingTop: 8,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
     color: '#ffffff',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chevronContainer: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
   },
   card: {
     backgroundColor: '#1e293b',
@@ -2461,19 +2480,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   collapsibleHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
+    paddingVertical: 32,
     paddingHorizontal: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 12,
+    minHeight: 180,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   collapsibleContent: {
-    marginTop: -12,
-    paddingTop: 16,
+    marginTop: 16,
   },
   receiptLineItem: {
     flexDirection: 'row',
