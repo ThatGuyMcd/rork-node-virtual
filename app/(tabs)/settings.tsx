@@ -354,10 +354,24 @@ export default function SettingsScreen() {
   };
 
   const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
+    setExpandedSections(prev => {
+      const isCurrentlyExpanded = prev[section];
+      if (isCurrentlyExpanded) {
+        return {
+          ...prev,
+          [section]: false,
+        };
+      } else {
+        const allClosed: Record<string, boolean> = {};
+        Object.keys(prev).forEach(key => {
+          allClosed[key] = false;
+        });
+        return {
+          ...allClosed,
+          [section]: true,
+        };
+      }
+    });
   };
 
   const CollapsibleSection = ({ 
@@ -374,9 +388,10 @@ export default function SettingsScreen() {
     children: React.ReactNode;
   }) => {
     const isExpanded = expandedSections[id];
+    const hasAnyExpanded = Object.values(expandedSections).some(val => val);
     
     return (
-      <View style={styles.section}>
+      <View style={[styles.section, !hasAnyExpanded && styles.sectionHalfWidth]}>
         <TouchableOpacity
           style={[styles.collapsibleHeader, { borderColor: colors.border }]}
           onPress={() => toggleSection(id)}
@@ -528,6 +543,8 @@ export default function SettingsScreen() {
         removeClippedSubviews={false}
       >
         <Text style={[styles.heading, { color: colors.text }]}>Settings</Text>
+        
+        <View style={styles.sectionsContainer}>{/* Grid container */}
 
         <CollapsibleSection 
           id="account" 
@@ -1649,6 +1666,8 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </CollapsibleSection>
 
+        </View>{/* End of sectionsContainer */}
+
         <Modal
           transparent
           visible={colorPickerVisible}
@@ -2074,8 +2093,21 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginBottom: 24,
   },
+  sectionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    alignItems: 'flex-start',
+  },
   section: {
-    marginBottom: 32,
+    marginBottom: 16,
+    flex: 1,
+    minWidth: '100%',
+  },
+  sectionHalfWidth: {
+    flex: 1,
+    minWidth: '47%',
+    maxWidth: '50%',
   },
   sectionHeader: {
     flexDirection: 'row',
