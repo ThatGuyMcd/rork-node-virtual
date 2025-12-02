@@ -1019,7 +1019,7 @@ export default function BasketScreen() {
 
                     {lastTransaction.payments && lastTransaction.payments.length > 0 ? (
                       <View>
-                        <Text style={[styles.receiptLabel, { color: colors.textSecondary, marginBottom: 8 }]}>Payment Method: Split Payment</Text>
+                        <Text style={[styles.receiptLabel, { color: colors.textSecondary, marginBottom: 8 }]}>Payment Methods:</Text>
                         {lastTransaction.payments.map((payment, idx) => (
                           <View key={idx} style={styles.receiptInfoRow}>
                             <Text style={[styles.receiptLabel, { color: colors.text, paddingLeft: 12 }]}>{payment.tenderName}</Text>
@@ -1035,10 +1035,12 @@ export default function BasketScreen() {
                     )}
 
                     {lastTransaction.cashback && lastTransaction.cashback > 0 && (() => {
-                      const tender = lastTransaction.payments && lastTransaction.payments.length > 0
-                        ? lastTransaction.payments.find(p => p.tenderId)?.tenderName
-                        : lastTransaction.tenderName;
-                      const isCash = tender === 'Cash';
+                      let lastPaymentTender = lastTransaction.tenderName;
+                      if (lastTransaction.payments && lastTransaction.payments.length > 0) {
+                        const lastPayment = lastTransaction.payments[lastTransaction.payments.length - 1];
+                        lastPaymentTender = lastPayment.tenderName;
+                      }
+                      const isCash = lastPaymentTender === 'Cash';
                       const label = isCash ? 'Change' : 'Cashback';
                       return (
                         <View style={styles.receiptInfoRow}>

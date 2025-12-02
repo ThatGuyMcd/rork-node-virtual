@@ -188,7 +188,7 @@ export class ESCPOSGenerator {
 
     if (transaction.payments && transaction.payments.length > 0) {
       receipt += this.bold(true);
-      receipt += 'Payment Method: Split Payment' + this.commands.LF;
+      receipt += 'Payment Methods:' + this.commands.LF;
       receipt += this.bold(false);
       transaction.payments.forEach((payment) => {
         receipt += this.formatLine(`  ${payment.tenderName}`, `£${payment.amount.toFixed(2)}`) + this.commands.LF;
@@ -201,10 +201,12 @@ export class ESCPOSGenerator {
 
     if (transaction.cashback && transaction.cashback > 0) {
       receipt += this.feed(1);
-      const tender = transaction.payments && transaction.payments.length > 0
-        ? transaction.payments.find(p => p.tenderId)?.tenderName
-        : transaction.tenderName;
-      const isCash = tender === 'Cash';
+      let lastPaymentTender = transaction.tenderName;
+      if (transaction.payments && transaction.payments.length > 0) {
+        const lastPayment = transaction.payments[transaction.payments.length - 1];
+        lastPaymentTender = lastPayment.tenderName;
+      }
+      const isCash = lastPaymentTender === 'Cash';
       const label = isCash ? 'CHANGE' : 'CASHBACK';
       receipt += this.bold(true);
       receipt += this.formatLine(label, `£${transaction.cashback.toFixed(2)}`) + this.commands.LF;
