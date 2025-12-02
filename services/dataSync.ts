@@ -24,6 +24,7 @@ const STORAGE_KEYS = {
   THEME_PREFERENCE: 'pos_theme_preference',
   PRODUCT_DISPLAY_SETTINGS: 'pos_product_display_settings',
   MENU_DATA: 'pos_menu_data',
+  BACKGROUND_SYNC_INTERVAL: 'pos_background_sync_interval',
 };
 
 export interface SyncProgress {
@@ -986,7 +987,7 @@ export class DataSyncService {
   }
 
   async clearAllData(): Promise<void> {
-    const keys = Object.values(STORAGE_KEYS).filter(key => key !== STORAGE_KEYS.THEME && key !== STORAGE_KEYS.THEME_PREFERENCE);
+    const keys = Object.values(STORAGE_KEYS).filter(key => key !== STORAGE_KEYS.THEME && key !== STORAGE_KEYS.THEME_PREFERENCE && key !== STORAGE_KEYS.BACKGROUND_SYNC_INTERVAL);
     await AsyncStorage.multiRemove(keys);
     console.log('[DataSync] All data cleared');
   }
@@ -994,6 +995,16 @@ export class DataSyncService {
   async hasInitialSyncCompleted(): Promise<boolean> {
     const lastSync = await this.getLastSyncTime();
     return lastSync !== null;
+  }
+
+  async setBackgroundSyncInterval(interval: 'disabled' | '6' | '12' | '24'): Promise<void> {
+    await AsyncStorage.setItem(STORAGE_KEYS.BACKGROUND_SYNC_INTERVAL, interval);
+    console.log('[DataSync] Background sync interval set to:', interval, 'hours');
+  }
+
+  async getBackgroundSyncInterval(): Promise<'disabled' | '6' | '12' | '24'> {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.BACKGROUND_SYNC_INTERVAL);
+    return (data as 'disabled' | '6' | '12' | '24') || 'disabled';
   }
 }
 

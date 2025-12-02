@@ -109,6 +109,7 @@ export default function SettingsScreen() {
   const [customColorModalVisible, setCustomColorModalVisible] = useState(false);
   const [customColorRgb, setCustomColorRgb] = useState({ r: 255, g: 87, b: 51 });
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [backgroundSyncInterval, setBackgroundSyncInterval] = useState<'disabled' | '6' | '12' | '24'>('disabled');
   const [discountPercentages, setDiscountPercentages] = useState<string[]>([]);
   const [discountModalVisible, setDiscountModalVisible] = useState(false);
   const [editingDiscountIndex, setEditingDiscountIndex] = useState<number | null>(null);
@@ -170,6 +171,7 @@ export default function SettingsScreen() {
     loadProductData();
     loadLastSyncTime();
     loadPrinterSettings();
+    loadBackgroundSyncInterval();
   }, []);
 
   useEffect(() => {
@@ -242,6 +244,11 @@ export default function SettingsScreen() {
     } catch (error) {
       console.error('Error loading printer settings:', error);
     }
+  };
+
+  const loadBackgroundSyncInterval = async () => {
+    const interval = await dataSyncService.getBackgroundSyncInterval();
+    setBackgroundSyncInterval(interval);
   };
 
   const handleConnectBluetooth = async () => {
@@ -729,6 +736,18 @@ export default function SettingsScreen() {
     </>
   );
 
+  const handleBackgroundSyncIntervalChange = async (interval: 'disabled' | '6' | '12' | '24') => {
+    setBackgroundSyncInterval(interval);
+    await dataSyncService.setBackgroundSyncInterval(interval);
+    if (interval !== 'disabled') {
+      Alert.alert(
+        'Background Sync Enabled',
+        `Data will automatically sync every ${interval} hours while the app is open. Note: Background sync when the app is closed requires additional native setup and is not available in this version.`,
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   const renderDataSyncContent = () => (
     <>
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -808,6 +827,70 @@ export default function SettingsScreen() {
           )}
         </TouchableOpacity>
       )}
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRowColumn}>
+          <View style={styles.settingHeader}>
+            <RefreshCw size={18} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>Automatic Background Sync</Text>
+              <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
+                Automatically sync data at regular intervals while the app is active
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.layoutOptions}>
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                backgroundSyncInterval === 'disabled' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+              ]}
+              onPress={() => handleBackgroundSyncIntervalChange('disabled')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Disabled</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                backgroundSyncInterval === '6' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+              ]}
+              onPress={() => handleBackgroundSyncIntervalChange('6')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Every 6h</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                backgroundSyncInterval === '12' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+              ]}
+              onPress={() => handleBackgroundSyncIntervalChange('12')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Every 12h</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                backgroundSyncInterval === '24' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+              ]}
+              onPress={() => handleBackgroundSyncIntervalChange('24')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Every 24h</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
 
     </>
   );
