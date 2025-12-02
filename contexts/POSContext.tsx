@@ -40,7 +40,7 @@ interface POSContextType {
   updateBasketItemMessage: (index: number, message: string) => void;
   removeFromBasket: (index: number) => void;
   clearBasket: () => void;
-  completeSale: (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[], gratuity?: number) => Promise<void>;
+  completeSale: (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[], gratuity?: number, cashback?: number) => Promise<void>;
   calculateTotals: () => { subtotal: number; vatBreakdown: Record<string, number>; total: number; discount: number };
   selectTable: (table: Table | null) => void;
   saveTableOrder: () => void;
@@ -260,7 +260,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     return { subtotal, discount, vatBreakdown, total: subtotalAfterDiscount };
   }, [basket, basketDiscount, isRefundMode]);
 
-  const completeSale = useCallback(async (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[], gratuity?: number) => {
+  const completeSale = useCallback(async (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[], gratuity?: number, cashback?: number) => {
     if (!currentOperator) {
       console.error('[POS] Cannot complete sale: no operator logged in');
       return;
@@ -305,6 +305,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         isRefund,
         discount: totals.discount > 0 ? totals.discount : undefined,
         gratuity,
+        cashback: cashback && cashback > 0 ? cashback : undefined,
       };
       await transactionService.saveTransaction(transaction);
       console.log('[POS] Split payment transaction recorded:', transaction.id, allPayments);
@@ -333,6 +334,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         isRefund,
         discount: totals.discount > 0 ? totals.discount : undefined,
         gratuity,
+        cashback: cashback && cashback > 0 ? cashback : undefined,
       };
       await transactionService.saveTransaction(transaction);
       console.log('[POS] Transaction recorded:', transaction.id);

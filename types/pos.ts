@@ -122,6 +122,7 @@ export interface Transaction {
   isRefund?: boolean;
   discount?: number;
   gratuity?: number;
+  cashback?: number;
 }
 
 export interface TransactionReport {

@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar, RotateCcw, Search, Percent, Gift, Trophy, Clock, Zap, Star, DollarSign, Printer } from 'lucide-react-native';
+import { FileText, TrendingUp, Users, CreditCard, Download, X, Filter, BarChart3, Layers, Calendar, RotateCcw, Search, Percent, Gift, Trophy, Clock, Zap, Star, DollarSign, Printer, Banknote } from 'lucide-react-native';
 import { transactionService } from '@/services/transactionService';
 import type { Transaction, TransactionReport } from '@/types/pos';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -830,6 +830,129 @@ export default function ReportsScreen() {
                         <Text style={[styles.transactionOperator, { color: colors.textSecondary }]}>
                           {transaction.operatorName} • {transaction.tenderName}
                           {transaction.tableName && ` • ${transaction.tableName}`} • Gratuity: £{transaction.gratuity?.toFixed(2)}
+                        </Text>
+                      </View>
+                      <Text style={[styles.transactionTotal, { color: colors.primary }]}>
+                        £{transaction.total.toFixed(2)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              );
+            })()}
+
+            {(() => {
+              const transactionsWithCashback = filteredTransactions.filter(t => t.cashback && t.cashback > 0);
+              const totalCashbackAmount = transactionsWithCashback.reduce((sum, t) => sum + (t.cashback || 0), 0);
+              const cashbackCount = transactionsWithCashback.length;
+
+              if (cashbackCount === 0) return null;
+
+              const cashbackByOperator: Record<string, { count: number; total: number }> = {};
+              const cashbackByPaymentMethod: Record<string, { count: number; total: number }> = {};
+
+              transactionsWithCashback.forEach(transaction => {
+                if (!cashbackByOperator[transaction.operatorId]) {
+                  cashbackByOperator[transaction.operatorId] = { count: 0, total: 0 };
+                }
+                cashbackByOperator[transaction.operatorId].count++;
+                cashbackByOperator[transaction.operatorId].total += transaction.cashback || 0;
+
+                if (transaction.payments && transaction.payments.length > 0) {
+                  transaction.payments.forEach(payment => {
+                    if (!cashbackByPaymentMethod[payment.tenderName]) {
+                      cashbackByPaymentMethod[payment.tenderName] = { count: 0, total: 0 };
+                    }
+                  });
+                } else {
+                  if (!cashbackByPaymentMethod[transaction.tenderName]) {
+                    cashbackByPaymentMethod[transaction.tenderName] = { count: 0, total: 0 };
+                  }
+                  cashbackByPaymentMethod[transaction.tenderName].count++;
+                }
+              });
+
+              const cardCashbackTotal = transactionsWithCashback
+                .filter(t => !t.payments || t.payments.length === 0)
+                .filter(t => t.tenderName === 'Card')
+                .reduce((sum, t) => sum + (t.cashback || 0), 0);
+
+              if (cashbackByPaymentMethod['Card']) {
+                cashbackByPaymentMethod['Card'].total = cardCashbackTotal;
+              }
+
+              return (
+                <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <View style={styles.cardHeader}>
+                    <Banknote size={20} color="#3b82f6" />
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>Cashback</Text>
+                  </View>
+
+                  <View style={styles.summaryGrid}>
+                    <View style={[styles.summaryItem, { backgroundColor: colors.background }]}>
+                      <FileText size={24} color="#3b82f6" />
+                      <Text style={[styles.summaryValue, { color: colors.text }]}>{cashbackCount}</Text>
+                      <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Cashback Txns</Text>
+                    </View>
+
+                    <View style={[styles.summaryItem, { backgroundColor: colors.background }]}>
+                      <TrendingUp size={24} color="#3b82f6" />
+                      <Text style={[styles.summaryValue, { color: '#3b82f6' }]}>£{totalCashbackAmount.toFixed(2)}</Text>
+                      <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total Cashback</Text>
+                    </View>
+                  </View>
+
+                  <Text style={[styles.sectionSubtitle, { color: colors.text }]}>By Operator</Text>
+                  {Object.entries(cashbackByOperator).map(([operatorId, data]) => (
+                    <View key={operatorId} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.breakdownLabel, { color: colors.text }]}>{
+                          operators[operatorId] || operatorId
+                        }</Text>
+                        <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
+                          {data.count} cashback transaction{data.count !== 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                      <Text style={[styles.breakdownValue, { color: '#3b82f6' }]}>
+                        £{data.total.toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+
+                  <Text style={[styles.sectionSubtitle, { color: colors.text }]}>By Payment Method</Text>
+                  {Object.entries(cashbackByPaymentMethod)
+                    .filter(([method]) => method !== 'Split Payment')
+                    .map(([method, data]) => (
+                    <View key={method} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.breakdownLabel, { color: colors.text }]}>{method}</Text>
+                        {data.count > 0 && (
+                          <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
+                            {data.count} transaction{data.count !== 1 ? 's' : ''}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={[styles.breakdownValue, { color: '#3b82f6' }]}>
+                        £{data.total.toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+
+                  <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Recent Cashback Transactions</Text>
+                  {transactionsWithCashback.slice(0, 5).map((transaction) => (
+                    <TouchableOpacity
+                      key={transaction.id}
+                      style={[styles.transactionItem, { borderBottomColor: colors.border }]}
+                      onPress={() => viewTransactionDetail(transaction)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.transactionId, { color: colors.text }]}>
+                          {new Date(transaction.timestamp).toLocaleString('en-GB')}
+                        </Text>
+                        <Text style={[styles.transactionOperator, { color: colors.textSecondary }]}>
+                          {transaction.operatorName} • {transaction.tenderName}
+                          {transaction.tableName && ` • ${transaction.tableName}`} • Cashback: £{transaction.cashback?.toFixed(2)}
                         </Text>
                       </View>
                       <Text style={[styles.transactionTotal, { color: colors.primary }]}>

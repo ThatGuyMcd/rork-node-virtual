@@ -142,7 +142,7 @@ export default function BasketScreen() {
       
       if (Math.abs(newRemaining) < 0.01) {
         closePaymentModal(async () => {
-          await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined);
+          await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0);
           setSplitPayments([]);
           setSplitPaymentAmount('');
           setGratuityAmount(0);
@@ -188,7 +188,7 @@ export default function BasketScreen() {
       }
     }
     closePaymentModal(async () => {
-      await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined);
+      await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0);
       setSplitPayments([]);
       setSplitPaymentAmount('');
       setGratuityAmount(0);
@@ -310,7 +310,11 @@ export default function BasketScreen() {
       amount: remainingTotal,
     }];
     
-    await completeSale(pendingTenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined);
+    const tender = availableTenders.find(t => t.id === pendingTenderId);
+    const isCash = tender?.name === 'Cash';
+    const cashbackToRecord = !isCash && changeAmount > 0 ? changeAmount : 0;
+    
+    await completeSale(pendingTenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, cashbackToRecord);
     setSplitPayments([]);
     setSplitPaymentAmount('');
     setGratuityAmount(0);
