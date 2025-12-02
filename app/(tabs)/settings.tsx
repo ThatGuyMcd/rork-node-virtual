@@ -958,7 +958,7 @@ export default function SettingsScreen() {
 
               <View style={{ marginTop: 24 }}>
                 <Text style={[styles.filterSectionTitle, { color: colors.text }]}>Visible Departments ({departments.length - productSettings.hiddenDepartmentIds.length}/{departments.length})</Text>
-                <ScrollView style={{ maxHeight: 300 }} nestedScrollEnabled>
+                <ScrollView style={{ maxHeight: 450 }} nestedScrollEnabled>
                   {departments.map((department) => {
                     const isHidden = productSettings.hiddenDepartmentIds.includes(department.id);
                     const group = groups.find(g => g.id === department.groupId);
@@ -966,23 +966,12 @@ export default function SettingsScreen() {
                     return (
                       <View key={department.id} style={[styles.departmentCard, { backgroundColor: colors.background, borderColor: colors.border }, isHidden && { opacity: 0.5 }]}>
                         <View style={styles.departmentHeader}>
-                          <TouchableOpacity
-                            style={styles.departmentNameContainer}
-                            onPress={() => toggleDepartmentVisibility(department.id)}
-                            activeOpacity={0.7}
-                          >
-                            <View style={{ flex: 1 }}>
-                              <Text style={[styles.filterItemText, { color: colors.text }]}>{department.name}</Text>
-                              {group && (
-                                <Text style={[styles.filterItemSubtext, { color: colors.textTertiary }]}>in {group.name}</Text>
-                              )}
-                            </View>
-                            {isHidden ? (
-                              <EyeOff size={20} color={colors.textTertiary} />
-                            ) : (
-                              <Eye size={20} color={colors.primary} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.filterItemText, { color: colors.text }]}>{department.name}</Text>
+                            {group && (
+                              <Text style={[styles.filterItemSubtext, { color: colors.textTertiary }]}>in {group.name}</Text>
                             )}
-                          </TouchableOpacity>
+                          </View>
                           
                           <TouchableOpacity
                             onPress={() => openColorPicker('department', department.id)}
@@ -990,6 +979,17 @@ export default function SettingsScreen() {
                             activeOpacity={0.7}
                           >
                             <Paintbrush size={18} color={getItemColor('department', department.id) || colors.primary} />
+                          </TouchableOpacity>
+                          
+                          <TouchableOpacity
+                            onPress={() => toggleDepartmentVisibility(department.id)}
+                            activeOpacity={0.7}
+                          >
+                            {isHidden ? (
+                              <EyeOff size={20} color={colors.textTertiary} />
+                            ) : (
+                              <Eye size={20} color={colors.primary} />
+                            )}
                           </TouchableOpacity>
                         </View>
                         
