@@ -13,7 +13,7 @@ import {
   Modal,
 } from 'react-native';
 
-import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, DollarSign, Printer, Bluetooth, Wifi } from 'lucide-react-native';
+import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, DollarSign, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
 import { printerService } from '@/services/printerService';
 import { useRouter } from 'expo-router';
@@ -393,6 +393,58 @@ export default function SettingsScreen() {
     const newSettings = { ...productSettings, sortOrder };
     setProductSettings(newSettings);
     await dataSyncService.setProductDisplaySettings(newSettings);
+  };
+
+  const moveGroupUp = async (groupId: string) => {
+    const visibleGroups = groups.filter(g => !productSettings.hiddenGroupIds.includes(g.id));
+    const currentOrder = productSettings.customGroupOrder || visibleGroups.map(g => g.id);
+    const index = currentOrder.indexOf(groupId);
+    if (index > 0) {
+      const newOrder = [...currentOrder];
+      [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+      const newSettings = { ...productSettings, customGroupOrder: newOrder, sortOrder: 'custom' as const };
+      setProductSettings(newSettings);
+      await dataSyncService.setProductDisplaySettings(newSettings);
+    }
+  };
+
+  const moveGroupDown = async (groupId: string) => {
+    const visibleGroups = groups.filter(g => !productSettings.hiddenGroupIds.includes(g.id));
+    const currentOrder = productSettings.customGroupOrder || visibleGroups.map(g => g.id);
+    const index = currentOrder.indexOf(groupId);
+    if (index < currentOrder.length - 1 && index !== -1) {
+      const newOrder = [...currentOrder];
+      [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+      const newSettings = { ...productSettings, customGroupOrder: newOrder, sortOrder: 'custom' as const };
+      setProductSettings(newSettings);
+      await dataSyncService.setProductDisplaySettings(newSettings);
+    }
+  };
+
+  const moveDepartmentUp = async (departmentId: string) => {
+    const visibleDepartments = departments.filter(d => !productSettings.hiddenDepartmentIds.includes(d.id));
+    const currentOrder = productSettings.customDepartmentOrder || visibleDepartments.map(d => d.id);
+    const index = currentOrder.indexOf(departmentId);
+    if (index > 0) {
+      const newOrder = [...currentOrder];
+      [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+      const newSettings = { ...productSettings, customDepartmentOrder: newOrder, sortOrder: 'custom' as const };
+      setProductSettings(newSettings);
+      await dataSyncService.setProductDisplaySettings(newSettings);
+    }
+  };
+
+  const moveDepartmentDown = async (departmentId: string) => {
+    const visibleDepartments = departments.filter(d => !productSettings.hiddenDepartmentIds.includes(d.id));
+    const currentOrder = productSettings.customDepartmentOrder || visibleDepartments.map(d => d.id);
+    const index = currentOrder.indexOf(departmentId);
+    if (index < currentOrder.length - 1 && index !== -1) {
+      const newOrder = [...currentOrder];
+      [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+      const newSettings = { ...productSettings, customDepartmentOrder: newOrder, sortOrder: 'custom' as const };
+      setProductSettings(newSettings);
+      await dataSyncService.setProductDisplaySettings(newSettings);
+    }
   };
 
   const changeDepartmentSortOrder = async (departmentId: string, sortOrder: 'plu' | 'alphabetical') => {
@@ -919,81 +971,157 @@ export default function SettingsScreen() {
               <View style={{ marginTop: 16 }}>
                 <Text style={[styles.filterSectionTitle, { color: colors.text }]}>Visible Groups ({groups.length - productSettings.hiddenGroupIds.length}/{groups.length})</Text>
                 <ScrollView style={{ maxHeight: 300 }} nestedScrollEnabled>
-                  {groups.map((group) => {
-                    const isHidden = productSettings.hiddenGroupIds.includes(group.id);
-                    return (
-                      <TouchableOpacity
-                        key={group.id}
-                        style={[
-                          styles.filterItem,
-                          { backgroundColor: colors.background, borderColor: colors.border },
-                          isHidden && { opacity: 0.5 },
-                        ]}
-                        onPress={() => toggleGroupVisibility(group.id)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.filterItemText, { color: colors.text }]}>{group.name}</Text>
+                  {(() => {
+                    const visibleGroups = groups.filter(g => !productSettings.hiddenGroupIds.includes(g.id));
+                    const orderedGroups = productSettings.customGroupOrder
+                      ? [...visibleGroups].sort((a, b) => {
+                          const aIndex = productSettings.customGroupOrder!.indexOf(a.id);
+                          const bIndex = productSettings.customGroupOrder!.indexOf(b.id);
+                          if (aIndex === -1) return 1;
+                          if (bIndex === -1) return -1;
+                          return aIndex - bIndex;
+                        })
+                      : visibleGroups;
+                    
+                    return orderedGroups.map((group, index) => {
+                      return (
+                        <View
+                          key={group.id}
+                          style={[
+                            styles.filterItem,
+                            { backgroundColor: colors.background, borderColor: colors.border },
+                          ]}
+                        >
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.filterItemText, { color: colors.text }]}>{group.name}</Text>
+                          </View>
+                          <View style={styles.actionButtons}>
+                            <TouchableOpacity
+                              onPress={() => moveGroupUp(group.id)}
+                              style={[styles.arrowButton, index === 0 && { opacity: 0.3 }]}
+                              disabled={index === 0}
+                              activeOpacity={0.7}
+                            >
+                              <ArrowUp size={16} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => moveGroupDown(group.id)}
+                              style={[styles.arrowButton, index === orderedGroups.length - 1 && { opacity: 0.3 }]}
+                              disabled={index === orderedGroups.length - 1}
+                              activeOpacity={0.7}
+                            >
+                              <ArrowDown size={16} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => openColorPicker('group', group.id)}
+                              style={[styles.colorButton, getItemColor('group', group.id) && { backgroundColor: getItemColor('group', group.id) + '20', borderRadius: 6 }]}
+                              activeOpacity={0.7}
+                            >
+                              <Paintbrush size={18} color={getItemColor('group', group.id) || colors.primary} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => toggleGroupVisibility(group.id)}
+                              activeOpacity={0.7}
+                            >
+                              <Eye size={20} color={colors.primary} />
+                            </TouchableOpacity>
+                          </View>
                         </View>
+                      );
+                    });
+                  })()}
+                  {groups.filter(g => productSettings.hiddenGroupIds.includes(g.id)).map((group) => (
+                    <View
+                      key={group.id}
+                      style={[
+                        styles.filterItem,
+                        { backgroundColor: colors.background, borderColor: colors.border, opacity: 0.5 },
+                      ]}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.filterItemText, { color: colors.text }]}>{group.name}</Text>
+                      </View>
+                      <View style={styles.actionButtons}>
                         <TouchableOpacity
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            openColorPicker('group', group.id);
-                          }}
+                          onPress={() => openColorPicker('group', group.id)}
                           style={[styles.colorButton, getItemColor('group', group.id) && { backgroundColor: getItemColor('group', group.id) + '20', borderRadius: 6 }]}
                           activeOpacity={0.7}
                         >
                           <Paintbrush size={18} color={getItemColor('group', group.id) || colors.primary} />
                         </TouchableOpacity>
-                        {isHidden ? (
+                        <TouchableOpacity
+                          onPress={() => toggleGroupVisibility(group.id)}
+                          activeOpacity={0.7}
+                        >
                           <EyeOff size={20} color={colors.textTertiary} />
-                        ) : (
-                          <Eye size={20} color={colors.primary} />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
                 </ScrollView>
               </View>
 
               <View style={{ marginTop: 24 }}>
                 <Text style={[styles.filterSectionTitle, { color: colors.text }]}>Visible Departments ({departments.length - productSettings.hiddenDepartmentIds.length}/{departments.length})</Text>
                 <ScrollView style={{ maxHeight: 600 }} nestedScrollEnabled>
-                  {departments.map((department) => {
-                    const isHidden = productSettings.hiddenDepartmentIds.includes(department.id);
-                    const group = groups.find(g => g.id === department.groupId);
-                    const departmentSortOrder = productSettings.departmentSortOrders?.[department.id] || 'plu';
-                    return (
-                      <View key={department.id} style={[styles.departmentCard, { backgroundColor: colors.background, borderColor: colors.border }, isHidden && { opacity: 0.5 }]}>
-                        <View style={styles.departmentHeader}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={[styles.filterItemText, { color: colors.text }]}>{department.name}</Text>
-                            {group && (
-                              <Text style={[styles.filterItemSubtext, { color: colors.textTertiary }]}>in {group.name}</Text>
-                            )}
+                  {(() => {
+                    const visibleDepartments = departments.filter(d => !productSettings.hiddenDepartmentIds.includes(d.id));
+                    const orderedDepartments = productSettings.customDepartmentOrder
+                      ? [...visibleDepartments].sort((a, b) => {
+                          const aIndex = productSettings.customDepartmentOrder!.indexOf(a.id);
+                          const bIndex = productSettings.customDepartmentOrder!.indexOf(b.id);
+                          if (aIndex === -1) return 1;
+                          if (bIndex === -1) return -1;
+                          return aIndex - bIndex;
+                        })
+                      : visibleDepartments;
+                    
+                    return orderedDepartments.map((department, index) => {
+                      const group = groups.find(g => g.id === department.groupId);
+                      const departmentSortOrder = productSettings.departmentSortOrders?.[department.id] || 'plu';
+                      return (
+                        <View key={department.id} style={[styles.departmentCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                          <View style={styles.departmentHeader}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={[styles.filterItemText, { color: colors.text }]}>{department.name}</Text>
+                              {group && (
+                                <Text style={[styles.filterItemSubtext, { color: colors.textTertiary }]}>in {group.name}</Text>
+                              )}
+                            </View>
+                            
+                            <View style={styles.actionButtons}>
+                              <TouchableOpacity
+                                onPress={() => moveDepartmentUp(department.id)}
+                                style={[styles.arrowButton, index === 0 && { opacity: 0.3 }]}
+                                disabled={index === 0}
+                                activeOpacity={0.7}
+                              >
+                                <ArrowUp size={16} color={colors.textSecondary} />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => moveDepartmentDown(department.id)}
+                                style={[styles.arrowButton, index === orderedDepartments.length - 1 && { opacity: 0.3 }]}
+                                disabled={index === orderedDepartments.length - 1}
+                                activeOpacity={0.7}
+                              >
+                                <ArrowDown size={16} color={colors.textSecondary} />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => openColorPicker('department', department.id)}
+                                style={[styles.colorButtonLarge, { backgroundColor: getItemColor('department', department.id) ? getItemColor('department', department.id) + '20' : colors.inputBackground, borderColor: getItemColor('department', department.id) || colors.border }]}
+                                activeOpacity={0.7}
+                              >
+                                <Paintbrush size={18} color={getItemColor('department', department.id) || colors.primary} />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => toggleDepartmentVisibility(department.id)}
+                                activeOpacity={0.7}
+                              >
+                                <Eye size={20} color={colors.primary} />
+                              </TouchableOpacity>
+                            </View>
                           </View>
                           
-                          <TouchableOpacity
-                            onPress={() => openColorPicker('department', department.id)}
-                            style={[styles.colorButtonLarge, { backgroundColor: getItemColor('department', department.id) ? getItemColor('department', department.id) + '20' : colors.inputBackground, borderColor: getItemColor('department', department.id) || colors.border }]}
-                            activeOpacity={0.7}
-                          >
-                            <Paintbrush size={18} color={getItemColor('department', department.id) || colors.primary} />
-                          </TouchableOpacity>
-                          
-                          <TouchableOpacity
-                            onPress={() => toggleDepartmentVisibility(department.id)}
-                            activeOpacity={0.7}
-                          >
-                            {isHidden ? (
-                              <EyeOff size={20} color={colors.textTertiary} />
-                            ) : (
-                              <Eye size={20} color={colors.primary} />
-                            )}
-                          </TouchableOpacity>
-                        </View>
-                        
-                        {!isHidden && (
                           <View style={styles.departmentSortSection}>
                             <TouchableOpacity
                               style={[
@@ -1019,7 +1147,38 @@ export default function SettingsScreen() {
                               <Text style={[styles.layoutOptionTitle, { color: colors.text, fontSize: 13 }]}>Alphabetical</Text>
                             </TouchableOpacity>
                           </View>
-                        )}
+                        </View>
+                      );
+                    });
+                  })()}
+                  {departments.filter(d => productSettings.hiddenDepartmentIds.includes(d.id)).map((department) => {
+                    const group = groups.find(g => g.id === department.groupId);
+                    return (
+                      <View key={department.id} style={[styles.departmentCard, { backgroundColor: colors.background, borderColor: colors.border, opacity: 0.5 }]}>
+                        <View style={styles.departmentHeader}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.filterItemText, { color: colors.text }]}>{department.name}</Text>
+                            {group && (
+                              <Text style={[styles.filterItemSubtext, { color: colors.textTertiary }]}>in {group.name}</Text>
+                            )}
+                          </View>
+                          
+                          <View style={styles.actionButtons}>
+                            <TouchableOpacity
+                              onPress={() => openColorPicker('department', department.id)}
+                              style={[styles.colorButtonLarge, { backgroundColor: getItemColor('department', department.id) ? getItemColor('department', department.id) + '20' : colors.inputBackground, borderColor: getItemColor('department', department.id) || colors.border }]}
+                              activeOpacity={0.7}
+                            >
+                              <Paintbrush size={18} color={getItemColor('department', department.id) || colors.primary} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => toggleDepartmentVisibility(department.id)}
+                              activeOpacity={0.7}
+                            >
+                              <EyeOff size={20} color={colors.textTertiary} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
                       </View>
                     );
                   })}
@@ -2352,5 +2511,13 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  arrowButton: {
+    padding: 6,
   },
 });
