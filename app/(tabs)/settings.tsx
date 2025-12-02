@@ -995,32 +995,29 @@ export default function SettingsScreen() {
                         
                         {!isHidden && (
                           <View style={styles.departmentSortSection}>
-                            <Text style={[styles.departmentSortLabel, { color: colors.textSecondary }]}>Sort Order:</Text>
-                            <View style={[styles.layoutOptions, { flex: 1 }]}>
-                              <TouchableOpacity
-                                style={[
-                                  styles.layoutOption,
-                                  { backgroundColor: colors.inputBackground, borderColor: colors.border, flex: 1 },
-                                  departmentSortOrder === 'plu' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
-                                ]}
-                                onPress={() => changeDepartmentSortOrder(department.id, 'plu')}
-                                activeOpacity={0.7}
-                              >
-                                <Text style={[styles.layoutOptionTitle, { color: colors.text, fontSize: 13 }]}>By PLU</Text>
-                              </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[
+                                styles.layoutOption,
+                                { backgroundColor: colors.inputBackground, borderColor: colors.border, flex: 1 },
+                                departmentSortOrder === 'plu' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                              ]}
+                              onPress={() => changeDepartmentSortOrder(department.id, 'plu')}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[styles.layoutOptionTitle, { color: colors.text, fontSize: 13 }]}>By PLU</Text>
+                            </TouchableOpacity>
 
-                              <TouchableOpacity
-                                style={[
-                                  styles.layoutOption,
-                                  { backgroundColor: colors.inputBackground, borderColor: colors.border, flex: 1 },
-                                  departmentSortOrder === 'alphabetical' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
-                                ]}
-                                onPress={() => changeDepartmentSortOrder(department.id, 'alphabetical')}
-                                activeOpacity={0.7}
-                              >
-                                <Text style={[styles.layoutOptionTitle, { color: colors.text, fontSize: 13 }]}>Alphabetical</Text>
-                              </TouchableOpacity>
-                            </View>
+                            <TouchableOpacity
+                              style={[
+                                styles.layoutOption,
+                                { backgroundColor: colors.inputBackground, borderColor: colors.border, flex: 1 },
+                                departmentSortOrder === 'alphabetical' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                              ]}
+                              onPress={() => changeDepartmentSortOrder(department.id, 'alphabetical')}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[styles.layoutOptionTitle, { color: colors.text, fontSize: 13 }]}>Alphabetical</Text>
+                            </TouchableOpacity>
                           </View>
                         )}
                       </View>
@@ -2351,13 +2348,9 @@ const styles = StyleSheet.create({
   departmentSortSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  departmentSortLabel: {
-    fontSize: 13,
-    fontWeight: '500',
   },
 });
