@@ -594,6 +594,20 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </>
           )}
+
+          {!siteInfo && (
+            <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>View transaction history, analytics, and generate reports</Text>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, marginBottom: 0 }]}
+                onPress={() => router.push('/reports')}
+                activeOpacity={0.8}
+              >
+                <FileText size={20} color="#ffffff" />
+                <Text style={styles.buttonText}>Open Reports</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </CollapsibleSection>
 
         {siteInfo && (
@@ -681,6 +695,18 @@ export default function SettingsScreen() {
                 )}
               </TouchableOpacity>
             )}
+
+            <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>View transaction history, analytics, and generate reports</Text>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, marginBottom: 0 }]}
+                onPress={() => router.push('/reports')}
+                activeOpacity={0.8}
+              >
+                <FileText size={20} color="#ffffff" />
+                <Text style={styles.buttonText}>Open Reports</Text>
+              </TouchableOpacity>
+            </View>
           </CollapsibleSection>
         )}
 
@@ -1579,24 +1605,7 @@ export default function SettingsScreen() {
           </View>
         </CollapsibleSection>
 
-        <CollapsibleSection 
-          id="reports" 
-          icon={FileText} 
-          title="Reports & Consolidation" 
-          iconColor="#10b981"
-        >
-          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-            <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>View transaction history, analytics, and generate reports</Text>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: colors.primary, marginBottom: 0 }]}
-              onPress={() => router.push('/reports')}
-              activeOpacity={0.8}
-            >
-              <FileText size={20} color="#ffffff" />
-              <Text style={styles.buttonText}>Open Reports</Text>
-            </TouchableOpacity>
-          </View>
-        </CollapsibleSection>
+
 
         {!isInitialSetupComplete && (
           <CollapsibleSection 
