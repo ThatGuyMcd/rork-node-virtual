@@ -976,6 +976,15 @@ export class DataSyncService {
     return syncInterval as any;
   }
 
+  async clearSiteInfo(): Promise<void> {
+    await AsyncStorage.multiRemove([
+      STORAGE_KEYS.SITE_ID,
+      STORAGE_KEYS.SITE_NAME,
+      STORAGE_KEYS.CREDENTIALS,
+    ]);
+    console.log('[DataSync] Site info and credentials cleared');
+  }
+
   async clearAllData(): Promise<void> {
     const keys = Object.values(STORAGE_KEYS).filter(key => key !== STORAGE_KEYS.THEME && key !== STORAGE_KEYS.THEME_PREFERENCE);
     await AsyncStorage.multiRemove(keys);

@@ -632,14 +632,47 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleDelinkSite = () => {
+    Alert.alert(
+      'De-link Site',
+      'This will remove the site connection and saved credentials. You will need to link again to sync data. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'De-link',
+          style: 'destructive',
+          onPress: async () => {
+            await dataSyncService.clearSiteInfo();
+            setSiteInfo(null);
+            setUsername('');
+            setPassword('');
+            setRemember(false);
+            Alert.alert('Done', 'Site has been de-linked');
+          },
+        },
+      ]
+    );
+  };
+
   const renderAccountContent = () => (
     <>
       {siteInfo ? (
-        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Linked Site</Text>
-          <Text style={[styles.value, { color: colors.text }]}>{siteInfo.siteName}</Text>
-          <Text style={[styles.subValue, { color: colors.textTertiary }]}>ID: {siteInfo.siteId}</Text>
-        </View>
+        <>
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Linked Site</Text>
+            <Text style={[styles.value, { color: colors.text }]}>{siteInfo.siteName}</Text>
+            <Text style={[styles.subValue, { color: colors.textTertiary }]}>ID: {siteInfo.siteId}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: '#ef4444' }]}
+            onPress={handleDelinkSite}
+            activeOpacity={0.8}
+          >
+            <LogIn size={20} color="#ffffff" />
+            <Text style={styles.buttonText}>De-link Site</Text>
+          </TouchableOpacity>
+        </>
       ) : (
         <>
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
