@@ -32,7 +32,7 @@ export default function SettingsScreen() {
   const [tableSelectionRequired, setTableSelectionRequired] = useState(false);
   const [productViewLayout, setProductViewLayout] = useState<'compact' | 'standard' | 'large'>('standard');
   const [productViewMode, setProductViewMode] = useState<'group-department' | 'all-departments' | 'all-items'>('group-department');
-  const { updateTableSelectionRequired, updateProductViewLayout, updateProductViewMode, isInitialSetupComplete, completeInitialSetup, cardPaymentEnabled, cashPaymentEnabled, cardMachineProvider, splitPaymentsEnabled, updateCardPaymentEnabled, updateCashPaymentEnabled, updateCardMachineProvider, updateSplitPaymentsEnabled, refundButtonEnabled, updateRefundButtonEnabled, discountSettings, updateDiscountSettings, gratuitySettings, updateGratuitySettings, receiptSettings, updateReceiptSettings } = usePOS();
+  const { updateTableSelectionRequired, updateProductViewLayout, updateProductViewMode, isInitialSetupComplete, completeInitialSetup, cardPaymentEnabled, cashPaymentEnabled, cardMachineProvider, splitPaymentsEnabled, updateCardPaymentEnabled, updateCashPaymentEnabled, updateCardMachineProvider, updateSplitPaymentsEnabled, refundButtonEnabled, updateRefundButtonEnabled, discountSettings, updateDiscountSettings, gratuitySettings, updateGratuitySettings, receiptSettings, updateReceiptSettings, changeAllowed, cashbackAllowed, updateChangeAllowed, updateCashbackAllowed } = usePOS();
   const router = useRouter();
   const { theme, themePreference, colors, setTheme } = useTheme();
 
@@ -1178,6 +1178,36 @@ export default function SettingsScreen() {
                 <Text style={styles.addDiscountText}>Add Gratuity Percentage</Text>
               </TouchableOpacity>
             )}
+          </View>
+
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View style={styles.settingRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Allow Change</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Allow giving change when payment exceeds total</Text>
+              </View>
+              <Switch
+                value={changeAllowed}
+                onValueChange={updateChangeAllowed}
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor="#ffffff"
+              />
+            </View>
+          </View>
+
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View style={styles.settingRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Allow Cashback</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Record change from non-cash tenders as cashback</Text>
+              </View>
+              <Switch
+                value={cashbackAllowed}
+                onValueChange={updateCashbackAllowed}
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor="#ffffff"
+              />
+            </View>
           </View>
 
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>

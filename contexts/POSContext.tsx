@@ -28,7 +28,11 @@ interface POSContextType {
   basketDiscount: number;
   gratuitySettings: GratuitySettings;
   receiptSettings: ReceiptSettings;
+  changeAllowed: boolean;
+  cashbackAllowed: boolean;
   updateReceiptSettings: (settings: ReceiptSettings) => Promise<void>;
+  updateChangeAllowed: (allowed: boolean) => Promise<void>;
+  updateCashbackAllowed: (allowed: boolean) => Promise<void>;
   login: (operator: Operator) => Promise<void>;
   logout: () => Promise<void>;
   addToBasket: (product: Product, selectedPrice: any, quantity?: number, manualPrice?: number) => void;
@@ -81,6 +85,8 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     headerLines: [],
     footerLines: [{ text: 'Thank you for your visit!', size: 'normal' }],
   });
+  const [changeAllowed, setChangeAllowed] = useState(true);
+  const [cashbackAllowed, setCashbackAllowed] = useState(false);
 
   const [tenders, setTenders] = useState<Tender[]>([
     { id: '1', name: 'Cash', color: '#10b981' },
@@ -146,6 +152,12 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       if (data) {
         setReceiptSettings(JSON.parse(data));
       }
+    });
+    AsyncStorage.getItem('changeAllowed').then((data) => {
+      setChangeAllowed(data !== 'false');
+    });
+    AsyncStorage.getItem('cashbackAllowed').then((data) => {
+      setCashbackAllowed(data === 'true');
     });
     dataSyncService.getStoredVATRates().then((rates) => {
       if (rates && rates.length > 0) {
@@ -593,6 +605,18 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     console.log('[POS] Receipt settings updated:', settings);
   }, []);
 
+  const updateChangeAllowed = useCallback(async (allowed: boolean) => {
+    setChangeAllowed(allowed);
+    await AsyncStorage.setItem('changeAllowed', allowed.toString());
+    console.log('[POS] Change allowed updated:', allowed);
+  }, []);
+
+  const updateCashbackAllowed = useCallback(async (allowed: boolean) => {
+    setCashbackAllowed(allowed);
+    await AsyncStorage.setItem('cashbackAllowed', allowed.toString());
+    console.log('[POS] Cashback allowed updated:', allowed);
+  }, []);
+
   return {
     currentOperator,
     basket,
@@ -643,5 +667,9 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     updateGratuitySettings,
     receiptSettings,
     updateReceiptSettings,
+    changeAllowed,
+    cashbackAllowed,
+    updateChangeAllowed,
+    updateCashbackAllowed,
   };
 });

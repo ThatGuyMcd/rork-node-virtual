@@ -41,6 +41,8 @@ export default function BasketScreen() {
     applyDiscount,
     gratuitySettings,
     selectTable,
+    changeAllowed,
+    cashbackAllowed,
   } = usePOS();
   const { colors, theme } = useTheme();
 
@@ -155,6 +157,20 @@ export default function BasketScreen() {
       
       if (amount > remainingTotal) {
         const change = amount - remainingTotal;
+        
+        if (!changeAllowed) {
+          Alert.alert('Change Not Allowed', 'Please enter the exact amount or less.');
+          return;
+        }
+        
+        const tender = availableTenders.find(t => t.id === tenderId);
+        const isCash = tender?.name === 'Cash';
+        
+        if (!isCash && !cashbackAllowed) {
+          Alert.alert('Cashback Not Allowed', 'Change can only be given for cash payments. Please enter the exact amount or less.');
+          return;
+        }
+        
         setChangeAmount(change);
         setPendingTenderId(tenderId);
         closePaymentModal();
@@ -1051,7 +1067,11 @@ export default function BasketScreen() {
             
             <Text style={[styles.changeModalTitle, { color: colors.text }]}>Change Due</Text>
             <Text style={[styles.changeAmount, { color: colors.success }]}>£{changeAmount.toFixed(2)}</Text>
-            <Text style={[styles.changeModalSubtitle, { color: colors.textSecondary }]}>Change will be given in cash</Text>
+            <Text style={[styles.changeModalSubtitle, { color: colors.textSecondary }]}>
+              {pendingTenderId && availableTenders.find(t => t.id === pendingTenderId)?.name === 'Cash' 
+                ? 'Change will be given in cash' 
+                : 'Cashback will be recorded (change given on non-cash tender)'}
+            </Text>
 
             <TouchableOpacity
               style={[styles.confirmChangeButton, { backgroundColor: colors.primary }]}
