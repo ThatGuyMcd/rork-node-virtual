@@ -2683,25 +2683,26 @@ export default function SettingsScreen() {
               showsVerticalScrollIndicator={true}
             >
               {Object.entries(customThemeColors).map(([key, value]) => (
-                <View key={key} style={[styles.themeColorItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.themeColorItem, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  onPress={() => {
+                    setEditingColorKey(key as keyof ThemeColors);
+                    const rgb = hexToRgb(value);
+                    if (rgb) {
+                      setCustomColorRgb(rgb);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
                   <View style={styles.themeColorInfo}>
                     <Text style={[styles.themeColorKey, { color: colors.text }]}>
                       {key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
                     </Text>
                     <Text style={[styles.themeColorValue, { color: colors.textSecondary }]}>{value}</Text>
                   </View>
-                  <TouchableOpacity
-                    style={[styles.themeColorPreview, { backgroundColor: value, borderColor: colors.border }]}
-                    onPress={() => {
-                      setEditingColorKey(key as keyof ThemeColors);
-                      const rgb = hexToRgb(value);
-                      if (rgb) {
-                        setCustomColorRgb(rgb);
-                      }
-                    }}
-                    activeOpacity={0.7}
-                  />
-                </View>
+                  <View style={[styles.themeColorPreview, { backgroundColor: value, borderColor: colors.border }]} />
+                </TouchableOpacity>
               ))}
             </ScrollView>
 
