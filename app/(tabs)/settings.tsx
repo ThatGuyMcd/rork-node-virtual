@@ -21,7 +21,7 @@ import type { ProductDisplaySettings, ProductGroup, Department, DiscountSettings
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
-const CollapsibleSection = ({ 
+const CollapsibleSection = React.memo(({ 
   id, 
   icon: Icon, 
   title, 
@@ -70,7 +70,9 @@ const CollapsibleSection = ({
       )}
     </View>
   );
-};
+});
+
+CollapsibleSection.displayName = 'CollapsibleSection';
 
 export default function SettingsScreen() {
   const [username, setUsername] = useState('');
@@ -121,6 +123,8 @@ export default function SettingsScreen() {
   });
   const [printerIPInput, setPrinterIPInput] = useState('');
   const [printerPortInput, setPrinterPortInput] = useState('9100');
+  const printerIPInputRef = useRef('');
+  const printerPortInputRef = useRef('9100');
   const [isConnectingPrinter, setIsConnectingPrinter] = useState(false);
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
   const [editingReceiptSection, setEditingReceiptSection] = useState<'header' | 'footer'>('header');
@@ -216,8 +220,14 @@ export default function SettingsScreen() {
     try {
       const settings = await printerService.loadSettings();
       setPrinterSettings(settings);
-      if (settings.ipAddress) setPrinterIPInput(settings.ipAddress);
-      if (settings.port) setPrinterPortInput(settings.port.toString());
+      if (settings.ipAddress) {
+        setPrinterIPInput(settings.ipAddress);
+        printerIPInputRef.current = settings.ipAddress;
+      }
+      if (settings.port) {
+        setPrinterPortInput(settings.port.toString());
+        printerPortInputRef.current = settings.port.toString();
+      }
     } catch (error) {
       console.error('Error loading printer settings:', error);
     }
@@ -1385,7 +1395,10 @@ export default function SettingsScreen() {
           <TextInput
             style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
             value={printerIPInput}
-            onChangeText={setPrinterIPInput}
+            onChangeText={(text) => {
+              printerIPInputRef.current = text;
+              setPrinterIPInput(text);
+            }}
             placeholder="192.168.1.100"
             placeholderTextColor={colors.textTertiary}
             keyboardType="numeric"
@@ -1395,7 +1408,10 @@ export default function SettingsScreen() {
           <TextInput
             style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
             value={printerPortInput}
-            onChangeText={setPrinterPortInput}
+            onChangeText={(text) => {
+              printerPortInputRef.current = text;
+              setPrinterPortInput(text);
+            }}
             placeholder="9100"
             placeholderTextColor={colors.textTertiary}
             keyboardType="numeric"
