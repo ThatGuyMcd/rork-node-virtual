@@ -1497,14 +1497,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
           )}
-        </CollapsibleSection>
 
-        <CollapsibleSection 
-          id="receipt" 
-          icon={FileText} 
-          title="Receipt Settings" 
-          iconColor={colors.primary}
-        >
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>Customize the header and footer text on receipts and bills</Text>
             
