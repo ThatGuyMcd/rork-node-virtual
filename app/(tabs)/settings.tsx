@@ -2217,8 +2217,9 @@ export default function SettingsScreen() {
       <ScrollView 
         ref={scrollViewRef}
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: 100 }]}
         showsVerticalScrollIndicator={false}
+        scrollIndicatorInsets={{ top: 90 }}
       >
         <View style={styles.sectionsGrid}>
           {sortedSections.map((section) => (
