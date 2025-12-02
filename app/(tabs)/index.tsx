@@ -2027,7 +2027,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between' as const,
   },
   tableGridItem: {
-    width: '48%',
+    width: '47%',
     padding: 12,
     borderRadius: 12,
     flexDirection: 'row' as const,
