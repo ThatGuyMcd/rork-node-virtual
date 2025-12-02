@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -1014,4 +1014,1203 @@ export default function SettingsScreen() {
     </>
   );
 
-  // [CONTINUES IN NEXT FILE CHUNK...]
+  const renderPaymentSettingsContent = () => (
+    <>
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Enable Cash Payments</Text>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Allow customers to pay with cash</Text>
+          </View>
+          <Switch
+            value={cashPaymentEnabled}
+            onValueChange={updateCashPaymentEnabled}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor="#ffffff"
+          />
+        </View>
+      </View>
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Enable Card Payments</Text>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Allow customers to pay with card</Text>
+          </View>
+          <Switch
+            value={cardPaymentEnabled}
+            onValueChange={updateCardPaymentEnabled}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor="#ffffff"
+          />
+        </View>
+      </View>
+
+      {cardPaymentEnabled && (
+        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Card Machine Provider</Text>
+          
+          <TouchableOpacity
+            style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+            onPress={() => setShowProviderDropdown(!showProviderDropdown)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.dropdownText, { color: colors.text }]}>
+              {cardMachineProvider === 'Teya' ? 'Teya' : 'None'}
+            </Text>
+            <ChevronDown size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          {showProviderDropdown && (
+            <View style={[styles.dropdown, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              {['Teya', 'None'].map((provider) => (
+                <TouchableOpacity
+                  key={provider}
+                  style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
+                  onPress={() => {
+                    updateCardMachineProvider(provider as 'Teya' | 'None');
+                    setShowProviderDropdown(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.dropdownItemText, { color: colors.text }]}>
+                    {provider}
+                  </Text>
+                  {cardMachineProvider === provider && (
+                    <CheckCircle size={20} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Enable Split Payments</Text>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Allow customers to split payment across multiple methods</Text>
+          </View>
+          <Switch
+            value={splitPaymentsEnabled}
+            onValueChange={updateSplitPaymentsEnabled}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor="#ffffff"
+          />
+        </View>
+      </View>
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Allow Change</Text>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Enable giving change to customers</Text>
+          </View>
+          <Switch
+            value={changeAllowed}
+            onValueChange={updateChangeAllowed}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor="#ffffff"
+          />
+        </View>
+      </View>
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Allow Cashback</Text>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Allow cashback on non-cash tenders when change is enabled</Text>
+          </View>
+          <Switch
+            value={cashbackAllowed}
+            onValueChange={updateCashbackAllowed}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor="#ffffff"
+          />
+        </View>
+      </View>
+    </>
+  );
+
+  const renderBasketSettingsContent = () => (
+    <>
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Table Selection Required</Text>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Require table selection before placing orders</Text>
+          </View>
+          <Switch
+            value={tableSelectionRequired}
+            onValueChange={handleTableSelectionToggle}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor="#ffffff"
+          />
+        </View>
+      </View>
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Enable Refund Button</Text>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Show refund button on basket screen</Text>
+          </View>
+          <Switch
+            value={refundButtonEnabled}
+            onValueChange={updateRefundButtonEnabled}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor="#ffffff"
+          />
+        </View>
+      </View>
+    </>
+  );
+
+  const renderDiscountContent = () => (
+    <>
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Preset Discount Percentages</Text>
+        <View style={styles.discountPercentagesList}>
+          {discountPercentages.map((percentage, index) => (
+            <View key={index} style={[styles.discountPercentageItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={[styles.discountPercentageText, { color: colors.text }]}>{percentage}%</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  const newPercentages = discountPercentages.filter((_, i) => i !== index);
+                  setDiscountPercentages(newPercentages);
+                  updateDiscountSettings({ ...discountSettings, presetPercentages: newPercentages.map(Number) });
+                }}
+                activeOpacity={0.7}
+              >
+                <X size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
+          onPress={() => {
+            setEditingDiscountIndex(null);
+            setDiscountInputValue('');
+            setDiscountModalVisible(true);
+          }}
+          activeOpacity={0.8}
+        >
+          <Percent size={20} color="#ffffff" />
+          <Text style={styles.buttonText}>Add Percentage</Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
+  const renderGratuityContent = () => (
+    <>
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Enable Gratuity</Text>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Allow adding tips to transactions</Text>
+          </View>
+          <Switch
+            value={gratuitySettings.enabled}
+            onValueChange={(value) => updateGratuitySettings({ ...gratuitySettings, enabled: value })}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor="#ffffff"
+          />
+        </View>
+      </View>
+
+      {gratuitySettings.enabled && (
+        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Preset Gratuity Percentages</Text>
+          <View style={styles.discountPercentagesList}>
+            {gratuityPercentages.map((percentage, index) => (
+              <View key={index} style={[styles.discountPercentageItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={[styles.discountPercentageText, { color: colors.text }]}>{percentage}%</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    const newPercentages = gratuityPercentages.filter((_, i) => i !== index);
+                    setGratuityPercentages(newPercentages);
+                    updateGratuitySettings({ ...gratuitySettings, presetPercentages: newPercentages.map(Number) });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <X size={18} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
+            onPress={() => {
+              setEditingGratuityIndex(null);
+              setGratuityInputValue('');
+              setGratuityModalVisible(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <Percent size={20} color="#ffffff" />
+            <Text style={styles.buttonText}>Add Percentage</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </>
+  );
+
+  const renderPrinterContent = () => (
+    <>
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Connection Type</Text>
+        <View style={styles.layoutOptions}>
+          <TouchableOpacity
+            style={[
+              styles.layoutOption,
+              { backgroundColor: colors.inputBackground, borderColor: colors.border },
+              printerSettings.connectionType === 'bluetooth' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+            ]}
+            onPress={() => handleConnectionTypeChange('bluetooth')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Bluetooth size={16} color={printerSettings.connectionType === 'bluetooth' ? colors.primary : colors.textSecondary} />
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Bluetooth</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.layoutOption,
+              { backgroundColor: colors.inputBackground, borderColor: colors.border },
+              printerSettings.connectionType === 'network' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+            ]}
+            onPress={() => handleConnectionTypeChange('network')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Wifi size={16} color={printerSettings.connectionType === 'network' ? colors.primary : colors.textSecondary} />
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Network</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {printerSettings.connectionType === 'network' && (
+        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>IP Address</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+            value={printerIPInput}
+            onChangeText={setPrinterIPInput}
+            placeholder="192.168.1.100"
+            placeholderTextColor={colors.textTertiary}
+            keyboardType="numeric"
+          />
+
+          <Text style={[styles.label, { marginTop: 16, color: colors.textSecondary }]}>Port</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+            value={printerPortInput}
+            onChangeText={setPrinterPortInput}
+            placeholder="9100"
+            placeholderTextColor={colors.textTertiary}
+            keyboardType="numeric"
+          />
+        </View>
+      )}
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Paper Width</Text>
+        <View style={styles.layoutOptions}>
+          <TouchableOpacity
+            style={[
+              styles.layoutOption,
+              { backgroundColor: colors.inputBackground, borderColor: colors.border },
+              printerSettings.paperWidth === '58mm' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+            ]}
+            onPress={() => handlePaperWidthChange('58mm')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>58mm</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.layoutOption,
+              { backgroundColor: colors.inputBackground, borderColor: colors.border },
+              printerSettings.paperWidth === '80mm' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+            ]}
+            onPress={() => handlePaperWidthChange('80mm')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>80mm</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {printerSettings.isConnected ? (
+        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <View style={[styles.statusBadge, { backgroundColor: '#10b98120' }]}>
+            <View style={[styles.statusDot, { backgroundColor: '#10b981' }]} />
+            <Text style={[styles.statusText, { color: '#10b981' }]}>Printer Connected</Text>
+          </View>
+          {printerSettings.deviceName && (
+            <Text style={[styles.deviceName, { color: colors.textSecondary }]}>{printerSettings.deviceName}</Text>
+          )}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: colors.accent, flex: 1 }]}
+              onPress={handleTestPrint}
+              activeOpacity={0.8}
+            >
+              <Printer size={20} color="#ffffff" />
+              <Text style={styles.buttonText}>Test Print</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.buttonDanger, { flex: 1 }]}
+              onPress={handleDisconnectPrinter}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>Disconnect</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: colors.primary }, isConnectingPrinter && { opacity: 0.7 }]}
+          onPress={printerSettings.connectionType === 'bluetooth' ? handleConnectBluetooth : handleConnectNetwork}
+          disabled={isConnectingPrinter}
+          activeOpacity={0.8}
+        >
+          {isConnectingPrinter ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <>
+              <Printer size={20} color="#ffffff" />
+              <Text style={styles.buttonText}>Connect Printer</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Enable Cash Drawer</Text>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Open cash drawer when printing receipts</Text>
+          </View>
+          <Switch
+            value={printerSettings.cashDrawerEnabled}
+            onValueChange={handleCashDrawerToggle}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor="#ffffff"
+          />
+        </View>
+      </View>
+
+      {printerSettings.cashDrawerEnabled && (
+        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Cash Drawer Voltage</Text>
+          <View style={styles.layoutOptions}>
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                printerSettings.cashDrawerVoltage === '12v' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+              ]}
+              onPress={() => handleCashDrawerVoltageChange('12v')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>12V</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                printerSettings.cashDrawerVoltage === '24v' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+              ]}
+              onPress={() => handleCashDrawerVoltageChange('24v')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>24V</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Receipt Header</Text>
+        <View style={styles.receiptLinesContainer}>
+          {receiptSettings.headerLines.map((line, index) => (
+            <View key={index} style={[styles.receiptLineItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.receiptLineText, { color: colors.text, fontSize: line.size === 'large' ? 18 : line.size === 'small' ? 12 : 14 }]}>{line.text}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  const newLines = receiptSettings.headerLines.filter((_, i) => i !== index);
+                  updateReceiptSettings({ ...receiptSettings, headerLines: newLines });
+                }}
+                activeOpacity={0.7}
+              >
+                <X size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
+          onPress={() => {
+            setEditingReceiptSection('header');
+            setEditingReceiptLineIndex(null);
+            setReceiptLineText('');
+            setReceiptLineSize('normal');
+            setReceiptModalVisible(true);
+          }}
+          activeOpacity={0.8}
+        >
+          <FileText size={20} color="#ffffff" />
+          <Text style={styles.buttonText}>Add Header Line</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Receipt Footer</Text>
+        <View style={styles.receiptLinesContainer}>
+          {receiptSettings.footerLines.map((line, index) => (
+            <View key={index} style={[styles.receiptLineItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.receiptLineText, { color: colors.text, fontSize: line.size === 'large' ? 18 : line.size === 'small' ? 12 : 14 }]}>{line.text}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  const newLines = receiptSettings.footerLines.filter((_, i) => i !== index);
+                  updateReceiptSettings({ ...receiptSettings, footerLines: newLines });
+                }}
+                activeOpacity={0.7}
+              >
+                <X size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
+          onPress={() => {
+            setEditingReceiptSection('footer');
+            setEditingReceiptLineIndex(null);
+            setReceiptLineText('');
+            setReceiptLineSize('normal');
+            setReceiptModalVisible(true);
+          }}
+          activeOpacity={0.8}
+        >
+          <FileText size={20} color="#ffffff" />
+          <Text style={styles.buttonText}>Add Footer Line</Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
+  const renderInitialSetupContent = () => (
+    <>
+      {!isInitialSetupComplete && (
+        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <Text style={[styles.infoText, { color: colors.textSecondary }]}>Complete initial setup to enable POS functionality</Text>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.primary, marginTop: 16 }]}
+            onPress={() => {
+              completeInitialSetup();
+              Alert.alert('Setup Complete', 'Initial setup has been completed!');
+            }}
+            activeOpacity={0.8}
+          >
+            <CheckCircle size={20} color="#ffffff" />
+            <Text style={styles.buttonText}>Complete Setup</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {isInitialSetupComplete && (
+        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <View style={[styles.statusBadge, { backgroundColor: '#10b98120' }]}>
+            <CheckCircle size={20} color="#10b981" />
+            <Text style={[styles.statusText, { color: '#10b981' }]}>Setup Complete</Text>
+          </View>
+        </View>
+      )}
+    </>
+  );
+
+  const renderDangerZoneContent = () => (
+    <>
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.infoText, { color: colors.textSecondary }]}>This will remove all synced data, credentials, and reset the app to its initial state.</Text>
+      </View>
+      <TouchableOpacity
+        style={[styles.button, styles.buttonDanger]}
+        onPress={handleClearData}
+        activeOpacity={0.8}
+      >
+        <Trash2 size={20} color="#ffffff" />
+        <Text style={styles.buttonText}>Clear All Data</Text>
+      </TouchableOpacity>
+    </>
+  );
+
+  const renderSectionContent = (sectionId: string) => {
+    switch (sectionId) {
+      case 'account':
+        return renderAccountContent();
+      case 'dataSync':
+        return renderDataSyncContent();
+      case 'appearance':
+        return renderAppearanceContent();
+      case 'payment':
+        return renderPaymentSettingsContent();
+      case 'pos':
+        return renderBasketSettingsContent();
+      case 'discount':
+        return renderDiscountContent();
+      case 'gratuity':
+        return renderGratuityContent();
+      case 'printer':
+        return renderPrinterContent();
+      case 'initialSetup':
+        return renderInitialSetupContent();
+      case 'danger':
+        return renderDangerZoneContent();
+      default:
+        return null;
+    }
+  };
+
+  const sections = [
+    { id: 'account', icon: LogIn, title: 'Account', color: '#3b82f6', order: siteInfo ? 1 : 1 },
+    { id: 'dataSync', icon: Database, title: 'Sync Data', color: '#10b981', order: siteInfo ? 2 : 999 },
+    { id: 'appearance', icon: Palette, title: 'Appearance', color: '#8b5cf6', order: 3 },
+    { id: 'payment', icon: CreditCard, title: 'Payment Settings', color: '#06b6d4', order: 4 },
+    { id: 'pos', icon: LayoutGrid, title: 'Basket Settings', color: '#f59e0b', order: 5 },
+    { id: 'discount', icon: Percent, title: 'Discount Settings', color: '#ec4899', order: 6 },
+    { id: 'gratuity', icon: DollarSign, title: 'Gratuity Settings', color: '#14b8a6', order: 7 },
+    { id: 'printer', icon: Printer, title: 'Printer & Receipt Settings', color: '#6366f1', order: 8 },
+    { id: 'initialSetup', icon: SettingsIcon, title: 'Initial Setup', color: '#84cc16', order: 9 },
+    { id: 'danger', icon: Trash2, title: 'Danger Zone', color: '#ef4444', order: 10 },
+  ];
+
+  const sortedSections = sections
+    .filter(section => {
+      if (section.id === 'dataSync' && !siteInfo) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const aExpanded = expandedSections[a.id];
+      const bExpanded = expandedSections[b.id];
+      if (aExpanded && !bExpanded) return -1;
+      if (!aExpanded && bExpanded) return 1;
+      return a.order - b.order;
+    });
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.sectionsGrid}>
+          {sortedSections.map((section) => (
+            <CollapsibleSection
+              key={section.id}
+              id={section.id}
+              icon={section.icon}
+              title={section.title}
+              iconColor={section.color}
+            >
+              {renderSectionContent(section.id)}
+            </CollapsibleSection>
+          ))}
+        </View>
+      </ScrollView>
+
+      <Modal
+        visible={colorPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setColorPickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Color</Text>
+            
+            <View style={styles.colorGrid}>
+              {[
+                '#ef4444', '#f97316', '#f59e0b', '#eab308',
+                '#84cc16', '#22c55e', '#10b981', '#14b8a6',
+                '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
+                '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
+              ].map((color) => (
+                <TouchableOpacity
+                  key={color}
+                  style={[styles.colorOption, { backgroundColor: color }]}
+                  onPress={() => setCustomColor(color)}
+                  activeOpacity={0.7}
+                />
+              ))}
+            </View>
+
+            <Text style={[styles.label, { color: colors.textSecondary, marginTop: 16 }]}>Custom Color</Text>
+            <View style={styles.customColorRow}>
+              <TextInput
+                style={[styles.input, { flex: 1, backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                value={customColorInput}
+                onChangeText={setCustomColorInput}
+                placeholder="#FF5733"
+                placeholderTextColor={colors.textTertiary}
+                autoCapitalize="characters"
+              />
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary }]}
+                onPress={applyCustomColor}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: colors.textTertiary, marginTop: 16 }]}
+              onPress={() => setColorPickerVisible(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={discountModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDiscountModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Add Discount Percentage</Text>
+            
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Percentage</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+              value={discountInputValue}
+              onChangeText={setDiscountInputValue}
+              placeholder="10"
+              placeholderTextColor={colors.textTertiary}
+              keyboardType="numeric"
+            />
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.textTertiary, flex: 1 }]}
+                onPress={() => setDiscountModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, flex: 1 }]}
+                onPress={() => {
+                  const value = parseFloat(discountInputValue);
+                  if (!isNaN(value) && value > 0 && value <= 100) {
+                    const newPercentages = [...discountPercentages, discountInputValue];
+                    setDiscountPercentages(newPercentages);
+                    updateDiscountSettings({ ...discountSettings, presetPercentages: newPercentages.map(Number) });
+                    setDiscountModalVisible(false);
+                  } else {
+                    Alert.alert('Invalid Input', 'Please enter a valid percentage between 0 and 100');
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={gratuityModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setGratuityModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Add Gratuity Percentage</Text>
+            
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Percentage</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+              value={gratuityInputValue}
+              onChangeText={setGratuityInputValue}
+              placeholder="15"
+              placeholderTextColor={colors.textTertiary}
+              keyboardType="numeric"
+            />
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.textTertiary, flex: 1 }]}
+                onPress={() => setGratuityModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, flex: 1 }]}
+                onPress={() => {
+                  const value = parseFloat(gratuityInputValue);
+                  if (!isNaN(value) && value > 0 && value <= 100) {
+                    const newPercentages = [...gratuityPercentages, gratuityInputValue];
+                    setGratuityPercentages(newPercentages);
+                    updateGratuitySettings({ ...gratuitySettings, presetPercentages: newPercentages.map(Number) });
+                    setGratuityModalVisible(false);
+                  } else {
+                    Alert.alert('Invalid Input', 'Please enter a valid percentage between 0 and 100');
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={receiptModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReceiptModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Add Receipt Line</Text>
+            
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Text</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+              value={receiptLineText}
+              onChangeText={setReceiptLineText}
+              placeholder="Enter receipt line text"
+              placeholderTextColor={colors.textTertiary}
+            />
+
+            <Text style={[styles.label, { color: colors.textSecondary, marginTop: 16 }]}>Size</Text>
+            <View style={styles.layoutOptions}>
+              {['small', 'normal', 'large'].map((size) => (
+                <TouchableOpacity
+                  key={size}
+                  style={[
+                    styles.layoutOption,
+                    { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                    receiptLineSize === size && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+                  ]}
+                  onPress={() => setReceiptLineSize(size as ReceiptLineSize)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>{size.charAt(0).toUpperCase() + size.slice(1)}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.textTertiary, flex: 1 }]}
+                onPress={() => setReceiptModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, flex: 1 }]}
+                onPress={() => {
+                  if (!receiptLineText.trim()) {
+                    Alert.alert('Error', 'Please enter text for the receipt line');
+                    return;
+                  }
+
+                  const newLine = { text: receiptLineText, size: receiptLineSize };
+                  if (editingReceiptSection === 'header') {
+                    updateReceiptSettings({ ...receiptSettings, headerLines: [...receiptSettings.headerLines, newLine] });
+                  } else {
+                    updateReceiptSettings({ ...receiptSettings, footerLines: [...receiptSettings.footerLines, newLine] });
+                  }
+                  setReceiptModalVisible(false);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  sectionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  section: {
+    marginBottom: 16,
+  },
+  sectionFixedWidth: {
+    width: '48%',
+  },
+  sectionExpanded: {
+    width: '100%',
+    order: -1,
+  },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 120,
+  },
+  sectionHeaderContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingRight: 8,
+  },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  chevronContainer: {
+    padding: 4,
+  },
+  collapsibleContent: {
+    marginTop: 16,
+  },
+  card: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  value: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  subValue: {
+    fontSize: 14,
+  },
+  input: {
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    fontSize: 16,
+  },
+  rememberRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  rememberText: {
+    fontSize: 16,
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 8,
+    gap: 8,
+    marginBottom: 12,
+  },
+  buttonPrimary: {
+    backgroundColor: '#3b82f6',
+  },
+  buttonSuccess: {
+    backgroundColor: '#10b981',
+  },
+  buttonDanger: {
+    backgroundColor: '#ef4444',
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  infoText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  progressCard: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  progressPhase: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 12,
+  },
+  progressBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  progressBarBackground: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressPercent: {
+    fontSize: 14,
+    fontWeight: '600',
+    minWidth: 40,
+  },
+  lastSyncText: {
+    fontSize: 13,
+    fontStyle: 'italic',
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  settingRowColumn: {
+    gap: 16,
+  },
+  settingHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  settingInfo: {
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  layoutOptions: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  layoutOption: {
+    flex: 1,
+    minWidth: 100,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  layoutOptionSelected: {
+    borderWidth: 2,
+  },
+  layoutOptionTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  warningBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 16,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 14,
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  filterItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 8,
+    gap: 12,
+  },
+  filterItemText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  filterItemSubtext: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  colorButton: {
+    padding: 6,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 20,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  colorOption: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+  },
+  customColorRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  dropdownText: {
+    flex: 1,
+    fontSize: 16,
+  },
+  dropdown: {
+    marginTop: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  dropdownItemText: {
+    fontSize: 16,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  deviceName: {
+    fontSize: 14,
+    marginTop: 8,
+  },
+  discountPercentagesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  discountPercentageItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 8,
+  },
+  discountPercentageText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  receiptLinesContainer: {
+    gap: 8,
+  },
+  receiptLineItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 12,
+  },
+  receiptLineText: {
+    fontWeight: '500',
+  },
+});
