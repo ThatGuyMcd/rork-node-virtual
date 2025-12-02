@@ -1173,17 +1173,19 @@ export default function ProductsScreen() {
                 >
                   {(() => {
                     if (product.prices.length === 0) return 'No price';
-                    if (product.prices.length === 1) {
-                      const priceLabel = product.prices[0].label.toUpperCase();
-                      if (priceLabel === 'OPEN') return 'Open price';
-                      if (priceLabel === 'NOT SET') return 'Not set';
-                      return `£${product.prices[0].price.toFixed(2)}`;
-                    }
                     const validPrices = product.prices.filter(p => {
                       const label = p.label.toUpperCase();
                       return label !== 'OPEN' && label !== 'NOT SET';
                     });
-                    if (validPrices.length === 0) return 'See options';
+                    if (validPrices.length === 0) {
+                      const priceLabel = product.prices[0].label.toUpperCase();
+                      if (priceLabel === 'OPEN') return 'Open price';
+                      if (priceLabel === 'NOT SET') return 'Not set';
+                      return 'See options';
+                    }
+                    if (validPrices.length === 1) {
+                      return `£${validPrices[0].price.toFixed(2)}`;
+                    }
                     return `from £${Math.min(...validPrices.map(p => p.price)).toFixed(2)}`;
                   })()}
                 </Text>
@@ -1249,17 +1251,19 @@ export default function ProductsScreen() {
                 >
                   {(() => {
                     if (product.prices.length === 0) return 'No price';
-                    if (product.prices.length === 1) {
-                      const priceLabel = product.prices[0].label.toUpperCase();
-                      if (priceLabel === 'OPEN') return 'Open price';
-                      if (priceLabel === 'NOT SET') return 'Not set';
-                      return `£${product.prices[0].price.toFixed(2)}`;
-                    }
                     const validPrices = product.prices.filter(p => {
                       const label = p.label.toUpperCase();
                       return label !== 'OPEN' && label !== 'NOT SET';
                     });
-                    if (validPrices.length === 0) return 'See options';
+                    if (validPrices.length === 0) {
+                      const priceLabel = product.prices[0].label.toUpperCase();
+                      if (priceLabel === 'OPEN') return 'Open price';
+                      if (priceLabel === 'NOT SET') return 'Not set';
+                      return 'See options';
+                    }
+                    if (validPrices.length === 1) {
+                      return `£${validPrices[0].price.toFixed(2)}`;
+                    }
                     return `from £${Math.min(...validPrices.map(p => p.price)).toFixed(2)}`;
                   })()}
                 </Text>
