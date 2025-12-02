@@ -1912,62 +1912,70 @@ export default function SettingsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Color</Text>
-            
-            <View style={styles.colorGrid}>
-              {[
-                '#ef4444', '#f97316', '#f59e0b', '#eab308',
-                '#84cc16', '#22c55e', '#10b981', '#14b8a6',
-                '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
-                '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
-                '#f43f5e', '#fb7185', '#fda4af', '#fecdd3',
-                '#fbbf24', '#fcd34d', '#fde047', '#fef08a',
-                '#a3e635', '#bef264', '#d9f99d', '#ecfccb',
-                '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5',
-                '#2dd4bf', '#5eead4', '#99f6e4', '#ccfbf1',
-                '#22d3ee', '#67e8f9', '#a5f3fc', '#cffafe',
-                '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe',
-                '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff',
-                '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe',
-                '#c084fc', '#d8b4fe', '#e9d5ff', '#f3e8ff',
-                '#e879f9', '#f0abfc', '#f5d0fe', '#fae8ff',
-                '#f472b6', '#f9a8d4', '#fbcfe8', '#fce7f3',
-              ].map((color) => (
-                <TouchableOpacity
-                  key={color}
-                  style={[styles.colorOption, { backgroundColor: color }]}
-                  onPress={() => setCustomColor(color)}
-                  activeOpacity={0.7}
-                />
-              ))}
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Color</Text>
+              <TouchableOpacity
+                onPress={() => setColorPickerVisible(false)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
             </View>
+            
+            <ScrollView 
+              style={styles.colorPickerScroll}
+              contentContainerStyle={styles.colorPickerScrollContent}
+              showsVerticalScrollIndicator={true}
+            >
+              <Text style={[styles.colorSectionTitle, { color: colors.textSecondary }]}>Preset Colors</Text>
+              <View style={styles.colorGrid}>
+                {[
+                  '#ef4444', '#f97316', '#f59e0b', '#eab308',
+                  '#84cc16', '#22c55e', '#10b981', '#14b8a6',
+                  '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
+                  '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
+                  '#f43f5e', '#fb7185', '#fda4af', '#fecdd3',
+                  '#fbbf24', '#fcd34d', '#fde047', '#fef08a',
+                  '#a3e635', '#bef264', '#d9f99d', '#ecfccb',
+                  '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5',
+                  '#2dd4bf', '#5eead4', '#99f6e4', '#ccfbf1',
+                  '#22d3ee', '#67e8f9', '#a5f3fc', '#cffafe',
+                  '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe',
+                  '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff',
+                  '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe',
+                  '#c084fc', '#d8b4fe', '#e9d5ff', '#f3e8ff',
+                  '#e879f9', '#f0abfc', '#f5d0fe', '#fae8ff',
+                  '#f472b6', '#f9a8d4', '#fbcfe8', '#fce7f3',
+                ].map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[styles.colorOption, { backgroundColor: color }]}
+                    onPress={() => setCustomColor(color)}
+                    activeOpacity={0.7}
+                  />
+                ))}
+              </View>
 
-            <Text style={[styles.label, { color: colors.textSecondary, marginTop: 16 }]}>Custom Color</Text>
-            <TouchableOpacity
-              style={[styles.customColorButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
-              onPress={() => {
-                setCustomColorModalVisible(true);
-                if (customColorInput) {
-                  const rgb = hexToRgb(customColorInput);
-                  if (rgb) {
-                    setCustomColorRgb(rgb);
+              <Text style={[styles.colorSectionTitle, { color: colors.textSecondary, marginTop: 16 }]}>Custom Color</Text>
+              <TouchableOpacity
+                style={[styles.customColorButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                onPress={() => {
+                  setCustomColorModalVisible(true);
+                  if (customColorInput) {
+                    const rgb = hexToRgb(customColorInput);
+                    if (rgb) {
+                      setCustomColorRgb(rgb);
+                    }
                   }
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.customColorPreview, { backgroundColor: rgbToHex(customColorRgb.r, customColorRgb.g, customColorRgb.b) }]} />
-              <Text style={[styles.customColorButtonText, { color: colors.text }]}>Create Custom Color</Text>
-              <Palette size={20} color={colors.primary} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: colors.textTertiary, marginTop: 16 }]}
-              onPress={() => setColorPickerVisible(false)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.customColorPreview, { backgroundColor: rgbToHex(customColorRgb.r, customColorRgb.g, customColorRgb.b) }]} />
+                <Text style={[styles.customColorButtonText, { color: colors.text }]}>Create Custom Color</Text>
+                <Palette size={20} color={colors.primary} />
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -2580,13 +2588,30 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 400,
+    maxHeight: '80%',
     borderRadius: 16,
     padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  colorPickerScroll: {
+    maxHeight: 500,
+  },
+  colorPickerScrollContent: {
+    paddingBottom: 20,
+  },
+  colorSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    marginBottom: 20,
   },
   colorGrid: {
     flexDirection: 'row',
@@ -2721,7 +2746,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     gap: 12,
-    marginTop: 12,
   },
   customColorPreview: {
     width: 32,
