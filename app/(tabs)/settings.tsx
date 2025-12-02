@@ -1971,7 +1971,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    minHeight: 120,
+    height: 140,
   },
   sectionHeaderContent: {
     flex: 1,
