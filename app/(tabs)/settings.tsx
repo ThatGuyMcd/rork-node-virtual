@@ -80,6 +80,7 @@ export default function SettingsScreen() {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     account: true,
     dataSync: false,
+    reportsConsolidation: false,
     appearance: false,
     payment: false,
     pos: false,
@@ -600,20 +601,6 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </>
       )}
-
-      {!siteInfo && (
-        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-          <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>View transaction history, analytics, and generate reports</Text>
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.primary, marginBottom: 0 }]}
-            onPress={() => router.push('/reports')}
-            activeOpacity={0.8}
-          >
-            <FileText size={20} color="#ffffff" />
-            <Text style={styles.buttonText}>Open Reports</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </>
   );
 
@@ -697,6 +684,11 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       )}
 
+    </>
+  );
+
+  const renderReportsConsolidationContent = () => (
+    <>
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
         <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>View transaction history, analytics, and generate reports</Text>
         <TouchableOpacity
@@ -1564,6 +1556,8 @@ export default function SettingsScreen() {
         return renderAccountContent();
       case 'dataSync':
         return renderDataSyncContent();
+      case 'reportsConsolidation':
+        return renderReportsConsolidationContent();
       case 'appearance':
         return renderAppearanceContent();
       case 'payment':
@@ -1588,14 +1582,15 @@ export default function SettingsScreen() {
   const sections = [
     { id: 'account', icon: LogIn, title: 'Account', color: '#3b82f6', order: siteInfo ? 1 : 1 },
     { id: 'dataSync', icon: Database, title: 'Sync Data', color: '#10b981', order: siteInfo ? 2 : 999 },
-    { id: 'appearance', icon: Palette, title: 'Appearance', color: '#8b5cf6', order: 3 },
-    { id: 'payment', icon: CreditCard, title: 'Payment Settings', color: '#06b6d4', order: 4 },
-    { id: 'pos', icon: LayoutGrid, title: 'Basket Settings', color: '#f59e0b', order: 5 },
-    { id: 'discount', icon: Percent, title: 'Discount Settings', color: '#ec4899', order: 6 },
-    { id: 'gratuity', icon: DollarSign, title: 'Gratuity Settings', color: '#14b8a6', order: 7 },
-    { id: 'printer', icon: Printer, title: 'Printer & Receipt Settings', color: '#6366f1', order: 8 },
-    { id: 'initialSetup', icon: SettingsIcon, title: 'Initial Setup', color: '#84cc16', order: 9 },
-    { id: 'danger', icon: Trash2, title: 'Danger Zone', color: '#ef4444', order: 10 },
+    { id: 'reportsConsolidation', icon: FileText, title: 'Reports & Consolidation', color: '#f97316', order: siteInfo ? 3 : 2 },
+    { id: 'appearance', icon: Palette, title: 'Appearance', color: '#8b5cf6', order: 4 },
+    { id: 'payment', icon: CreditCard, title: 'Payment Settings', color: '#06b6d4', order: 5 },
+    { id: 'pos', icon: LayoutGrid, title: 'Basket Settings', color: '#f59e0b', order: 6 },
+    { id: 'discount', icon: Percent, title: 'Discount Settings', color: '#ec4899', order: 7 },
+    { id: 'gratuity', icon: DollarSign, title: 'Gratuity Settings', color: '#14b8a6', order: 8 },
+    { id: 'printer', icon: Printer, title: 'Printer & Receipt Settings', color: '#6366f1', order: 9 },
+    { id: 'initialSetup', icon: SettingsIcon, title: 'Initial Setup', color: '#84cc16', order: 10 },
+    { id: 'danger', icon: Trash2, title: 'Danger Zone', color: '#ef4444', order: 11 },
   ];
 
   const sortedSections = sections
