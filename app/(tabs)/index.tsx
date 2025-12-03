@@ -17,7 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, X, RefreshCw, Grid3x3, Save } from 'lucide-react-native';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { usePOS } from '@/contexts/POSContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme, type ButtonSkin } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
 import { tableDataService } from '@/services/tableDataService';
 import { apiClient } from '@/services/api';
@@ -86,12 +86,30 @@ export default function ProductsScreen() {
   const [menuModalVisible, setMenuModalVisible] = useState(false);
   const [currentMenuId, setCurrentMenuId] = useState<string | null>(null);
   const [menuStack, setMenuStack] = useState<string[]>([]);
+
+  const getButtonSkinStyle = useCallback((skin: ButtonSkin) => {
+    switch (skin) {
+      case 'rounded':
+        return { borderRadius: 24 };
+      case 'sharp':
+        return { borderRadius: 4 };
+      case 'soft':
+        return { borderRadius: 16, opacity: 0.9 };
+      case 'outlined':
+        return { borderRadius: 12, borderWidth: 2, borderColor: 'rgba(255, 255, 255, 0.3)' };
+      case 'minimal':
+        return { borderRadius: 8, opacity: 0.7 };
+      case 'default':
+      default:
+        return { borderRadius: 12 };
+    }
+  }, []);
   const [productMsgModalVisible, setProductMsgModalVisible] = useState(false);
   const [productMsgInput, setProductMsgInput] = useState('');
   const [productMsgProduct, setProductMsgProduct] = useState<Product | null>(null);
   const [productMsgPrice, setProductMsgPrice] = useState<PriceOption | null>(null);
   const { addToBasket, currentTable, selectTable, isTableSelectionRequired, productViewLayout, productViewMode, saveTableTab } = usePOS();
-  const { colors, theme } = useTheme();
+  const { colors, theme, buttonSkin } = useTheme();
   const navigation = useNavigation();
 
   const scaleAnim = useState(new Animated.Value(0))[0];
@@ -1013,6 +1031,7 @@ export default function ProductsScreen() {
                     width: getCardDimensions(productViewLayout).width,
                     height: getCardDimensions(productViewLayout).groupHeight,
                   },
+                  getButtonSkinStyle(buttonSkin),
                 ]}
                 onPress={() => setSelectedGroup(group.id)}
                 activeOpacity={0.8}
@@ -1064,6 +1083,7 @@ export default function ProductsScreen() {
                     width: getCardDimensions(productViewLayout).width,
                     height: getCardDimensions(productViewLayout).groupHeight,
                   },
+                  getButtonSkinStyle(buttonSkin),
                 ]}
                 onPress={() => setSelectedDepartment(dept.id)}
                 activeOpacity={0.8}
@@ -1111,6 +1131,7 @@ export default function ProductsScreen() {
                     width: getCardDimensions(productViewLayout).width,
                     height: getCardDimensions(productViewLayout).groupHeight,
                   },
+                  getButtonSkinStyle(buttonSkin),
                 ]}
                 onPress={() => setSelectedDepartment(dept.id)}
                 activeOpacity={0.8}
@@ -1149,6 +1170,7 @@ export default function ProductsScreen() {
                     width: getCardDimensions(productViewLayout).width,
                     height: getCardDimensions(productViewLayout).productHeight,
                   },
+                  getButtonSkinStyle(buttonSkin),
                 ]}
                 onPress={() => handleProductPress(product)}
                 activeOpacity={0.8}
@@ -1227,6 +1249,7 @@ export default function ProductsScreen() {
                     width: getCardDimensions(productViewLayout).width,
                     height: getCardDimensions(productViewLayout).productHeight,
                   },
+                  getButtonSkinStyle(buttonSkin),
                 ]}
                 onPress={() => handleProductPress(product)}
                 activeOpacity={0.8}
