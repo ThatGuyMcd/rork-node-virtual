@@ -6,15 +6,18 @@ import { useColorScheme } from 'react-native';
 
 export type ThemeName = 'light' | 'dark' | 'sunset' | 'ocean' | 'forest' | 'midnight' | 'rose' | 'lavender' | 'sunsetLight' | 'oceanLight' | 'forestLight' | 'midnightLight' | 'roseLight' | 'lavenderLight' | 'custom';
 export type ThemePreference = ThemeName | 'system';
+export type ButtonSkin = 'default' | 'rounded' | 'sharp' | 'soft' | 'outlined' | 'minimal';
 
 interface ThemeContextType {
   theme: ThemeName;
   themePreference: ThemePreference;
   colors: ThemeColors;
   customColors: ThemeColors | null;
+  buttonSkin: ButtonSkin;
   setTheme: (theme: ThemePreference) => Promise<void>;
   toggleTheme: () => Promise<void>;
   setCustomColors: (colors: ThemeColors) => Promise<void>;
+  setButtonSkin: (skin: ButtonSkin) => Promise<void>;
 }
 
 export const [ThemeProvider, useTheme] = createContextHook<ThemeContextType>(() => {
@@ -22,6 +25,7 @@ export const [ThemeProvider, useTheme] = createContextHook<ThemeContextType>(() 
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
   const [theme, setThemeState] = useState<ThemeName>('dark');
   const [customColors, setCustomColorsState] = useState<ThemeColors | null>(null);
+  const [buttonSkin, setButtonSkinState] = useState<ButtonSkin>('default');
 
   useEffect(() => {
     loadTheme();
@@ -37,9 +41,14 @@ export const [ThemeProvider, useTheme] = createContextHook<ThemeContextType>(() 
     const savedTheme = await dataSyncService.getTheme();
     const savedPreference = await dataSyncService.getThemePreference();
     const savedCustomColors = await dataSyncService.getCustomThemeColors();
+    const savedButtonSkin = await dataSyncService.getButtonSkin();
     
     if (savedCustomColors) {
       setCustomColorsState(savedCustomColors);
+    }
+    
+    if (savedButtonSkin) {
+      setButtonSkinState(savedButtonSkin as ButtonSkin);
     }
     
     if (savedPreference === 'system') {
@@ -81,6 +90,12 @@ export const [ThemeProvider, useTheme] = createContextHook<ThemeContextType>(() 
     console.log('[Theme] Custom colors updated');
   }, []);
 
+  const setButtonSkin = useCallback(async (skin: ButtonSkin) => {
+    setButtonSkinState(skin);
+    await dataSyncService.setButtonSkin(skin);
+    console.log('[Theme] Button skin changed to:', skin);
+  }, []);
+
   const colors = theme === 'custom' && customColors ? customColors : (Colors[theme as keyof typeof Colors] || Colors.dark);
 
   return {
@@ -88,8 +103,10 @@ export const [ThemeProvider, useTheme] = createContextHook<ThemeContextType>(() 
     themePreference,
     colors,
     customColors,
+    buttonSkin,
     setTheme,
     toggleTheme,
     setCustomColors,
+    setButtonSkin,
   };
 });

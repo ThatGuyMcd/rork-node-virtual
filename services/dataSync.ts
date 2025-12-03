@@ -24,6 +24,7 @@ const STORAGE_KEYS = {
   THEME: 'pos_theme',
   THEME_PREFERENCE: 'pos_theme_preference',
   CUSTOM_THEME_COLORS: 'pos_custom_theme_colors',
+  BUTTON_SKIN: 'pos_button_skin',
   PRODUCT_DISPLAY_SETTINGS: 'pos_product_display_settings',
   MENU_DATA: 'pos_menu_data',
   BACKGROUND_SYNC_INTERVAL: 'pos_background_sync_interval',
@@ -686,6 +687,15 @@ export class DataSyncService {
   async getCustomThemeColors(): Promise<ThemeColors | null> {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.CUSTOM_THEME_COLORS);
     return data ? JSON.parse(data) : null;
+  }
+
+  async setButtonSkin(skin: string): Promise<void> {
+    await AsyncStorage.setItem(STORAGE_KEYS.BUTTON_SKIN, skin);
+  }
+
+  async getButtonSkin(): Promise<string> {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.BUTTON_SKIN);
+    return data || 'default';
   }
 
   async setProductDisplaySettings(settings: ProductDisplaySettings): Promise<void> {

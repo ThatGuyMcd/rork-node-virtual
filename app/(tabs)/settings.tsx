@@ -90,7 +90,7 @@ export default function SettingsScreen() {
   const [productViewMode, setProductViewMode] = useState<'group-department' | 'all-departments' | 'all-items'>('group-department');
   const { updateTableSelectionRequired, updateProductViewLayout, updateProductViewMode, isInitialSetupComplete, completeInitialSetup, cardPaymentEnabled, cashPaymentEnabled, cardMachineProvider, splitPaymentsEnabled, updateCardPaymentEnabled, updateCashPaymentEnabled, updateCardMachineProvider, updateSplitPaymentsEnabled, refundButtonEnabled, updateRefundButtonEnabled, discountSettings, updateDiscountSettings, gratuitySettings, updateGratuitySettings, receiptSettings, updateReceiptSettings, changeAllowed, cashbackAllowed, updateChangeAllowed, updateCashbackAllowed } = usePOS();
   const router = useRouter();
-  const { theme, themePreference, colors, setTheme, customColors, setCustomColors } = useTheme();
+  const { theme, themePreference, colors, setTheme, customColors, setCustomColors, buttonSkin, setButtonSkin } = useTheme();
   const [customThemeColors, setCustomThemeColors] = useState<ThemeColors>(customColors || Colors.dark);
   const [customThemeModalVisible, setCustomThemeModalVisible] = useState(false);
   const [editingColorKey, setEditingColorKey] = useState<keyof ThemeColors | null>(null);
@@ -1144,6 +1144,96 @@ export default function SettingsScreen() {
               activeOpacity={0.7}
             >
               <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Orchid</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRowColumn}>
+          <View style={styles.settingHeader}>
+            <Paintbrush size={18} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>Button Skins</Text>
+              <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
+                Choose button style for interactive elements throughout the app
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.layoutOptions}>
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                buttonSkin === 'default' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+              ]}
+              onPress={() => setButtonSkin('default')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Default</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                buttonSkin === 'rounded' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+              ]}
+              onPress={() => setButtonSkin('rounded')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Rounded</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                buttonSkin === 'sharp' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+              ]}
+              onPress={() => setButtonSkin('sharp')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Sharp</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.layoutOptions, { marginTop: 8 }]}>
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                buttonSkin === 'soft' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+              ]}
+              onPress={() => setButtonSkin('soft')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Soft</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                buttonSkin === 'outlined' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+              ]}
+              onPress={() => setButtonSkin('outlined')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Outlined</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.layoutOption,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                buttonSkin === 'minimal' && [styles.layoutOptionSelected, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
+              ]}
+              onPress={() => setButtonSkin('minimal')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.layoutOptionTitle, { color: colors.text }]}>Minimal</Text>
             </TouchableOpacity>
           </View>
         </View>
