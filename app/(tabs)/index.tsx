@@ -91,21 +91,19 @@ export default function ProductsScreen() {
     switch (skin) {
       case 'rounded':
         return {
-          borderRadius: 32,
+          borderRadius: 28,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.4,
-          shadowRadius: 8,
-          elevation: 8,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.5,
+          shadowRadius: 12,
+          elevation: 10,
         };
       case 'sharp':
         return {
-          borderRadius: 0,
-          borderWidth: 3,
-          borderColor: 'rgba(0, 0, 0, 0.3)',
+          borderRadius: 4,
           shadowColor: '#000',
-          shadowOffset: { width: 4, height: 4 },
-          shadowOpacity: 0.5,
+          shadowOffset: { width: 2, height: 2 },
+          shadowOpacity: 0.3,
           shadowRadius: 0,
           elevation: 4,
         };
@@ -113,28 +111,31 @@ export default function ProductsScreen() {
         return {
           borderRadius: 20,
           shadowColor: backgroundColor,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.6,
-          shadowRadius: 16,
-          elevation: 12,
+          shadowOffset: { width: -4, height: -4 },
+          shadowOpacity: 0.4,
+          shadowRadius: 8,
+          elevation: 0,
         };
       case 'outlined':
         return {
-          borderRadius: 12,
+          borderRadius: 16,
           borderWidth: 3,
           borderColor: backgroundColor,
           shadowColor: backgroundColor,
           shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.8,
-          shadowRadius: 12,
+          shadowOpacity: 1,
+          shadowRadius: 20,
           elevation: 0,
         };
       case 'minimal':
         return {
           borderRadius: 8,
-          opacity: 0.85,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.2)',
+          borderWidth: 0,
+          shadowColor: 'transparent',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          elevation: 0,
         };
       case 'default':
       default:
@@ -151,25 +152,51 @@ export default function ProductsScreen() {
 
   const getButtonOverlayStyle = useCallback((skin: ButtonSkin) => {
     switch (skin) {
-      case 'soft':
+      case 'rounded':
         return {
           ...StyleSheet.absoluteFillObject,
-          backgroundColor: 'rgba(255, 255, 255, 0.15)',
-          borderRadius: 20,
-        };
-      case 'outlined':
-        return {
-          ...StyleSheet.absoluteFillObject,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          borderRadius: 28,
+          borderTopWidth: 2,
+          borderLeftWidth: 2,
+          borderTopColor: 'rgba(255, 255, 255, 0.4)',
+          borderLeftColor: 'rgba(255, 255, 255, 0.3)',
+          borderBottomWidth: 3,
+          borderRightWidth: 3,
+          borderBottomColor: 'rgba(0, 0, 0, 0.5)',
+          borderRightColor: 'rgba(0, 0, 0, 0.4)',
         };
       case 'sharp':
         return {
           ...StyleSheet.absoluteFillObject,
-          backgroundColor: 'transparent',
-          borderTopWidth: 3,
-          borderTopColor: 'rgba(255, 255, 255, 0.2)',
+          borderRadius: 4,
+          borderTopWidth: 4,
+          borderLeftWidth: 4,
+          borderTopColor: 'rgba(255, 255, 255, 0.5)',
+          borderLeftColor: 'rgba(255, 255, 255, 0.4)',
           borderBottomWidth: 4,
-          borderBottomColor: 'rgba(0, 0, 0, 0.3)',
+          borderRightWidth: 4,
+          borderBottomColor: 'rgba(0, 0, 0, 0.6)',
+          borderRightColor: 'rgba(0, 0, 0, 0.5)',
+        };
+      case 'soft':
+        return {
+          ...StyleSheet.absoluteFillObject,
+          borderRadius: 20,
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.2)',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        };
+      case 'outlined':
+        return {
+          ...StyleSheet.absoluteFillObject,
+          borderRadius: 14,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        };
+      case 'minimal':
+        return {
+          ...StyleSheet.absoluteFillObject,
+          borderRadius: 8,
+          backgroundColor: 'rgba(255, 255, 255, 0.06)',
         };
       default:
         return null;
