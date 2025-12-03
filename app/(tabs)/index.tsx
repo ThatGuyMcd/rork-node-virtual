@@ -87,21 +87,92 @@ export default function ProductsScreen() {
   const [currentMenuId, setCurrentMenuId] = useState<string | null>(null);
   const [menuStack, setMenuStack] = useState<string[]>([]);
 
-  const getButtonSkinStyle = useCallback((skin: ButtonSkin) => {
+  const getButtonSkinStyle = useCallback((skin: ButtonSkin, backgroundColor: string = '#000000') => {
     switch (skin) {
       case 'rounded':
-        return { borderRadius: 24 };
+        return {
+          borderRadius: 32,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.4,
+          shadowRadius: 8,
+          elevation: 8,
+        };
       case 'sharp':
-        return { borderRadius: 4 };
+        return {
+          borderRadius: 0,
+          borderWidth: 3,
+          borderColor: 'rgba(0, 0, 0, 0.3)',
+          shadowColor: '#000',
+          shadowOffset: { width: 4, height: 4 },
+          shadowOpacity: 0.5,
+          shadowRadius: 0,
+          elevation: 4,
+        };
       case 'soft':
-        return { borderRadius: 16, opacity: 0.9 };
+        return {
+          borderRadius: 20,
+          shadowColor: backgroundColor,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.6,
+          shadowRadius: 16,
+          elevation: 12,
+        };
       case 'outlined':
-        return { borderRadius: 12, borderWidth: 2, borderColor: 'rgba(255, 255, 255, 0.3)' };
+        return {
+          borderRadius: 12,
+          borderWidth: 3,
+          borderColor: backgroundColor,
+          shadowColor: backgroundColor,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.8,
+          shadowRadius: 12,
+          elevation: 0,
+        };
       case 'minimal':
-        return { borderRadius: 8, opacity: 0.7 };
+        return {
+          borderRadius: 8,
+          opacity: 0.85,
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.2)',
+        };
       case 'default':
       default:
-        return { borderRadius: 12 };
+        return {
+          borderRadius: 12,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 6,
+          elevation: 6,
+        };
+    }
+  }, []);
+
+  const getButtonOverlayStyle = useCallback((skin: ButtonSkin) => {
+    switch (skin) {
+      case 'soft':
+        return {
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: 'rgba(255, 255, 255, 0.15)',
+          borderRadius: 20,
+        };
+      case 'outlined':
+        return {
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        };
+      case 'sharp':
+        return {
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: 'transparent',
+          borderTopWidth: 3,
+          borderTopColor: 'rgba(255, 255, 255, 0.2)',
+          borderBottomWidth: 4,
+          borderBottomColor: 'rgba(0, 0, 0, 0.3)',
+        };
+      default:
+        return null;
     }
   }, []);
   const [productMsgModalVisible, setProductMsgModalVisible] = useState(false);
@@ -1031,7 +1102,7 @@ export default function ProductsScreen() {
                     width: getCardDimensions(productViewLayout).width,
                     height: getCardDimensions(productViewLayout).groupHeight,
                   },
-                  getButtonSkinStyle(buttonSkin),
+                  getButtonSkinStyle(buttonSkin, getGroupColor(group.id)),
                 ]}
                 onPress={() => setSelectedGroup(group.id)}
                 activeOpacity={0.8}
@@ -1044,6 +1115,9 @@ export default function ProductsScreen() {
                   />
                 ) : (
                   <View style={[StyleSheet.absoluteFill, { backgroundColor: getGroupColor(group.id), opacity: 0.9 }]} />
+                )}
+                {getButtonOverlayStyle(buttonSkin) && (
+                  <View style={getButtonOverlayStyle(buttonSkin) as any} />
                 )}
                 <Text style={[
                   styles.cardTitle,
@@ -1083,7 +1157,7 @@ export default function ProductsScreen() {
                     width: getCardDimensions(productViewLayout).width,
                     height: getCardDimensions(productViewLayout).groupHeight,
                   },
-                  getButtonSkinStyle(buttonSkin),
+                  getButtonSkinStyle(buttonSkin, getDepartmentColor(dept.id)),
                 ]}
                 onPress={() => setSelectedDepartment(dept.id)}
                 activeOpacity={0.8}
@@ -1096,6 +1170,9 @@ export default function ProductsScreen() {
                   />
                 ) : (
                   <View style={[StyleSheet.absoluteFill, { backgroundColor: getDepartmentColor(dept.id), opacity: 0.9 }]} />
+                )}
+                {getButtonOverlayStyle(buttonSkin) && (
+                  <View style={getButtonOverlayStyle(buttonSkin) as any} />
                 )}
                 <Text style={[
                   styles.cardTitle,
@@ -1131,11 +1208,14 @@ export default function ProductsScreen() {
                     width: getCardDimensions(productViewLayout).width,
                     height: getCardDimensions(productViewLayout).groupHeight,
                   },
-                  getButtonSkinStyle(buttonSkin),
+                  getButtonSkinStyle(buttonSkin, getDepartmentColor(dept.id)),
                 ]}
                 onPress={() => setSelectedDepartment(dept.id)}
                 activeOpacity={0.8}
               >
+                {getButtonOverlayStyle(buttonSkin) && (
+                  <View style={getButtonOverlayStyle(buttonSkin) as any} />
+                )}
                 <Text style={[
                   styles.cardTitle,
                   productViewLayout === 'compact' && styles.cardTitleCompact,
@@ -1170,11 +1250,14 @@ export default function ProductsScreen() {
                     width: getCardDimensions(productViewLayout).width,
                     height: getCardDimensions(productViewLayout).productHeight,
                   },
-                  getButtonSkinStyle(buttonSkin),
+                  getButtonSkinStyle(buttonSkin, product.buttonColor),
                 ]}
                 onPress={() => handleProductPress(product)}
                 activeOpacity={0.8}
               >
+                {getButtonOverlayStyle(buttonSkin) && (
+                  <View style={getButtonOverlayStyle(buttonSkin) as any} />
+                )}
                 <Text
                   style={[
                     productViewLayout === 'compact' ? styles.productNameCompact : 
@@ -1249,11 +1332,14 @@ export default function ProductsScreen() {
                     width: getCardDimensions(productViewLayout).width,
                     height: getCardDimensions(productViewLayout).productHeight,
                   },
-                  getButtonSkinStyle(buttonSkin),
+                  getButtonSkinStyle(buttonSkin, product.buttonColor),
                 ]}
                 onPress={() => handleProductPress(product)}
                 activeOpacity={0.8}
               >
+                {getButtonOverlayStyle(buttonSkin) && (
+                  <View style={getButtonOverlayStyle(buttonSkin) as any} />
+                )}
                 <Text
                   style={[
                     productViewLayout === 'compact' ? styles.productNameCompact : 
