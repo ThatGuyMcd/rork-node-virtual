@@ -1156,7 +1156,7 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.settingTitle, { color: colors.text }]}>Button Skins</Text>
               <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                Choose button style for interactive elements throughout the app
+                Choose button style for group, department, and product buttons in the Products tab
               </Text>
             </View>
           </View>

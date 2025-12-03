@@ -156,19 +156,9 @@ export default function TabLayout() {
           marginTop: 4,
         },
         headerStyle: {
-          backgroundColor: 'transparent',
+          backgroundColor: colors.cardBackground,
           borderBottomColor: colors.primary,
           borderBottomWidth: 2,
-        },
-        headerBackground: () => {
-          const isLightTheme = theme === 'light' || theme.includes('Light');
-          return (
-            <BlurView
-              intensity={80}
-              tint={isLightTheme ? 'light' : 'dark'}
-              style={{ flex: 1, backgroundColor: colors.headerBackground }}
-            />
-          );
         },
         headerTintColor: colors.text,
         headerTitleStyle: {
