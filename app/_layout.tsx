@@ -25,8 +25,42 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   useEffect(() => {
+    const initApp = async () => {
+      try {
+        console.log('[App] Starting app initialization...');
+        if (!__DEV__) {
+          try {
+            console.log('[App] Checking for updates...');
+            await Updates.checkForUpdateAsync();
+            console.log('[App] Update check completed');
+          } catch (updateError) {
+            console.error('[App] Update check failed:', updateError);
+          }
+        }
+      } catch (e) {
+        console.error('[App] App initialization error:', e);
+      } finally {
+        console.log('[App] Hiding splash screen...');
+        try {
+          await SplashScreen.hideAsync();
+          console.log('[App] Splash screen hidden successfully');
+        } catch (splashError) {
+          console.error('[App] Failed to hide splash screen:', splashError);
+        }
+      }
+    };
+
+    setTimeout(() => {
+      console.log('[App] Starting initialization with timeout...');
+      initApp();
+    }, 100);
+  }, []);
+
+  useEffect(() => {
     const checkAndAutoSync = async () => {
       try {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
         const syncInterval = await dataSyncService.getBackgroundSyncInterval();
         if (syncInterval === 'disabled') {
           console.log('[App] Auto-sync is disabled');
@@ -58,37 +92,12 @@ export default function RootLayout() {
       }
     };
 
-    const initApp = async () => {
-      try {
-        console.log('[App] Starting app initialization...');
-        if (!__DEV__) {
-          try {
-            console.log('[App] Checking for updates...');
-            await Updates.checkForUpdateAsync();
-            console.log('[App] Update check completed');
-          } catch (updateError) {
-            console.error('[App] Update check failed:', updateError);
-          }
-        }
+    const timeoutId = setTimeout(() => {
+      console.log('[App] Starting delayed auto-sync check...');
+      checkAndAutoSync();
+    }, 3000);
 
-        await checkAndAutoSync();
-      } catch (e) {
-        console.error('[App] App initialization error:', e);
-      } finally {
-        console.log('[App] Hiding splash screen...');
-        try {
-          await SplashScreen.hideAsync();
-          console.log('[App] Splash screen hidden successfully');
-        } catch (splashError) {
-          console.error('[App] Failed to hide splash screen:', splashError);
-        }
-      }
-    };
-
-    setTimeout(() => {
-      console.log('[App] Starting initialization with timeout...');
-      initApp();
-    }, 100);
+    return () => clearTimeout(timeoutId);
   }, []);
 
   return (
