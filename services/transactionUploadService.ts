@@ -1,5 +1,6 @@
 import type { Transaction } from '@/types/pos';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { trpcClient } from '@/lib/trpc';
 
 const TERMINAL_NUMBER_KEY = 'pos_terminal_number';
 
@@ -38,32 +39,14 @@ export class TransactionUploadService {
       console.log('  Folders:', folderData);
       console.log('  Files:', Object.keys(fileData));
 
-      const API_BASE_URL = 'https://app.positron-portal.com';
-      const url = `${API_BASE_URL}/webviewdataupload`;
+      console.log('[TransactionUpload] Uploading via tRPC backend...');
 
-      console.log('[TransactionUpload] Posting to:', url);
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          SITEID: siteId,
-          DESTINATIONWEBVIEWFOLDER: destinationFolder,
-          FOLDERDATA: folderData,
-          FILEDATA: fileData,
-        }),
+      const result = await trpcClient.transaction.upload.mutate({
+        SITEID: siteId,
+        DESTINATIONWEBVIEWFOLDER: destinationFolder,
+        FOLDERDATA: folderData,
+        FILEDATA: fileData,
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[TransactionUpload] Server error:', errorText);
-        throw new Error(`Failed to upload transaction data: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json().catch(() => ({ success: true }));
 
       console.log('[TransactionUpload] Upload successful:', result);
     } catch (error) {
