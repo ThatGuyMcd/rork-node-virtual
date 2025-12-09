@@ -928,6 +928,24 @@ export default function SettingsScreen() {
   const renderReportsConsolidationContent = () => (
     <>
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Terminal Number</Text>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Set unique identifier for this terminal (NV{terminalNumber.padStart(2, '0')})</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.primary, marginBottom: 0, paddingVertical: 8, paddingHorizontal: 16 }]}
+            onPress={() => {
+              setTerminalNumberInput(terminalNumber);
+              setTerminalNumberModalVisible(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.buttonText, { fontSize: 14 }]}>Edit</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
         <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>View transaction history, analytics, and generate reports</Text>
         <TouchableOpacity
           style={[styles.button, { backgroundColor: colors.primary, marginBottom: 0 }]}
@@ -1730,24 +1748,7 @@ export default function SettingsScreen() {
 
   const renderBasketSettingsContent = () => (
     <>
-      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <Text style={[styles.settingTitle, { color: colors.text }]}>Terminal Number</Text>
-            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Set unique identifier for this terminal (NV{terminalNumber.padStart(2, '0')})</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.primary, marginBottom: 0, paddingVertical: 8, paddingHorizontal: 16 }]}
-            onPress={() => {
-              setTerminalNumberInput(terminalNumber);
-              setTerminalNumberModalVisible(true);
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.buttonText, { fontSize: 14 }]}>Edit</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      
 
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
         <View style={styles.settingRow}>
