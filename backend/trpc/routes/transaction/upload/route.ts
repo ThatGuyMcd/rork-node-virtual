@@ -19,7 +19,7 @@ const uploadTransactionDataRoute = publicProcedure
 
     try {
       const API_BASE_URL = 'https://app.positron-portal.com';
-      const url = `${API_BASE_URL}/uploadwebviewdata`;
+      const url = `${API_BASE_URL}/webviewdataupload`;
 
       console.log('[Transaction Upload] Posting to:', url);
 
