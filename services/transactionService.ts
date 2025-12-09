@@ -3,14 +3,19 @@ import type { Transaction, TransactionReport } from '@/types/pos';
 import * as XLSX from 'xlsx';
 
 const TRANSACTIONS_KEY = 'transactions';
+const RECEIPTS_KEY = 'transaction_receipts';
 
 class TransactionService {
-  async saveTransaction(transaction: Transaction): Promise<void> {
+  async saveTransaction(transaction: Transaction, receiptText?: string): Promise<void> {
     try {
       const existing = await this.getAllTransactions();
       const updated = [...existing, transaction];
       await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updated));
       console.log('[TransactionService] Transaction saved:', transaction.id);
+
+      if (receiptText) {
+        await this.saveReceipt(transaction.id, receiptText);
+      }
     } catch (error) {
       console.error('[TransactionService] Error saving transaction:', error);
       throw error;
@@ -152,10 +157,33 @@ class TransactionService {
     }
   }
 
+  async saveReceipt(transactionId: string, receiptText: string): Promise<void> {
+    try {
+      const existing = await this.getAllReceipts();
+      existing[transactionId] = receiptText;
+      await AsyncStorage.setItem(RECEIPTS_KEY, JSON.stringify(existing));
+      console.log('[TransactionService] Receipt saved:', transactionId);
+    } catch (error) {
+      console.error('[TransactionService] Error saving receipt:', error);
+      throw error;
+    }
+  }
+
+  async getAllReceipts(): Promise<Record<string, string>> {
+    try {
+      const data = await AsyncStorage.getItem(RECEIPTS_KEY);
+      return data ? JSON.parse(data) : {};
+    } catch (error) {
+      console.error('[TransactionService] Error loading receipts:', error);
+      return {};
+    }
+  }
+
   async clearAllTransactions(): Promise<void> {
     try {
       await AsyncStorage.removeItem(TRANSACTIONS_KEY);
-      console.log('[TransactionService] All transactions cleared');
+      await AsyncStorage.removeItem(RECEIPTS_KEY);
+      console.log('[TransactionService] All transactions and receipts cleared');
     } catch (error) {
       console.error('[TransactionService] Error clearing transactions:', error);
       throw error;

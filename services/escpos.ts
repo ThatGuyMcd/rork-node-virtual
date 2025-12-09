@@ -242,6 +242,84 @@ export class ESCPOSGenerator {
     return new TextEncoder().encode(receipt);
   }
 
+  generateReceiptText(transaction: Transaction, siteName?: string, receiptSettings?: ReceiptSettings, terminalId?: string, terminalName?: string): string {
+    let receipt = '';
+
+    if (receiptSettings && receiptSettings.headerLines.length > 0) {
+      receiptSettings.headerLines.forEach((line) => {
+        receipt += this.centerText(line.text) + '\r\n';
+      });
+    } else {
+      receipt += this.centerText(siteName || 'RECEIPT') + '\r\n';
+    }
+    
+    receipt += '=' .repeat(this.charsPerLine) + '\r\n\r\n';
+
+    transaction.items.forEach((item) => {
+      const itemName = item.product.name;
+      const quantity = Math.abs(item.quantity);
+      const total = Math.abs(item.lineTotal);
+      
+      receipt += `${quantity} x ${itemName}`.padEnd(this.charsPerLine - 7) + `£${total.toFixed(2)}`.padStart(7) + '\r\n';
+    });
+
+    receipt += '\r\n';
+    const subtotal = Math.abs(transaction.subtotal);
+    receipt += 'Total (inc VAT): '.padEnd(this.charsPerLine - 7) + `£${subtotal.toFixed(2)}`.padStart(7) + '\r\n';
+    receipt += 'Subtotal: '.padEnd(this.charsPerLine - 7) + `£${subtotal.toFixed(2)}`.padStart(7) + '\r\n';
+    receipt += '=' .repeat(this.charsPerLine) + '\r\n';
+
+    if (transaction.payments && transaction.payments.length > 0) {
+      transaction.payments.forEach((payment) => {
+        receipt += `Paid By: ${payment.tenderName}`.padEnd(this.charsPerLine) + '\r\n';
+        receipt += `Amount Paid: £${payment.amount.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
+      });
+    } else {
+      receipt += `Paid By: ${transaction.tenderName}`.padEnd(this.charsPerLine) + '\r\n';
+      const total = Math.abs(transaction.total);
+      receipt += `Amount Paid: £${total.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
+    }
+
+    if (transaction.cashback && transaction.cashback > 0) {
+      receipt += `Change: £${transaction.cashback.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
+    } else {
+      receipt += 'Change: £0.00'.padEnd(this.charsPerLine) + '\r\n';
+    }
+    
+    receipt += '=' .repeat(this.charsPerLine) + '\r\n';
+
+    Object.entries(transaction.vatBreakdown).forEach(([vatCode, vatAmount]) => {
+      receipt += `CODE = ${vatCode} - STANDARD: £${vatAmount.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
+      receipt += `VAT Total: £${vatAmount.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
+    });
+
+    receipt += '=' .repeat(this.charsPerLine) + '\r\n';
+    receipt += `Served by: ${transaction.operatorName}\r\n`;
+    
+    if (terminalId && terminalName) {
+      receipt += `Terminal ID: ${terminalId} - ${terminalName}\r\n`;
+    }
+    
+    receipt += `Transaction ID: ${transaction.id}\r\n`;
+    
+    const date = new Date(transaction.timestamp);
+    const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    receipt += `Time/Date: ${timeStr} / ${dateStr}\r\n`;
+    receipt += '=' .repeat(this.charsPerLine) + '\r\n\r\n';
+
+    if (receiptSettings && receiptSettings.footerLines.length > 0) {
+      receiptSettings.footerLines.forEach((line) => {
+        receipt += this.centerText(line.text) + '\r\n';
+      });
+    } else {
+      receipt += this.centerText('Thank you') + '\r\n';
+      receipt += this.centerText('for visiting us!') + '\r\n';
+    }
+
+    return receipt;
+  }
+
   generateTestReceipt(): Uint8Array {
     let receipt = '';
 

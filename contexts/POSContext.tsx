@@ -7,6 +7,7 @@ import { tableDataService } from '@/services/tableDataService';
 import { transactionService } from '@/services/transactionService';
 import { printerService } from '@/services/printerService';
 import { transactionUploadService } from '@/services/transactionUploadService';
+import { ESCPOSGenerator } from '@/services/escpos';
 
 interface POSContextType {
   currentOperator: Operator | null;
@@ -309,14 +310,27 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         cashback: cashback && cashback > 0 ? cashback : undefined,
       };
       console.log('[POS] Split payment transaction cashback:', cashback, 'transaction.cashback:', transaction.cashback);
-      await transactionService.saveTransaction(transaction);
-      console.log('[POS] Split payment transaction recorded:', transaction.id, allPayments);
       
       try {
         const siteInfo = await dataSyncService.getSiteInfo();
+        const terminalNumber = await transactionUploadService.getTerminalNumber();
+        const terminalId = `NV${terminalNumber.padStart(2, '0')}`;
+        
+        const escposGenerator = new ESCPOSGenerator('80mm');
+        const receiptText = escposGenerator.generateReceiptText(
+          transaction,
+          siteInfo?.siteName,
+          receiptSettings,
+          terminalId,
+          'Terminal'
+        );
+        
+        await transactionService.saveTransaction(transaction, receiptText);
+        console.log('[POS] Split payment transaction recorded:', transaction.id, allPayments);
+        
         if (siteInfo) {
-          await transactionUploadService.uploadTransactionToServer(transaction, siteInfo.siteId);
-          console.log('[POS] Transaction uploaded to server successfully');
+          await transactionUploadService.uploadAllTransactionsToServer(siteInfo.siteId);
+          console.log('[POS] Transactions uploaded to server successfully');
         } else {
           console.warn('[POS] No site info found, skipping transaction upload');
         }
@@ -350,14 +364,26 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         gratuity,
         cashback: cashback && cashback > 0 ? cashback : undefined,
       };
-      await transactionService.saveTransaction(transaction);
-      console.log('[POS] Transaction recorded:', transaction.id);
-      
       try {
         const siteInfo = await dataSyncService.getSiteInfo();
+        const terminalNumber = await transactionUploadService.getTerminalNumber();
+        const terminalId = `NV${terminalNumber.padStart(2, '0')}`;
+        
+        const escposGenerator = new ESCPOSGenerator('80mm');
+        const receiptText = escposGenerator.generateReceiptText(
+          transaction,
+          siteInfo?.siteName,
+          receiptSettings,
+          terminalId,
+          'Terminal'
+        );
+        
+        await transactionService.saveTransaction(transaction, receiptText);
+        console.log('[POS] Transaction recorded:', transaction.id);
+        
         if (siteInfo) {
-          await transactionUploadService.uploadTransactionToServer(transaction, siteInfo.siteId);
-          console.log('[POS] Transaction uploaded to server successfully');
+          await transactionUploadService.uploadAllTransactionsToServer(siteInfo.siteId);
+          console.log('[POS] Transactions uploaded to server successfully');
         } else {
           console.warn('[POS] No site info found, skipping transaction upload');
         }
@@ -385,7 +411,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     setBasketDiscount(0);
     clearBasket();
     console.log('[POS] Payment completed, table still selected for receipt printing');
-  }, [clearBasket, currentTable, currentOperator, tenders, basket, calculateTotals]);
+  }, [clearBasket, currentTable, currentOperator, tenders, basket, calculateTotals, receiptSettings]);
 
   const saveTableOrder = useCallback(() => {
     if (!currentTable || !currentOperator || basket.length === 0) return;
