@@ -17,6 +17,7 @@ import {
 import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, DollarSign, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
 import { printerService } from '@/services/printerService';
+import { transactionUploadService } from '@/services/transactionUploadService';
 import { useRouter } from 'expo-router';
 import type { ProductDisplaySettings, ProductGroup, Department, DiscountSettings, GratuitySettings, PrinterSettings, ReceiptLineSize } from '@/types/pos';
 import { usePOS } from '@/contexts/POSContext';
@@ -146,6 +147,9 @@ export default function SettingsScreen() {
   const [isDraggingRed, setIsDraggingRed] = useState(false);
   const [isDraggingGreen, setIsDraggingGreen] = useState(false);
   const [isDraggingBlue, setIsDraggingBlue] = useState(false);
+  const [terminalNumber, setTerminalNumber] = useState('01');
+  const [terminalNumberModalVisible, setTerminalNumberModalVisible] = useState(false);
+  const [terminalNumberInput, setTerminalNumberInput] = useState('');
   
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     account: true,
@@ -176,6 +180,7 @@ export default function SettingsScreen() {
     loadLastSyncTime();
     loadPrinterSettings();
     loadBackgroundSyncInterval();
+    loadTerminalNumber();
   }, []);
 
   useEffect(() => {
@@ -253,6 +258,27 @@ export default function SettingsScreen() {
   const loadBackgroundSyncInterval = async () => {
     const interval = await dataSyncService.getBackgroundSyncInterval();
     setBackgroundSyncInterval(interval);
+  };
+
+  const loadTerminalNumber = async () => {
+    const number = await transactionUploadService.getTerminalNumber();
+    setTerminalNumber(number);
+  };
+
+  const handleTerminalNumberUpdate = async () => {
+    const number = terminalNumberInput.trim();
+    if (!number) {
+      Alert.alert('Error', 'Please enter a terminal number');
+      return;
+    }
+    if (!/^\d{1,2}$/.test(number)) {
+      Alert.alert('Error', 'Terminal number must be 1-2 digits');
+      return;
+    }
+    await transactionUploadService.setTerminalNumber(number);
+    setTerminalNumber(number);
+    setTerminalNumberModalVisible(false);
+    Alert.alert('Success', `Terminal number set to NV${number.padStart(2, '0')}`);
   };
 
   const handleConnectBluetooth = async () => {
@@ -1707,6 +1733,25 @@ export default function SettingsScreen() {
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Terminal Number</Text>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Set unique identifier for this terminal (NV{terminalNumber.padStart(2, '0')})</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.primary, marginBottom: 0, paddingVertical: 8, paddingHorizontal: 16 }]}
+            onPress={() => {
+              setTerminalNumberInput(terminalNumber);
+              setTerminalNumberModalVisible(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.buttonText, { fontSize: 14 }]}>Edit</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
             <Text style={[styles.settingTitle, { color: colors.text }]}>Table Selection Required</Text>
             <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Require table selection before placing orders</Text>
           </View>
@@ -3154,6 +3199,51 @@ export default function SettingsScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={styles.buttonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={terminalNumberModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTerminalNumberModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Set Terminal Number</Text>
+            
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Terminal Number (1-99)</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+              value={terminalNumberInput}
+              onChangeText={setTerminalNumberInput}
+              placeholder="01"
+              placeholderTextColor={colors.textTertiary}
+              keyboardType="numeric"
+              maxLength={2}
+            />
+
+            <Text style={[styles.infoText, { color: colors.textSecondary, marginTop: 12, fontSize: 13 }]}>
+              This will appear as NV{terminalNumberInput.padStart(2, '0') || '01'} in transaction records
+            </Text>
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.textTertiary, flex: 1 }]}
+                onPress={() => setTerminalNumberModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, flex: 1 }]}
+                onPress={handleTerminalNumberUpdate}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
