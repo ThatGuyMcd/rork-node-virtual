@@ -140,42 +140,50 @@ export class DataSyncService {
       }
     };
 
-    for (let i = 0; i < filesToDownload.length; i++) {
-      const path = filesToDownload[i];
-      const currentNum = i + 1;
+    const BATCH_SIZE = 15;
+    let downloadedCount = 0;
+    let lastProgressFolder = '';
+
+    console.log(`[DataSync] Starting parallel download with batch size: ${BATCH_SIZE}`);
+
+    for (let batchStart = 0; batchStart < filesToDownload.length; batchStart += BATCH_SIZE) {
+      const batchEnd = Math.min(batchStart + BATCH_SIZE, filesToDownload.length);
+      const batch = filesToDownload.slice(batchStart, batchEnd);
       
-      console.log(`[DataSync] Downloading file ${currentNum} of ${filesToDownload.length}: ${path}`);
+      console.log(`[DataSync] Downloading batch ${Math.floor(batchStart / BATCH_SIZE) + 1}: files ${batchStart + 1}-${batchEnd} of ${filesToDownload.length}`);
       
-      try {
-        const text = await apiClient.getFile(siteInfo.siteId, path);
-        files.set(path, text);
-        
-        console.log(`[DataSync] Successfully downloaded: ${path}`);
-        
-        const folder = path.split('/')[0] || 'root';
-        const progressUpdate = {
-          phase: 'downloading' as const,
-          current: currentNum,
-          total: filesToDownload.length,
-          message: getFriendlyName(folder),
-        };
-        
-        onProgress?.(progressUpdate);
-        
-        if (currentNum % 5 === 0 || currentNum === filesToDownload.length) {
-          await new Promise(resolve => setTimeout(resolve, 10));
+      const batchPromises = batch.map(async (path) => {
+        try {
+          const text = await apiClient.getFile(siteInfo.siteId, path);
+          return { path, text, success: true };
+        } catch (error) {
+          console.error(`[DataSync] Failed to download ${path}:`, error);
+          return { path, text: '', success: false };
         }
-      } catch (error) {
-        console.error(`[DataSync] Failed to download ${path}:`, error);
-        const folder = path.split('/')[0] || 'root';
-        const progressUpdate = {
-          phase: 'downloading' as const,
-          current: currentNum,
-          total: filesToDownload.length,
-          message: `Error: ${getFriendlyName(folder)}`,
-        };
-        onProgress?.(progressUpdate);
+      });
+
+      const results = await Promise.all(batchPromises);
+      
+      for (const result of results) {
+        if (result.success) {
+          files.set(result.path, result.text);
+        }
+        downloadedCount++;
+        
+        const folder = result.path.split('/')[0] || 'root';
+        if (folder !== lastProgressFolder) {
+          lastProgressFolder = folder;
+          console.log(`[DataSync] Now downloading: ${getFriendlyName(folder)}`);
+        }
       }
+      
+      const progressUpdate = {
+        phase: 'downloading' as const,
+        current: downloadedCount,
+        total: filesToDownload.length,
+        message: getFriendlyName(lastProgressFolder),
+      };
+      onProgress?.(progressUpdate);
     }
 
     console.log(`[DataSync] Downloaded ${files.size} files successfully`);
