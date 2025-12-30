@@ -16,6 +16,7 @@ import {
 
 import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info, Server, Users, Menu, Loader, Edit2 } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
+import { trpcClient } from '@/lib/trpc';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { printerService } from '@/services/printerService';
 import { transactionUploadService } from '@/services/transactionUploadService';
@@ -476,7 +477,31 @@ export default function SettingsScreen() {
       setSettingsProfiles(profiles);
       setCreateProfileModalVisible(false);
       setProfileNameInput('');
-      Alert.alert('Success', `Settings profile "${name}" saved successfully!`);
+      
+      if (siteInfo) {
+        console.log('[Settings] Uploading profile to server...');
+        try {
+          const uploadResult = await trpcClient.settingsprofile.upload.mutate({
+            siteId: siteInfo.siteId,
+            profileName: name,
+            profileData: profileData,
+            timestamp: profile.timestamp,
+          });
+          
+          if (uploadResult.success) {
+            console.log('[Settings] Profile uploaded successfully');
+            Alert.alert('Success', `Settings profile "${name}" saved and synced to server!`);
+          } else {
+            console.error('[Settings] Profile upload failed:', uploadResult.error);
+            Alert.alert('Success', `Settings profile "${name}" saved locally. Server sync failed.`);
+          }
+        } catch (uploadError) {
+          console.error('[Settings] Error uploading profile:', uploadError);
+          Alert.alert('Success', `Settings profile "${name}" saved locally. Server sync failed.`);
+        }
+      } else {
+        Alert.alert('Success', `Settings profile "${name}" saved successfully!`);
+      }
     } catch (error) {
       console.error('Error saving settings profile:', error);
       Alert.alert('Error', 'Failed to save settings profile');

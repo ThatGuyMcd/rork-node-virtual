@@ -204,6 +204,50 @@ export class DataSyncService {
     await this.saveFileMetadata(filteredManifest);
     await AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
 
+    try {
+      console.log('[DataSync] Downloading settings profiles from server...');
+      onProgress?.({ phase: 'parsing', current: 0, total: 1, message: 'Downloading settings profiles...' });
+      
+      const { trpcClient } = await import('@/lib/trpc');
+      const profilesResult = await trpcClient.settingsprofile.download.query({
+        siteId: siteInfo.siteId,
+      });
+      
+      if (profilesResult.success && profilesResult.profiles.length > 0) {
+        console.log(`[DataSync] Downloaded ${profilesResult.profiles.length} settings profiles`);
+        
+        const existingProfiles = await AsyncStorage.getItem('pos_settings_profiles');
+        const existingProfilesArray = existingProfiles ? JSON.parse(existingProfiles) : [];
+        
+        for (const serverProfile of profilesResult.profiles) {
+          const existingIndex = existingProfilesArray.findIndex((p: any) => p.name === serverProfile.profileName);
+          
+          if (existingIndex >= 0) {
+            existingProfilesArray[existingIndex] = {
+              name: serverProfile.profileName,
+              timestamp: serverProfile.timestamp,
+              data: serverProfile.profileData,
+            };
+          } else {
+            existingProfilesArray.push({
+              name: serverProfile.profileName,
+              timestamp: serverProfile.timestamp,
+              data: serverProfile.profileData,
+            });
+          }
+          
+          await AsyncStorage.setItem(`pos_settings_profile_${serverProfile.profileName}`, JSON.stringify(serverProfile.profileData));
+        }
+        
+        await AsyncStorage.setItem('pos_settings_profiles', JSON.stringify(existingProfilesArray));
+        console.log('[DataSync] Settings profiles synced successfully');
+      } else {
+        console.log('[DataSync] No settings profiles found on server');
+      }
+    } catch (profileError) {
+      console.error('[DataSync] Failed to download settings profiles:', profileError);
+    }
+
     onProgress?.({ phase: 'complete', current: 1, total: 1, message: 'Sync complete!' });
 
     console.log('[DataSync] ========== SYNC COMPLETE ==========');
