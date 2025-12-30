@@ -244,7 +244,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   const refundBasketItem = useCallback((index: number) => {
     const newBasket = [...basket];
     const item = newBasket[index];
-    const newQuantity = -Math.abs(item.quantity);
+    const newQuantity = item.quantity < 0 ? Math.abs(item.quantity) : -Math.abs(item.quantity);
     newBasket[index] = {
       ...item,
       quantity: newQuantity,
