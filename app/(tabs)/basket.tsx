@@ -416,6 +416,7 @@ export default function BasketScreen() {
             if (lowerLabel === 'small') return 'SML';
             if (lowerLabel === 'large') return 'LRG';
             if (lowerLabel === 'half') return 'HALF';
+            if (lowerLabel === 'schooner') return '2/3PT';
             if (label === '125ml' || label === '175ml' || label === '250ml') return label;
             return label;
           };
