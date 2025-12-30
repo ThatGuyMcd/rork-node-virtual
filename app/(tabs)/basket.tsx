@@ -27,6 +27,8 @@ const getPricePrefix = (label: string): string => {
   if (lowerLabel === 'large') return 'LRG';
   if (lowerLabel === 'half') return 'HALF';
   if (lowerLabel === 'schooner') return '2/3PT';
+  if (lowerLabel === 'open') return 'OPEN';
+  if (lowerLabel === 'not set') return 'NOT SET';
   if (label === '125ml' || label === '175ml' || label === '250ml') return label;
   return label === 'standard' ? '' : label;
 };
@@ -423,7 +425,7 @@ export default function BasketScreen() {
           const isRefundItem = item.quantity < 0;
           const prefix = getPricePrefix(item.selectedPrice.label);
           
-          const displayName = prefix !== '' && item.product.name.startsWith(prefix + ' ') 
+          const displayName = prefix !== '' && item.product.name.toUpperCase().startsWith(prefix.toUpperCase() + ' ') 
             ? item.product.name.substring(prefix.length + 1)
             : item.product.name;
           
@@ -989,7 +991,9 @@ export default function BasketScreen() {
                   <Text style={[styles.receiptSectionTitle, { color: colors.text }]}>Items</Text>
                   {lastTransaction.items.map((item, index) => {
                     const prefix = getPricePrefix(item.selectedPrice.label);
-                    const displayName = prefix ? `${prefix} ${item.product.name}` : item.product.name;
+                    const displayName = (prefix && !item.product.name.toUpperCase().startsWith(prefix.toUpperCase() + ' '))
+                      ? `${prefix} ${item.product.name}` 
+                      : item.product.name;
                     return (
                     <View key={index} style={styles.receiptItemRow}>
                       <View style={styles.receiptItemInfo}>
