@@ -181,3 +181,37 @@ export interface ReceiptSettings {
   headerLines: ReceiptLine[];
   footerLines: ReceiptLine[];
 }
+
+export interface SettingsProfile {
+  id: string;
+  name: string;
+  createdAt: string;
+  createdBy: string; // Operator name
+  settings: {
+    // POS Settings
+    tableSelectionRequired: boolean;
+    productViewLayout: 'compact' | 'standard' | 'large';
+    productViewMode: 'group-department' | 'all-departments' | 'all-items';
+    productDisplaySettings: ProductDisplaySettings;
+    discountSettings: DiscountSettings;
+    gratuitySettings: GratuitySettings;
+    printerSettings: PrinterSettings;
+    receiptSettings: ReceiptSettings;
+    terminalNumber: string;
+    
+    // Feature Flags
+    cardPaymentEnabled: boolean;
+    cashPaymentEnabled: boolean;
+    splitPaymentsEnabled: boolean;
+    cardMachineProvider: 'Teya' | 'None';
+    changeAllowed: boolean;
+    cashbackAllowed: boolean;
+    refundButtonEnabled: boolean;
+    backgroundSyncInterval: 'disabled' | '6' | '12' | '24';
+    
+    // Theme Settings
+    themePreference: 'light' | 'dark' | 'system' | 'custom' | string;
+    customColors: any | null;
+    buttonSkin: 'default' | 'rounded' | 'sharp' | 'soft' | 'outlined' | 'minimal';
+  };
+}
