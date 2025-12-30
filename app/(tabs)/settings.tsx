@@ -1933,23 +1933,71 @@ export default function SettingsScreen() {
 
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
         <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Preset Discount Percentages</Text>
-        <View style={styles.discountPercentagesList}>
-          {discountPercentages.map((percentage, index) => (
-            <View key={index} style={[styles.discountPercentageItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <Text style={[styles.discountPercentageText, { color: colors.text }]}>{percentage}%</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  const newPercentages = discountPercentages.filter((_, i) => i !== index);
-                  setDiscountPercentages(newPercentages);
-                  updateDiscountSettings({ ...discountSettings, presetPercentages: newPercentages.map(Number) });
-                }}
-                activeOpacity={0.7}
-              >
-                <X size={18} color={colors.textTertiary} />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
+        {discountPercentages.length === 0 ? (
+          <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No discount percentages added yet</Text>
+        ) : (
+          <View style={styles.percentagesList}>
+            {discountPercentages.map((percentage, index) => (
+              <View key={index} style={[styles.percentageItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={[styles.percentageValue, { color: colors.text }]}>{percentage}%</Text>
+                <View style={styles.percentageActions}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (index > 0) {
+                        const newPercentages = [...discountPercentages];
+                        [newPercentages[index - 1], newPercentages[index]] = [newPercentages[index], newPercentages[index - 1]];
+                        setDiscountPercentages(newPercentages);
+                        updateDiscountSettings({ ...discountSettings, presetPercentages: newPercentages.map(Number) });
+                      }
+                    }}
+                    style={[styles.percentageActionButton, index === 0 && { opacity: 0.3 }]}
+                    disabled={index === 0}
+                    activeOpacity={0.7}
+                  >
+                    <ArrowUp size={16} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (index < discountPercentages.length - 1) {
+                        const newPercentages = [...discountPercentages];
+                        [newPercentages[index], newPercentages[index + 1]] = [newPercentages[index + 1], newPercentages[index]];
+                        setDiscountPercentages(newPercentages);
+                        updateDiscountSettings({ ...discountSettings, presetPercentages: newPercentages.map(Number) });
+                      }
+                    }}
+                    style={[styles.percentageActionButton, index === discountPercentages.length - 1 && { opacity: 0.3 }]}
+                    disabled={index === discountPercentages.length - 1}
+                    activeOpacity={0.7}
+                  >
+                    <ArrowDown size={16} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setEditingDiscountIndex(index);
+                      setDiscountInputValue(percentage);
+                      setDiscountModalVisible(true);
+                    }}
+                    style={styles.percentageActionButton}
+                    activeOpacity={0.7}
+                  >
+                    <Paintbrush size={16} color={colors.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const newPercentages = discountPercentages.filter((_, i) => i !== index);
+                      setDiscountPercentages(newPercentages);
+                      updateDiscountSettings({ ...discountSettings, presetPercentages: newPercentages.map(Number) });
+                    }}
+                    style={styles.percentageActionButton}
+                    activeOpacity={0.7}
+                  >
+                    <Trash2 size={16} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
         <TouchableOpacity
           style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
           onPress={() => {
@@ -1982,23 +2030,71 @@ export default function SettingsScreen() {
       {gratuitySettings.enabled && (
         <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
           <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Preset Gratuity Percentages</Text>
-          <View style={styles.discountPercentagesList}>
-            {gratuityPercentages.map((percentage, index) => (
-              <View key={index} style={[styles.discountPercentageItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                <Text style={[styles.discountPercentageText, { color: colors.text }]}>{percentage}%</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    const newPercentages = gratuityPercentages.filter((_, i) => i !== index);
-                    setGratuityPercentages(newPercentages);
-                    updateGratuitySettings({ ...gratuitySettings, presetPercentages: newPercentages.map(Number) });
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <X size={18} color={colors.textTertiary} />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
+          {gratuityPercentages.length === 0 ? (
+            <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No gratuity percentages added yet</Text>
+          ) : (
+            <View style={styles.percentagesList}>
+              {gratuityPercentages.map((percentage, index) => (
+                <View key={index} style={[styles.percentageItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Text style={[styles.percentageValue, { color: colors.text }]}>{percentage}%</Text>
+                  <View style={styles.percentageActions}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (index > 0) {
+                          const newPercentages = [...gratuityPercentages];
+                          [newPercentages[index - 1], newPercentages[index]] = [newPercentages[index], newPercentages[index - 1]];
+                          setGratuityPercentages(newPercentages);
+                          updateGratuitySettings({ ...gratuitySettings, presetPercentages: newPercentages.map(Number) });
+                        }
+                      }}
+                      style={[styles.percentageActionButton, index === 0 && { opacity: 0.3 }]}
+                      disabled={index === 0}
+                      activeOpacity={0.7}
+                    >
+                      <ArrowUp size={16} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (index < gratuityPercentages.length - 1) {
+                          const newPercentages = [...gratuityPercentages];
+                          [newPercentages[index], newPercentages[index + 1]] = [newPercentages[index + 1], newPercentages[index]];
+                          setGratuityPercentages(newPercentages);
+                          updateGratuitySettings({ ...gratuitySettings, presetPercentages: newPercentages.map(Number) });
+                        }
+                      }}
+                      style={[styles.percentageActionButton, index === gratuityPercentages.length - 1 && { opacity: 0.3 }]}
+                      disabled={index === gratuityPercentages.length - 1}
+                      activeOpacity={0.7}
+                    >
+                      <ArrowDown size={16} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setEditingGratuityIndex(index);
+                        setGratuityInputValue(percentage);
+                        setGratuityModalVisible(true);
+                      }}
+                      style={styles.percentageActionButton}
+                      activeOpacity={0.7}
+                    >
+                      <Paintbrush size={16} color={colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        const newPercentages = gratuityPercentages.filter((_, i) => i !== index);
+                        setGratuityPercentages(newPercentages);
+                        updateGratuitySettings({ ...gratuitySettings, presetPercentages: newPercentages.map(Number) });
+                      }}
+                      style={styles.percentageActionButton}
+                      activeOpacity={0.7}
+                    >
+                      <Trash2 size={16} color={colors.textTertiary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
           <TouchableOpacity
             style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
             onPress={() => {
@@ -2016,96 +2112,7 @@ export default function SettingsScreen() {
     </>
   );
 
-  const renderDiscountContent = () => (
-    <>
-      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-        <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Preset Discount Percentages</Text>
-        <View style={styles.discountPercentagesList}>
-          {discountPercentages.map((percentage, index) => (
-            <View key={index} style={[styles.discountPercentageItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <Text style={[styles.discountPercentageText, { color: colors.text }]}>{percentage}%</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  const newPercentages = discountPercentages.filter((_, i) => i !== index);
-                  setDiscountPercentages(newPercentages);
-                  updateDiscountSettings({ ...discountSettings, presetPercentages: newPercentages.map(Number) });
-                }}
-                activeOpacity={0.7}
-              >
-                <X size={18} color={colors.textTertiary} />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
-          onPress={() => {
-            setEditingDiscountIndex(null);
-            setDiscountInputValue('');
-            setDiscountModalVisible(true);
-          }}
-          activeOpacity={0.8}
-        >
-          <Percent size={20} color="#ffffff" />
-          <Text style={styles.buttonText}>Add Percentage</Text>
-        </TouchableOpacity>
-      </View>
-    </>
-  );
 
-  const renderGratuityContent = () => (
-    <>
-      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <Text style={[styles.settingTitle, { color: colors.text }]}>Enable Gratuity</Text>
-            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Allow adding tips to transactions</Text>
-          </View>
-          <Switch
-            value={gratuitySettings.enabled}
-            onValueChange={(value) => updateGratuitySettings({ ...gratuitySettings, enabled: value })}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor="#ffffff"
-          />
-        </View>
-      </View>
-
-      {gratuitySettings.enabled && (
-        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-          <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Preset Gratuity Percentages</Text>
-          <View style={styles.discountPercentagesList}>
-            {gratuityPercentages.map((percentage, index) => (
-              <View key={index} style={[styles.discountPercentageItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                <Text style={[styles.discountPercentageText, { color: colors.text }]}>{percentage}%</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    const newPercentages = gratuityPercentages.filter((_, i) => i !== index);
-                    setGratuityPercentages(newPercentages);
-                    updateGratuitySettings({ ...gratuitySettings, presetPercentages: newPercentages.map(Number) });
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <X size={18} color={colors.textTertiary} />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
-            onPress={() => {
-              setEditingGratuityIndex(null);
-              setGratuityInputValue('');
-              setGratuityModalVisible(true);
-            }}
-            activeOpacity={0.8}
-          >
-            <Percent size={20} color="#ffffff" />
-            <Text style={styles.buttonText}>Add Percentage</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </>
-  );
 
   const renderPrinterContent = () => (
     <>
@@ -2865,7 +2872,7 @@ export default function SettingsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Add Discount Percentage</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{editingDiscountIndex !== null ? 'Edit Discount Percentage' : 'Add Discount Percentage'}</Text>
             
             <Text style={[styles.label, { color: colors.textSecondary }]}>Percentage</Text>
             <TextInput
@@ -2890,9 +2897,16 @@ export default function SettingsScreen() {
                 onPress={() => {
                   const value = parseFloat(discountInputValue);
                   if (!isNaN(value) && value > 0 && value <= 100) {
-                    const newPercentages = [...discountPercentages, discountInputValue];
-                    setDiscountPercentages(newPercentages);
-                    updateDiscountSettings({ ...discountSettings, presetPercentages: newPercentages.map(Number) });
+                    if (editingDiscountIndex !== null) {
+                      const newPercentages = [...discountPercentages];
+                      newPercentages[editingDiscountIndex] = discountInputValue;
+                      setDiscountPercentages(newPercentages);
+                      updateDiscountSettings({ ...discountSettings, presetPercentages: newPercentages.map(Number) });
+                    } else {
+                      const newPercentages = [...discountPercentages, discountInputValue];
+                      setDiscountPercentages(newPercentages);
+                      updateDiscountSettings({ ...discountSettings, presetPercentages: newPercentages.map(Number) });
+                    }
                     setDiscountModalVisible(false);
                   } else {
                     Alert.alert('Invalid Input', 'Please enter a valid percentage between 0 and 100');
@@ -2900,7 +2914,7 @@ export default function SettingsScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={styles.buttonText}>Add</Text>
+                <Text style={styles.buttonText}>{editingDiscountIndex !== null ? 'Save' : 'Add'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2915,7 +2929,7 @@ export default function SettingsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Add Gratuity Percentage</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{editingGratuityIndex !== null ? 'Edit Gratuity Percentage' : 'Add Gratuity Percentage'}</Text>
             
             <Text style={[styles.label, { color: colors.textSecondary }]}>Percentage</Text>
             <TextInput
@@ -2940,9 +2954,16 @@ export default function SettingsScreen() {
                 onPress={() => {
                   const value = parseFloat(gratuityInputValue);
                   if (!isNaN(value) && value > 0 && value <= 100) {
-                    const newPercentages = [...gratuityPercentages, gratuityInputValue];
-                    setGratuityPercentages(newPercentages);
-                    updateGratuitySettings({ ...gratuitySettings, presetPercentages: newPercentages.map(Number) });
+                    if (editingGratuityIndex !== null) {
+                      const newPercentages = [...gratuityPercentages];
+                      newPercentages[editingGratuityIndex] = gratuityInputValue;
+                      setGratuityPercentages(newPercentages);
+                      updateGratuitySettings({ ...gratuitySettings, presetPercentages: newPercentages.map(Number) });
+                    } else {
+                      const newPercentages = [...gratuityPercentages, gratuityInputValue];
+                      setGratuityPercentages(newPercentages);
+                      updateGratuitySettings({ ...gratuitySettings, presetPercentages: newPercentages.map(Number) });
+                    }
                     setGratuityModalVisible(false);
                   } else {
                     Alert.alert('Invalid Input', 'Please enter a valid percentage between 0 and 100');
@@ -2950,7 +2971,7 @@ export default function SettingsScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={styles.buttonText}>Add</Text>
+                <Text style={styles.buttonText}>{editingGratuityIndex !== null ? 'Save' : 'Add'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -3763,23 +3784,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
   },
-  discountPercentagesList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  emptyText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    marginBottom: 12,
   },
-  discountPercentageItem: {
+  percentagesList: {
+    gap: 8,
+    marginBottom: 8,
+  },
+  percentageItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    justifyContent: 'space-between',
+    padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    gap: 8,
+    gap: 12,
   },
-  discountPercentageText: {
-    fontSize: 14,
-    fontWeight: '500',
+  percentageValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+  },
+  percentageActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  percentageActionButton: {
+    padding: 6,
   },
   receiptLinesContainer: {
     gap: 8,
