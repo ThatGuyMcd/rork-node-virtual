@@ -1344,9 +1344,6 @@ export default function ProductsScreen() {
             style={styles.backButton}
             onPress={() => {
               setSelectedDepartment(null);
-              if (productViewMode === 'group-department') {
-                setSelectedGroup(null);
-              }
             }}
           >
             <ChevronLeft size={24} color="#3b82f6" />
