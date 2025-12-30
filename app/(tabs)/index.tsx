@@ -1851,12 +1851,13 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
-    paddingTop: 16,
+    paddingTop: 8,
   },
   heading: {
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 16,
+    textAlign: 'center',
   },
   backButton: {
     flexDirection: 'row',
@@ -2095,7 +2096,7 @@ const styles = StyleSheet.create({
   tableBar: {
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: 8,
+    paddingBottom: 4,
   },
   tableBarContent: {
     flexDirection: 'row',
