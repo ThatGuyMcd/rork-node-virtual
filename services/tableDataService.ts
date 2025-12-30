@@ -309,6 +309,9 @@ class TableDataService {
         content = header;
       } else {
         content = await FileSystem.readAsStringAsync(filePath);
+        if (content.length > 0 && !content.endsWith('\n')) {
+          content += '\n';
+        }
       }
 
       for (const row of rows) {
