@@ -25,8 +25,8 @@ export const uploadStoredTabRoute = publicProcedure
 
     const payload = {
       SITEID: siteId,
-      DESTINATIONWEBVIEWFOLDER: 'DATA',
-      FOLDERDATA: ['OPERATORDATA', 'OPERATORDATA/Stored Operator Tabs'],
+      DESTINATIONWEBVIEWFOLDER: '',
+      FOLDERDATA: ['DATA/OPERATORDATA', 'DATA/OPERATORDATA/Stored Operator Tabs'],
       FILEDATA: {
         [`DATA/OPERATORDATA/Stored Operator Tabs/${fileName}`]: csvContent,
       },
