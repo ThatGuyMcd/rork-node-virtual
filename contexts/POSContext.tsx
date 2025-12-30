@@ -42,6 +42,7 @@ interface POSContextType {
   addToBasket: (product: Product, selectedPrice: any, quantity?: number, manualPrice?: number) => void;
   updateBasketItemQuantity: (index: number, quantity: number) => void;
   updateBasketItemMessage: (index: number, message: string) => void;
+  refundBasketItem: (index: number) => void;
   removeFromBasket: (index: number) => void;
   clearBasket: () => void;
   completeSale: (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[], gratuity?: number, cashback?: number) => Promise<void>;
@@ -236,6 +237,18 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     newBasket[index].product = { 
       ...item.product, 
       name: message ? `${baseName} - ${message}` : baseName 
+    };
+    setBasket(newBasket);
+  }, [basket]);
+
+  const refundBasketItem = useCallback((index: number) => {
+    const newBasket = [...basket];
+    const item = newBasket[index];
+    const newQuantity = -Math.abs(item.quantity);
+    newBasket[index] = {
+      ...item,
+      quantity: newQuantity,
+      lineTotal: newQuantity * item.selectedPrice.price,
     };
     setBasket(newBasket);
   }, [basket]);
@@ -745,6 +758,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     addToBasket,
     updateBasketItemQuantity,
     updateBasketItemMessage,
+    refundBasketItem,
     removeFromBasket,
     clearBasket,
     completeSale,

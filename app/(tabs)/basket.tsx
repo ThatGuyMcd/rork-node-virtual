@@ -254,6 +254,7 @@ export default function BasketScreen() {
     currentOperator,
     updateBasketItemQuantity,
     updateBasketItemMessage,
+    refundBasketItem,
     removeFromBasket,
     clearBasket,
     calculateTotals,
@@ -273,7 +274,6 @@ export default function BasketScreen() {
     cashbackAllowed,
     savingTable,
     processingTransaction,
-    addToBasket,
   } = usePOS();
   const { colors, theme } = useTheme();
 
@@ -532,13 +532,7 @@ export default function BasketScreen() {
   };
 
   const handleRefundItem = (index: number) => {
-    const item = basket[index];
-    addToBasket(
-      item.product,
-      item.selectedPrice,
-      -Math.abs(item.quantity),
-      item.selectedPrice.price
-    );
+    refundBasketItem(index);
   };
 
   const handleConfirmChange = async () => {
