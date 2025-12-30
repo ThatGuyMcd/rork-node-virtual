@@ -20,23 +20,15 @@ export const uploadStoredTabRoute = publicProcedure
     const fileName = `${operatorName}_StoredTab.csv`;
     const filePath = `OPERATORDATA/Stored Operator Tabs/${fileName}`;
 
-    const RORK_DB_ENDPOINT = process.env.EXPO_PUBLIC_RORK_DB_ENDPOINT;
-    const RORK_DB_NAMESPACE = process.env.EXPO_PUBLIC_RORK_DB_NAMESPACE;
-    const RORK_DB_TOKEN = process.env.EXPO_PUBLIC_RORK_DB_TOKEN;
-
-    if (!RORK_DB_ENDPOINT || !RORK_DB_NAMESPACE || !RORK_DB_TOKEN) {
-      console.error('[StoredTab Upload] Missing database configuration');
-      throw new Error('Database configuration is missing');
-    }
-
-    const uploadUrl = `${RORK_DB_ENDPOINT}/upload`;
+    const API_BASE_URL = 'https://app.positron-portal.com';
+    const uploadUrl = `${API_BASE_URL}/webviewdataupload`;
 
     const payload = {
       SITEID: siteId,
-      DESTINATIONWEBVIEWFOLDER: 'OPERATORDATA',
-      FOLDERDATA: ['Stored Operator Tabs'],
+      DESTINATIONWEBVIEWFOLDER: 'DATA',
+      FOLDERDATA: ['OPERATORDATA', 'OPERATORDATA/Stored Operator Tabs'],
       FILEDATA: {
-        [`Stored Operator Tabs/${fileName}`]: csvContent,
+        [`DATA/OPERATORDATA/Stored Operator Tabs/${fileName}`]: csvContent,
       },
     };
 
@@ -48,8 +40,7 @@ export const uploadStoredTabRoute = publicProcedure
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${RORK_DB_TOKEN}`,
-          'surreal-ns': RORK_DB_NAMESPACE,
+          'Accept': 'application/json',
         },
         body: JSON.stringify(payload),
       });
@@ -60,14 +51,15 @@ export const uploadStoredTabRoute = publicProcedure
         throw new Error(`Upload failed: ${response.statusText}`);
       }
 
-      await response.json();
-      console.log('[StoredTab Upload] Upload successful');
+      const result = await response.json().catch(() => ({ success: true }));
+      console.log('[StoredTab Upload] Upload successful:', result);
       console.log('[StoredTab Upload] ========== UPLOAD COMPLETE ==========');
 
       return {
         success: true,
         message: 'Stored tab uploaded successfully',
         filePath,
+        serverResponse: result,
       };
     } catch (error) {
       console.error('[StoredTab Upload] Error:', error);
