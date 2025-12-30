@@ -1076,40 +1076,43 @@ export default function ProductsScreen() {
       <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
 
       {tables.length > 0 && (
-        <View style={[styles.tableBar, { backgroundColor: colors.cardBackground, borderBottomColor: colors.primary }]}>
-          <View style={styles.tableBarRow}>
+        <View style={[styles.tableBar, { backgroundColor: colors.background }]}>
+          <View style={styles.tableBarContent}>
             <TouchableOpacity
-              style={[styles.tableButton, currentTable && { backgroundColor: currentTable.color }]}
+              style={[
+                styles.tableChip,
+                { 
+                  backgroundColor: currentTable ? currentTable.color : colors.cardBackground,
+                  borderColor: currentTable ? 'transparent' : colors.border,
+                }
+              ]}
               onPress={() => setTableModalVisible(true)}
               activeOpacity={0.7}
             >
-              <Grid3x3 size={20} color="#fff" />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.tableButtonText}>
-                  {currentTable ? currentTable.name : 'No Table Selected'}
+              <Grid3x3 size={16} color={currentTable ? "#fff" : colors.textSecondary} />
+              <View style={styles.tableChipContent}>
+                <Text style={[styles.tableChipText, { color: currentTable ? '#fff' : colors.textSecondary }]}>
+                  {currentTable ? currentTable.name : 'Select Table'}
                 </Text>
                 {currentTable && (
-                  <Text style={styles.tableButtonCode}>{currentTable.area} • Code: {currentTable.tabCode}</Text>
+                  <Text style={styles.tableChipSubtext}>{currentTable.area}</Text>
                 )}
               </View>
             </TouchableOpacity>
             {currentTable && (
               <TouchableOpacity
-                style={[styles.saveTableButton, { backgroundColor: colors.primary }]}
+                style={[styles.saveChip, { backgroundColor: colors.primary }]}
                 onPress={async () => {
                   await saveTableTab();
                   showNotification('Table saved and logged out');
                 }}
                 activeOpacity={0.7}
               >
-                <Save size={20} color="#fff" />
-                <Text style={styles.saveTableButtonText}>Save Tab</Text>
+                <Save size={16} color="#fff" />
+                <Text style={styles.saveChipText}>Save</Text>
               </TouchableOpacity>
             )}
           </View>
-          {!currentTable && (
-            <Text style={styles.tableHint}>Tap to select a table</Text>
-          )}
         </View>
       )}
 
@@ -2090,56 +2093,60 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   tableBar: {
-    backgroundColor: '#1e293b',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: '#3b82f6',
+    paddingTop: 10,
+    paddingBottom: 8,
   },
-  tableBarRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  tableButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#334155',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#3b82f6',
-  },
-  saveTableButton: {
+  tableBarContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
   },
-  saveTableButtonText: {
+  tableChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tableChipContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  tableChipText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
+  },
+  tableChipSubtext: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  saveChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  saveChipText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#fff',
-  },
-  tableButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  tableButtonCode: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginTop: 2,
-  },
-  tableHint: {
-    fontSize: 12,
-    color: '#94a3b8',
-    marginTop: 6,
-    fontStyle: 'italic' as const,
   },
   tableModal: {
     borderRadius: 20,
