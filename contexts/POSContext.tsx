@@ -468,8 +468,22 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         for (let rowIdx = 0; rowIdx < csvRows.length; rowIdx++) {
           const row = csvRows[rowIdx];
           console.log(`[POS] Processing row ${rowIdx + 1}/${csvRows.length}: ${row.productName}`);
-          const baseName = row.productName.split(' - ')[0];
-          let product = products.find(p => p.name === baseName || p.name === row.productName);
+          
+          const prefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML'];
+          let detectedPrefix: string | null = null;
+          let productNameWithoutPrefix = row.productName;
+          
+          for (const prefix of prefixes) {
+            if (row.productName.toUpperCase().startsWith(prefix + ' ')) {
+              detectedPrefix = prefix;
+              productNameWithoutPrefix = row.productName.substring(prefix.length + 1);
+              console.log(`[POS] Detected prefix "${detectedPrefix}", stripped name: ${productNameWithoutPrefix}`);
+              break;
+            }
+          }
+          
+          const baseName = productNameWithoutPrefix.split(' - ')[0];
+          let product = products.find(p => p.name === baseName || p.name === productNameWithoutPrefix);
           
           if (!product && row.pluFile) {
             product = products.find(p => {
@@ -482,21 +496,11 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           if (product) {
             let selectedPrice = product.prices[0] || { key: 'PRICE_STANDARD', label: 'standard', price: row.price };
             
-            const prefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ml', '175ml', '250ml'];
-            let detectedPrefix: string | null = null;
-            
-            for (const prefix of prefixes) {
-              if (row.productName.startsWith(prefix + ' ')) {
-                detectedPrefix = prefix;
-                break;
-              }
-            }
-            
             if (detectedPrefix) {
               const matchingPrice = product.prices.find(p => p.label.toUpperCase() === detectedPrefix);
               if (matchingPrice) {
                 selectedPrice = matchingPrice;
-                console.log(`[POS] Detected prefix "${detectedPrefix}" for ${row.productName}, using price: ${matchingPrice.price}`);
+                console.log(`[POS] Using price for prefix "${detectedPrefix}": ${matchingPrice.price}`);
               } else {
                 console.warn(`[POS] Could not find matching price for prefix "${detectedPrefix}" in product ${product.name}`);
               }
@@ -504,7 +508,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
               const standardPrice = product.prices.find(p => p.label.toLowerCase() === 'standard');
               if (standardPrice) {
                 selectedPrice = standardPrice;
-                console.log(`[POS] No prefix detected for ${row.productName}, using standard price: ${standardPrice.price}`);
+                console.log(`[POS] No prefix detected, using standard price: ${standardPrice.price}`);
               }
             }
             
