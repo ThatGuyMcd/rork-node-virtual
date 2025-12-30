@@ -2353,7 +2353,7 @@ export default function SettingsScreen() {
       <ScrollView 
         ref={scrollViewRef}
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: 100 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: 50 }]}
         showsVerticalScrollIndicator={false}
         scrollIndicatorInsets={{ top: 90 }}
       >
