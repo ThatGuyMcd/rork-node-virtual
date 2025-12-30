@@ -16,7 +16,7 @@ export const uploadSettingsProfileProcedure = publicProcedure
     
     try {
       const API_BASE_URL = 'https://app.positron-portal.com/api/v1';
-      const url = `${API_BASE_URL}/sites/${encodeURIComponent(input.siteId)}/data/settings-profile`;
+      const url = `${API_BASE_URL}/sites/${encodeURIComponent(input.siteId)}/data/settings-profiles`;
       
       console.log('[tRPC] Posting to:', url);
       
