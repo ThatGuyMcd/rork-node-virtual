@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [storedTabStatuses, setStoredTabStatuses] = useState<Map<string, { hasData: boolean; total: number }>>(new Map());
+  const [isPolling, setIsPolling] = useState(false);
   const { login } = usePOS();
   const { colors, theme, buttonSkin } = useTheme();
   const router = useRouter();
@@ -160,10 +161,6 @@ export default function LoginScreen() {
     }
   };
 
-  useEffect(() => {
-    loadOperators();
-  }, []);
-
   const loadOperators = async () => {
     setLoading(true);
     try {
@@ -180,6 +177,45 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
+  const refreshStoredTabStatuses = useCallback(async () => {
+    if (isPolling || operators.length === 0) return;
+    
+    setIsPolling(true);
+    try {
+      console.log('[Login] Polling stored tabs from server...');
+      await storedTabService.downloadStoredTabsFromServer();
+      
+      const operatorNames = operators.map(op => op.name);
+      const statuses = await storedTabService.getAllStoredTabStatuses(operatorNames);
+      setStoredTabStatuses(statuses);
+      console.log('[Login] Stored tab statuses refreshed');
+    } catch (error) {
+      console.error('[Login] Failed to refresh stored tabs:', error);
+    } finally {
+      setIsPolling(false);
+    }
+  }, [isPolling, operators]);
+
+  useEffect(() => {
+    loadOperators();
+  }, []);
+
+  useEffect(() => {
+    if (selectedOperator || operators.length === 0) {
+      return;
+    }
+
+    console.log('[Login] Starting periodic stored tab polling (10s interval)');
+    const interval = setInterval(() => {
+      refreshStoredTabStatuses();
+    }, 10000);
+
+    return () => {
+      console.log('[Login] Stopping stored tab polling');
+      clearInterval(interval);
+    };
+  }, [selectedOperator, operators, refreshStoredTabStatuses]);
 
   const handleOperatorSelect = async (operator: Operator) => {
     if (!operator.pin || operator.pin.trim() === '') {
