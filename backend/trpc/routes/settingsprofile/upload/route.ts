@@ -16,7 +16,7 @@ export const uploadSettingsProfileProcedure = publicProcedure
     try {
       const fileData: Record<string, string> = {};
       for (const [profileName, profileInfo] of Object.entries(input.allProfiles)) {
-        const fileName = `${profileName}.json`;
+        const fileName = `settings-profiles/${profileName}.json`;
         fileData[fileName] = JSON.stringify(profileInfo);
       }
       
