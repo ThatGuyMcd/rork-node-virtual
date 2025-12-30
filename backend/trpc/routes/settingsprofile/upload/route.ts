@@ -5,34 +5,32 @@ export const uploadSettingsProfileProcedure = publicProcedure
   .input(
     z.object({
       siteId: z.string(),
-      profileName: z.string(),
-      profileData: z.any(),
-      timestamp: z.string(),
+      allProfiles: z.record(z.string(), z.any()),
     })
   )
   .mutation(async ({ input }) => {
-    console.log('[tRPC] Uploading settings profile:', input.profileName);
+    console.log('[tRPC] Uploading all settings profiles');
     console.log('[tRPC] Site ID:', input.siteId);
+    console.log('[tRPC] Profile count:', Object.keys(input.allProfiles).length);
     
     try {
-      const fileName = `${input.profileName}.json`;
       const folderPath = `${input.siteId}/settings-profiles`;
+      
+      const fileData: Record<string, string> = {};
+      for (const [profileName, profileInfo] of Object.entries(input.allProfiles)) {
+        const fileName = `${profileName}.json`;
+        fileData[fileName] = JSON.stringify(profileInfo);
+      }
       
       const uploadData = {
         SITEID: input.siteId,
         DESTINATIONWEBVIEWFOLDER: folderPath,
         FOLDERDATA: ['settings-profiles'],
-        FILEDATA: {
-          [fileName]: JSON.stringify({
-            profileName: input.profileName,
-            profileData: input.profileData,
-            timestamp: input.timestamp,
-          }),
-        },
+        FILEDATA: fileData,
       };
       
       console.log('[tRPC] Posting to: https://app.positron-portal.com/webviewdataupload');
-      console.log('[tRPC] Uploading profile to folder:', folderPath);
+      console.log('[tRPC] Uploading', Object.keys(fileData).length, 'profiles to folder:', folderPath);
       
       const response = await fetch('https://app.positron-portal.com/webviewdataupload', {
         method: 'POST',
@@ -54,15 +52,14 @@ export const uploadSettingsProfileProcedure = publicProcedure
       
       return {
         success: true,
-        profileName: input.profileName,
+        profileCount: Object.keys(input.allProfiles).length,
         serverResponse: result,
       };
     } catch (error: any) {
-      console.error('[tRPC] Error uploading profile to server:', error);
+      console.error('[tRPC] Error uploading profiles to server:', error);
       
       return {
         success: false,
-        profileName: input.profileName,
         error: error.message,
       };
     }

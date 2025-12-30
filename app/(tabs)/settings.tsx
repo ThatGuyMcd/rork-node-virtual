@@ -479,24 +479,37 @@ export default function SettingsScreen() {
       setProfileNameInput('');
       
       if (siteInfo) {
-        console.log('[Settings] Uploading profile to server...');
+        console.log('[Settings] Uploading all profiles to server...');
         try {
+          const allProfilesData: Record<string, any> = {};
+          
+          for (const prof of profiles) {
+            const profileDataFromStorage = await AsyncStorage.getItem(`pos_settings_profile_${prof.name}`);
+            if (profileDataFromStorage) {
+              allProfilesData[prof.name] = {
+                profileName: prof.name,
+                profileData: JSON.parse(profileDataFromStorage),
+                timestamp: prof.timestamp,
+              };
+            }
+          }
+          
+          console.log('[Settings] Uploading', Object.keys(allProfilesData).length, 'profiles');
+          
           const uploadResult = await trpcClient.settingsprofile.upload.mutate({
             siteId: siteInfo.siteId,
-            profileName: name,
-            profileData: profileData,
-            timestamp: profile.timestamp,
+            allProfiles: allProfilesData,
           });
           
           if (uploadResult.success) {
-            console.log('[Settings] Profile uploaded successfully');
+            console.log('[Settings] All profiles uploaded successfully');
             Alert.alert('Success', `Settings profile "${name}" saved and synced to server!`);
           } else {
             console.error('[Settings] Profile upload failed:', uploadResult.error);
             Alert.alert('Success', `Settings profile "${name}" saved locally. Server sync failed.`);
           }
         } catch (uploadError) {
-          console.error('[Settings] Error uploading profile:', uploadError);
+          console.error('[Settings] Error uploading profiles:', uploadError);
           Alert.alert('Success', `Settings profile "${name}" saved locally. Server sync failed.`);
         }
       } else {
@@ -2710,7 +2723,7 @@ export default function SettingsScreen() {
 
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
         <Text style={[styles.label, { color: colors.textSecondary }]}>Version</Text>
-        <Text style={[styles.value, { color: colors.text }]}>1.0.0</Text>
+        <Text style={[styles.value, { color: colors.text }]}>1.0.1</Text>
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -2721,13 +2734,13 @@ export default function SettingsScreen() {
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
         <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 8 }]}>Description</Text>
         <Text style={[styles.infoText, { color: colors.text }]}>
-          A modern Point of Sale (POS) system featuring real-time product management, flexible payment options, detailed reporting, and seamless data synchronization. Built for businesses that need reliable and intuitive transaction management.
+          A table ordering platform designed for smooth service and modern payments. Supports integration with multiple card machine providers to deliver a diverse, feature-rich card payment experience, while also allowing payments to be recorded directly on any Android device. Built to connect to your main till system through the cloud for streamlined deployment and dependable synchronization.
         </Text>
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
         <Text style={[styles.label, { color: colors.textSecondary }]}>Platform</Text>
-        <Text style={[styles.value, { color: colors.text }]}>React Native (Expo SDK 54)</Text>
+        <Text style={[styles.value, { color: colors.text }]}>Android</Text>
       </View>
     </>
   );
