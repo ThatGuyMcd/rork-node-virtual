@@ -13,7 +13,7 @@ import {
   PanResponder,
 } from 'react-native';
 
-import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare, RotateCcw, Percent, Printer, Undo2 } from 'lucide-react-native';
+import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare, RotateCcw, Percent, Printer } from 'lucide-react-native';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { printerService } from '@/services/printerService';
@@ -177,15 +177,11 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
       {isManager && (
         <View style={[styles.refundButtonContainer, { width: refundButtonWidth }]}>
           <TouchableOpacity
-            style={[styles.refundButtonSwipe, { backgroundColor: isRefundItem ? colors.success : (colors.warning || '#f59e0b') }]}
+            style={[styles.refundButtonSwipe, { backgroundColor: isRefundItem ? colors.success : colors.error }]}
             onPress={isRefundItem ? handleUndoRefund : handleRefund}
             activeOpacity={0.8}
           >
-            {isRefundItem ? (
-              <RotateCcw size={24} color="#fff" />
-            ) : (
-              <Undo2 size={24} color="#fff" />
-            )}
+            <RotateCcw size={24} color="#fff" />
           </TouchableOpacity>
         </View>
       )}
