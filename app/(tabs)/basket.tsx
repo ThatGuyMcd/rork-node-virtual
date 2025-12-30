@@ -408,6 +408,19 @@ export default function BasketScreen() {
       >
         {basket.map((item, index) => {
           const isRefundItem = item.quantity < 0;
+          
+          const getPricePrefix = (label: string): string => {
+            const lowerLabel = label.toLowerCase();
+            if (label === 'Standard') return '';
+            if (lowerLabel === 'double') return 'DBL';
+            if (lowerLabel === 'small') return 'SML';
+            if (lowerLabel === 'large') return 'LRG';
+            if (label === '125ml' || label === '175ml' || label === '250ml') return label;
+            return label;
+          };
+          
+          const prefix = getPricePrefix(item.selectedPrice.label);
+          
           return (
           <View 
             key={index} 
@@ -420,23 +433,24 @@ export default function BasketScreen() {
               }
             ]}
           >
-            <View style={styles.itemInfo}>
-              <View style={styles.itemNameRow}>
-                <Text style={[styles.itemName, { color: colors.text }]}>{item.product.name}</Text>
+            <View style={styles.itemTopRow}>
+              <View style={styles.itemNameContainer}>
+                {prefix !== '' && (
+                  <Text style={[styles.itemPrefix, { color: colors.textSecondary }]}>[{prefix}] </Text>
+                )}
+                <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
+                  {item.product.name}
+                </Text>
                 {isRefundItem && (
                   <View style={[styles.refundBadge, { backgroundColor: colors.error }]}>
                     <Text style={styles.refundBadgeText}>REFUND</Text>
                   </View>
                 )}
               </View>
-              <Text style={[styles.itemPrice, { color: colors.textSecondary }]}>
-                £{item.selectedPrice.price.toFixed(2)}
-                {item.selectedPrice.label !== 'Standard' &&
-                  ` (${item.selectedPrice.label})`}
-              </Text>
+              <Text style={[styles.quantityNumber, { color: colors.text }]}>{Math.abs(item.quantity)}</Text>
             </View>
 
-            <View style={styles.itemActions}>
+            <View style={styles.itemBottomRow}>
               <View style={[styles.quantityControl, { backgroundColor: colors.background, borderColor: colors.border }]}>
                 <TouchableOpacity
                   style={styles.quantityButton}
@@ -447,7 +461,6 @@ export default function BasketScreen() {
                 >
                   <Minus size={14} color={colors.text} />
                 </TouchableOpacity>
-                <Text style={[styles.quantityText, { color: colors.text }]}>{item.quantity}</Text>
                 <TouchableOpacity
                   style={styles.quantityButton}
                   onPress={() =>
@@ -1241,40 +1254,51 @@ const styles = StyleSheet.create({
   },
   basketItem: {
     borderRadius: 10,
-    padding: 8,
+    padding: 10,
     borderWidth: 1,
+    gap: 6,
   },
-  itemInfo: {
-    marginBottom: 6,
-  },
-  itemNameRow: {
+  itemTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  itemNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
     flexWrap: 'wrap' as const,
+  },
+  itemPrefix: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   refundBadge: {
     paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 3,
+    marginLeft: 6,
   },
   refundBadgeText: {
     fontSize: 9,
     fontWeight: '700',
     color: '#fff',
   },
-  itemName: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 1,
+  quantityNumber: {
+    fontSize: 16,
+    fontWeight: '700',
+    minWidth: 28,
+    textAlign: 'right' as const,
   },
-  itemPrice: {
-    fontSize: 12,
-  },
-  itemActions: {
+  itemBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: 8,
   },
   quantityControl: {
@@ -1286,13 +1310,6 @@ const styles = StyleSheet.create({
   quantityButton: {
     padding: 6,
   },
-  quantityText: {
-    fontSize: 14,
-    fontWeight: '600',
-    paddingHorizontal: 12,
-    minWidth: 32,
-    textAlign: 'center' as const,
-  },
   lineTotal: {
     fontSize: 16,
     fontWeight: '700',
@@ -1301,11 +1318,9 @@ const styles = StyleSheet.create({
   },
   messageButton: {
     padding: 8,
-    marginLeft: 4,
   },
   removeButton: {
     padding: 8,
-    marginLeft: 4,
   },
   summary: {
     padding: 20,
