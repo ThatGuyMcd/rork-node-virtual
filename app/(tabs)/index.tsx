@@ -1585,13 +1585,25 @@ export default function ProductsScreen() {
                       return (
                         <TouchableOpacity
                           key={area}
-                          style={[styles.areaCard, { backgroundColor: areaColor, borderColor: areaColor }]}
+                          style={[styles.areaCard, { backgroundColor: areaColor }, getButtonSkinStyle(buttonSkin, areaColor)]}
                           onPress={async () => {
                             setSelectedArea(area);
                             await loadAreaData(area);
                           }}
-                          activeOpacity={0.7}
+                          activeOpacity={0.8}
                         >
+                          {isLiquidGlassAvailable() ? (
+                            <GlassView
+                              style={StyleSheet.absoluteFill}
+                              glassEffectStyle="regular"
+                              tintColor={areaColor}
+                            />
+                          ) : (
+                            <View style={[StyleSheet.absoluteFill, { backgroundColor: areaColor, opacity: 0.9 }]} />
+                          )}
+                          {getButtonOverlayStyle(buttonSkin) && (
+                            <View style={getButtonOverlayStyle(buttonSkin) as any} />
+                          )}
                           <Text style={[styles.areaCardTitle, { color: '#ffffff' }]}>{area}</Text>
                           <Text style={[styles.areaCardCount, { color: 'rgba(255, 255, 255, 0.8)' }]}>
                             {tables.filter(t => t.area === area).length} tables
@@ -1636,7 +1648,8 @@ export default function ProductsScreen() {
                             key={table.id}
                             style={[
                               styles.tableGridItem,
-                              { backgroundColor: statusColor, borderColor: statusColor },
+                              { backgroundColor: statusColor },
+                              getButtonSkinStyle(buttonSkin, statusColor),
                               currentTable?.id === table.id && styles.tableOptionSelected,
                               isLocked && styles.tableLockedItem,
                             ]}
@@ -1650,8 +1663,20 @@ export default function ProductsScreen() {
                               setSelectedArea(null);
                               showNotification(`Selected table: ${table.name} (${selectedArea})`);
                             }}
-                            activeOpacity={isLocked ? 1 : 0.7}
+                            activeOpacity={isLocked ? 1 : 0.8}
                           >
+                            {isLiquidGlassAvailable() ? (
+                              <GlassView
+                                style={StyleSheet.absoluteFill}
+                                glassEffectStyle="regular"
+                                tintColor={statusColor}
+                              />
+                            ) : (
+                              <View style={[StyleSheet.absoluteFill, { backgroundColor: statusColor, opacity: 0.9 }]} />
+                            )}
+                            {getButtonOverlayStyle(buttonSkin) && (
+                              <View style={getButtonOverlayStyle(buttonSkin) as any} />
+                            )}
                             <View style={{ flex: 1 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                 <Text style={[styles.tableOptionText, { color: '#ffffff' }]}>{table.name}</Text>
@@ -2189,9 +2214,8 @@ const styles = StyleSheet.create({
   areaCard: {
     width: '48%',
     padding: 20,
-    borderRadius: 12,
-    borderWidth: 1,
     minHeight: 80,
+    overflow: 'hidden',
   },
   areaCardTitle: {
     fontSize: 18,
@@ -2297,12 +2321,11 @@ const styles = StyleSheet.create({
   tableGridItem: {
     width: '47%',
     padding: 12,
-    borderRadius: 12,
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
-    borderWidth: 1,
     minHeight: 80,
+    overflow: 'hidden',
   },
   tableLockedItem: {
     opacity: 0.6,
