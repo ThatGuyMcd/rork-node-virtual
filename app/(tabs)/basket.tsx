@@ -56,6 +56,7 @@ export default function BasketScreen() {
     changeAllowed,
     cashbackAllowed,
     savingTable,
+    processingTransaction,
   } = usePOS();
   const { colors, theme } = useTheme();
 
@@ -1148,6 +1149,25 @@ export default function BasketScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        transparent
+        visible={processingTransaction}
+        animationType="fade"
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+          <View style={[styles.processingModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={[styles.processingIconContainer, { backgroundColor: colors.primary + '20' }]}>
+              <CreditCard size={48} color={colors.primary} />
+            </View>
+            
+            <Text style={[styles.processingModalTitle, { color: colors.text }]}>Processing Transaction...</Text>
+            <Text style={[styles.processingModalSubtitle, { color: colors.textSecondary }]}>
+              Please wait while we post your transaction to the server
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1955,6 +1975,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   savingModalSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  processingModal: {
+    borderRadius: 20,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  processingIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  processingModalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  processingModalSubtitle: {
     fontSize: 16,
     textAlign: 'center',
   },

@@ -33,6 +33,7 @@ interface POSContextType {
   changeAllowed: boolean;
   cashbackAllowed: boolean;
   savingTable: boolean;
+  processingTransaction: boolean;
   updateReceiptSettings: (settings: ReceiptSettings) => Promise<void>;
   updateChangeAllowed: (allowed: boolean) => Promise<void>;
   updateCashbackAllowed: (allowed: boolean) => Promise<void>;
@@ -91,6 +92,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   const [changeAllowed, setChangeAllowed] = useState(true);
   const [cashbackAllowed, setCashbackAllowed] = useState(false);
   const [savingTable, setSavingTable] = useState(false);
+  const [processingTransaction, setProcessingTransaction] = useState(false);
 
   const [tenders, setTenders] = useState<Tender[]>([
     { id: '1', name: 'Cash', color: '#10b981' },
@@ -270,10 +272,13 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   }, [basket, basketDiscount, isRefundMode]);
 
   const completeSale = useCallback(async (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[], gratuity?: number, cashback?: number) => {
-    if (!currentOperator) {
-      console.error('[POS] Cannot complete sale: no operator logged in');
-      return;
-    }
+    setProcessingTransaction(true);
+    try {
+      if (!currentOperator) {
+        console.error('[POS] Cannot complete sale: no operator logged in');
+        setProcessingTransaction(false);
+        return;
+      }
 
     const tender = tenders.find(t => t.id === tenderId);
     if (!tender) {
@@ -418,6 +423,9 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     setBasketDiscount(0);
     clearBasket();
     console.log('[POS] Payment completed, table still selected for receipt printing');
+    } finally {
+      setProcessingTransaction(false);
+    }
   }, [clearBasket, currentTable, currentOperator, tenders, basket, calculateTotals, receiptSettings]);
 
   const saveTableOrder = useCallback(() => {
@@ -775,5 +783,6 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     updateChangeAllowed,
     updateCashbackAllowed,
     savingTable,
+    processingTransaction,
   };
 });
