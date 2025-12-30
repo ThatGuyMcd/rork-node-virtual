@@ -1413,10 +1413,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center' as const,
     alignItems: 'flex-end' as const,
+    paddingRight: 6,
   },
   deleteButton: {
-    width: 80,
-    height: '100%',
+    width: 70,
+    height: '90%',
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
     borderRadius: 10,
