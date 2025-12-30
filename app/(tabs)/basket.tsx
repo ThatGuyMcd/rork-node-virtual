@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
 
 import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare, RotateCcw, Percent, Printer } from 'lucide-react-native';
 import { usePOS } from '@/contexts/POSContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme, type ButtonSkin } from '@/contexts/ThemeContext';
 import { printerService } from '@/services/printerService';
 import { transactionService } from '@/services/transactionService';
 import type { Transaction } from '@/types/pos';
@@ -47,6 +47,9 @@ interface SwipeableBasketItemProps {
   onDelete: (index: number) => void;
   onRefund: (index: number) => void;
   onUndoRefund: (index: number) => void;
+  buttonSkin: ButtonSkin;
+  getButtonSkinStyle: (skin: ButtonSkin, backgroundColor?: string) => any;
+  getButtonOverlayStyle: (skin: ButtonSkin) => any;
 }
 
 const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
@@ -62,6 +65,9 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
   onDelete,
   onRefund,
   onUndoRefund,
+  buttonSkin,
+  getButtonSkinStyle,
+  getButtonOverlayStyle,
 }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const currentOffset = useRef(0);
@@ -177,10 +183,17 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
       {isManager && (
         <View style={[styles.refundButtonContainer, { width: refundButtonWidth }]}>
           <TouchableOpacity
-            style={[styles.refundButtonSwipe, { backgroundColor: isRefundItem ? colors.success : colors.error }]}
+            style={[
+              styles.refundButtonSwipe,
+              { backgroundColor: isRefundItem ? colors.success : colors.error },
+              getButtonSkinStyle(buttonSkin, isRefundItem ? colors.success : colors.error),
+            ]}
             onPress={isRefundItem ? handleUndoRefund : handleRefund}
             activeOpacity={0.8}
           >
+            {getButtonOverlayStyle(buttonSkin) && (
+              <View style={getButtonOverlayStyle(buttonSkin) as any} />
+            )}
             <RotateCcw size={24} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -188,10 +201,17 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
       
       <View style={[styles.deleteButtonContainer, { width: deleteButtonWidth }]}>
         <TouchableOpacity
-          style={[styles.deleteButton, { backgroundColor: colors.error }]}
+          style={[
+            styles.deleteButton,
+            { backgroundColor: colors.error },
+            getButtonSkinStyle(buttonSkin, colors.error),
+          ]}
           onPress={handleDelete}
           activeOpacity={0.8}
         >
+          {getButtonOverlayStyle(buttonSkin) && (
+            <View style={getButtonOverlayStyle(buttonSkin) as any} />
+          )}
           <Trash2 size={24} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -289,7 +309,123 @@ export default function BasketScreen() {
     savingTable,
     processingTransaction,
   } = usePOS();
-  const { colors, theme } = useTheme();
+  const { colors, theme, buttonSkin } = useTheme();
+
+  const getButtonSkinStyle = useCallback((skin: ButtonSkin, backgroundColor: string = '#000000') => {
+    switch (skin) {
+      case 'rounded':
+        return {
+          borderRadius: 28,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.5,
+          shadowRadius: 12,
+          elevation: 10,
+        };
+      case 'sharp':
+        return {
+          borderRadius: 4,
+          shadowColor: '#000',
+          shadowOffset: { width: 2, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 0,
+          elevation: 4,
+        };
+      case 'soft':
+        return {
+          borderRadius: 20,
+          shadowColor: backgroundColor,
+          shadowOffset: { width: -4, height: -4 },
+          shadowOpacity: 0.4,
+          shadowRadius: 8,
+          elevation: 0,
+        };
+      case 'outlined':
+        return {
+          borderRadius: 16,
+          borderWidth: 3,
+          borderColor: backgroundColor,
+          shadowColor: backgroundColor,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 1,
+          shadowRadius: 20,
+          elevation: 0,
+        };
+      case 'minimal':
+        return {
+          borderRadius: 8,
+          borderWidth: 0,
+          shadowColor: 'transparent',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          elevation: 0,
+        };
+      case 'default':
+      default:
+        return {
+          borderRadius: 12,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 6,
+          elevation: 6,
+        };
+    }
+  }, []);
+
+  const getButtonOverlayStyle = useCallback((skin: ButtonSkin) => {
+    switch (skin) {
+      case 'rounded':
+        return {
+          ...StyleSheet.absoluteFillObject,
+          borderRadius: 28,
+          borderTopWidth: 2,
+          borderLeftWidth: 2,
+          borderTopColor: 'rgba(255, 255, 255, 0.4)',
+          borderLeftColor: 'rgba(255, 255, 255, 0.3)',
+          borderBottomWidth: 3,
+          borderRightWidth: 3,
+          borderBottomColor: 'rgba(0, 0, 0, 0.5)',
+          borderRightColor: 'rgba(0, 0, 0, 0.4)',
+        };
+      case 'sharp':
+        return {
+          ...StyleSheet.absoluteFillObject,
+          borderRadius: 4,
+          borderTopWidth: 4,
+          borderLeftWidth: 4,
+          borderTopColor: 'rgba(255, 255, 255, 0.5)',
+          borderLeftColor: 'rgba(255, 255, 255, 0.4)',
+          borderBottomWidth: 4,
+          borderRightWidth: 4,
+          borderBottomColor: 'rgba(0, 0, 0, 0.6)',
+          borderRightColor: 'rgba(0, 0, 0, 0.5)',
+        };
+      case 'soft':
+        return {
+          ...StyleSheet.absoluteFillObject,
+          borderRadius: 20,
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.2)',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        };
+      case 'outlined':
+        return {
+          ...StyleSheet.absoluteFillObject,
+          borderRadius: 14,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        };
+      case 'minimal':
+        return {
+          ...StyleSheet.absoluteFillObject,
+          borderRadius: 8,
+          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        };
+      default:
+        return null;
+    }
+  }, []);
 
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [splitPaymentAmount, setSplitPaymentAmount] = useState('');
@@ -619,7 +755,8 @@ export default function BasketScreen() {
                 { 
                   backgroundColor: isRefundMode ? colors.error : colors.cardBackground,
                   borderColor: colors.error,
-                }
+                },
+                getButtonSkinStyle(buttonSkin, isRefundMode ? colors.error : colors.cardBackground),
               ]}
               onPress={() => {
                 const success = toggleRefundMode();
@@ -633,6 +770,9 @@ export default function BasketScreen() {
               }}
               activeOpacity={0.7}
             >
+              {getButtonOverlayStyle(buttonSkin) && (
+                <View style={getButtonOverlayStyle(buttonSkin) as any} />
+              )}
               <RotateCcw size={20} color={isRefundMode ? '#fff' : colors.error} />
               <Text style={[
                 styles.refundButtonText,
@@ -643,10 +783,17 @@ export default function BasketScreen() {
             </TouchableOpacity>
           )}
           <TouchableOpacity
-            style={[styles.clearButton, { backgroundColor: colors.cardBackground }]}
+            style={[
+              styles.clearButton,
+              { backgroundColor: colors.cardBackground },
+              getButtonSkinStyle(buttonSkin, colors.cardBackground),
+            ]}
             onPress={clearBasket}
             activeOpacity={0.7}
           >
+            {getButtonOverlayStyle(buttonSkin) && (
+              <View style={getButtonOverlayStyle(buttonSkin) as any} />
+            )}
             <Trash2 size={20} color={colors.error} />
             <Text style={[styles.clearText, { color: colors.error }]}>Clear</Text>
           </TouchableOpacity>
@@ -681,6 +828,9 @@ export default function BasketScreen() {
               onDelete={removeFromBasket}
               onRefund={handleRefundItem}
               onUndoRefund={handleUndoRefund}
+              buttonSkin={buttonSkin}
+              getButtonSkinStyle={getButtonSkinStyle}
+              getButtonOverlayStyle={getButtonOverlayStyle}
             />
           );
         })}
@@ -700,11 +850,15 @@ export default function BasketScreen() {
                 { 
                   backgroundColor: basketDiscount > 0 ? colors.accent : colors.background,
                   borderColor: basketDiscount > 0 ? colors.accent : colors.border,
-                }
+                },
+                getButtonSkinStyle(buttonSkin, basketDiscount > 0 ? colors.accent : colors.background),
               ]}
               onPress={() => setDiscountModalVisible(true)}
               activeOpacity={0.7}
             >
+              {getButtonOverlayStyle(buttonSkin) && (
+                <View style={getButtonOverlayStyle(buttonSkin) as any} />
+              )}
               <Percent size={14} color={basketDiscount > 0 ? '#fff' : colors.accent} />
               <Text style={[
                 styles.discountButtonBottomText,
@@ -722,11 +876,15 @@ export default function BasketScreen() {
                 { 
                   backgroundColor: gratuityAmount > 0 ? colors.success : colors.background,
                   borderColor: gratuityAmount > 0 ? colors.success : colors.border,
-                }
+                },
+                getButtonSkinStyle(buttonSkin, gratuityAmount > 0 ? colors.success : colors.background),
               ]}
               onPress={() => setGratuityModalVisible(true)}
               activeOpacity={0.7}
             >
+              {getButtonOverlayStyle(buttonSkin) && (
+                <View style={getButtonOverlayStyle(buttonSkin) as any} />
+              )}
               <DollarSign size={14} color={gratuityAmount > 0 ? '#fff' : colors.success} />
               <Text style={[
                 styles.gratuityButtonBottomText,
@@ -782,20 +940,34 @@ export default function BasketScreen() {
         <View style={styles.buttonRow}>
           {currentTable && (
             <TouchableOpacity
-              style={[styles.saveTabButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+              style={[
+                styles.saveTabButton,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                getButtonSkinStyle(buttonSkin, colors.cardBackground),
+              ]}
               onPress={handleSaveTab}
               activeOpacity={0.8}
             >
+              {getButtonOverlayStyle(buttonSkin) && (
+                <View style={getButtonOverlayStyle(buttonSkin) as any} />
+              )}
               <Save size={20} color={colors.primary} />
               <Text style={[styles.saveTabButtonText, { color: colors.primary }]}>Save Tab</Text>
             </TouchableOpacity>
           )}
 
           <TouchableOpacity
-            style={[styles.payButton, { backgroundColor: colors.primary, flex: currentTable ? 1 : undefined }]}
+            style={[
+              styles.payButton,
+              { backgroundColor: colors.primary, flex: currentTable ? 1 : undefined },
+              getButtonSkinStyle(buttonSkin, colors.primary),
+            ]}
             onPress={openPaymentModal}
             activeOpacity={0.8}
           >
+            {getButtonOverlayStyle(buttonSkin) && (
+              <View style={getButtonOverlayStyle(buttonSkin) as any} />
+            )}
             <CreditCard size={24} color="#fff" />
             <Text style={styles.payButtonText}>Pay £{remainingTotal.toFixed(2)}</Text>
           </TouchableOpacity>

@@ -305,10 +305,17 @@ export default function SearchScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.cameraButton, { backgroundColor: colors.primary }]}
+          style={[
+            styles.cameraButton,
+            { backgroundColor: colors.primary },
+            getButtonSkinStyle(buttonSkin, colors.primary),
+          ]}
           onPress={openCamera}
           activeOpacity={0.7}
         >
+          {getButtonOverlayStyle(buttonSkin) && (
+            <View style={getButtonOverlayStyle(buttonSkin) as any} />
+          )}
           <Camera size={24} color="#fff" />
         </TouchableOpacity>
       </View>
