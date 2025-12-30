@@ -1271,7 +1271,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     flexWrap: 'wrap' as const,
-    paddingTop: 2,
+    paddingTop: 5,
   },
   itemPrefix: {
     fontSize: 15,
