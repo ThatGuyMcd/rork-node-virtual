@@ -14,7 +14,7 @@ import {
   PanResponder,
 } from 'react-native';
 
-import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, DollarSign, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info, Server, Users, Menu, Loader } from 'lucide-react-native';
+import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info, Server, Users, Menu, Loader } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
 import { printerService } from '@/services/printerService';
 import { transactionUploadService } from '@/services/transactionUploadService';
@@ -58,13 +58,6 @@ const CollapsibleSection = React.memo(({
             <Icon size={28} color={iconColor} />
           </View>
           <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={2}>{title}</Text>
-        </View>
-        <View style={styles.chevronContainer}>
-          {isExpanded ? (
-            <ChevronUp size={20} color={colors.textSecondary} />
-          ) : (
-            <ChevronDown size={20} color={colors.textSecondary} />
-          )}
         </View>
       </TouchableOpacity>
       {isExpanded && (
@@ -3324,7 +3317,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    paddingRight: 8,
   },
   iconCircle: {
     width: 56,
@@ -3338,9 +3330,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  chevronContainer: {
-    padding: 4,
-  },
+
   collapsibleContent: {
     marginTop: 16,
   },
