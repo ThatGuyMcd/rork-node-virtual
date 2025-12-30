@@ -19,6 +19,18 @@ import { printerService } from '@/services/printerService';
 import { transactionService } from '@/services/transactionService';
 import type { Transaction } from '@/types/pos';
 
+const getPricePrefix = (label: string): string => {
+  const lowerLabel = label.toLowerCase();
+  if (lowerLabel === 'standard') return '';
+  if (lowerLabel === 'double') return 'DBL';
+  if (lowerLabel === 'small') return 'SML';
+  if (lowerLabel === 'large') return 'LRG';
+  if (lowerLabel === 'half') return 'HALF';
+  if (lowerLabel === 'schooner') return '2/3PT';
+  if (label === '125ml' || label === '175ml' || label === '250ml') return label;
+  return label === 'standard' ? '' : label;
+};
+
 export default function BasketScreen() {
   const {
     basket,
@@ -408,19 +420,6 @@ export default function BasketScreen() {
       >
         {basket.map((item, index) => {
           const isRefundItem = item.quantity < 0;
-          
-          const getPricePrefix = (label: string): string => {
-            const lowerLabel = label.toLowerCase();
-            if (lowerLabel === 'standard') return '';
-            if (lowerLabel === 'double') return 'DBL';
-            if (lowerLabel === 'small') return 'SML';
-            if (lowerLabel === 'large') return 'LRG';
-            if (lowerLabel === 'half') return 'HALF';
-            if (lowerLabel === 'schooner') return '2/3PT';
-            if (label === '125ml' || label === '175ml' || label === '250ml') return label;
-            return label;
-          };
-          
           const prefix = getPricePrefix(item.selectedPrice.label);
           
           const displayName = prefix !== '' && item.product.name.startsWith(prefix + ' ') 
@@ -987,17 +986,20 @@ export default function BasketScreen() {
                   <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
 
                   <Text style={[styles.receiptSectionTitle, { color: colors.text }]}>Items</Text>
-                  {lastTransaction.items.map((item, index) => (
+                  {lastTransaction.items.map((item, index) => {
+                    const prefix = getPricePrefix(item.selectedPrice.label);
+                    const displayName = prefix ? `${prefix} ${item.product.name}` : item.product.name;
+                    return (
                     <View key={index} style={styles.receiptItemRow}>
                       <View style={styles.receiptItemInfo}>
-                        <Text style={[styles.receiptItemName, { color: colors.text }]}>{item.product.name}</Text>
+                        <Text style={[styles.receiptItemName, { color: colors.text }]}>{displayName}</Text>
                         <Text style={[styles.receiptItemDetails, { color: colors.textSecondary }]}>
                           {Math.abs(item.quantity)} × £{item.selectedPrice.price.toFixed(2)}
                         </Text>
                       </View>
                       <Text style={[styles.receiptItemTotal, { color: colors.text }]}>£{Math.abs(item.lineTotal).toFixed(2)}</Text>
                     </View>
-                  ))}
+                  )})}
 
                   <View style={[styles.receiptDivider, { backgroundColor: colors.border }]} />
 

@@ -229,6 +229,18 @@ class TransactionService {
     return [headers.join(','), ...rows].join('\n');
   }
 
+  private getPricePrefix(label: string): string {
+    const lowerLabel = label.toLowerCase();
+    if (lowerLabel === 'standard') return '';
+    if (lowerLabel === 'double') return 'DBL';
+    if (lowerLabel === 'small') return 'SML';
+    if (lowerLabel === 'large') return 'LRG';
+    if (lowerLabel === 'half') return 'HALF';
+    if (lowerLabel === 'schooner') return '2/3PT';
+    if (label === '125ml' || label === '175ml' || label === '250ml') return label;
+    return label === 'standard' ? '' : label;
+  }
+
   async exportTransactionsExcel(transactions: Transaction[]): Promise<ArrayBuffer> {
     const workbook = XLSX.utils.book_new();
 
@@ -306,11 +318,13 @@ class TransactionService {
     transactions.forEach(transaction => {
       const date = new Date(transaction.timestamp);
       transaction.items.forEach(item => {
+        const prefix = this.getPricePrefix(item.selectedPrice.label);
+        const displayName = prefix ? `${prefix} ${item.product.name}` : item.product.name;
         itemsData.push({
           'Transaction ID': transaction.id,
           'Date': date.toLocaleDateString('en-GB'),
           'Time': date.toLocaleTimeString('en-GB'),
-          'Product Name': item.product.name,
+          'Product Name': displayName,
           'Quantity': item.quantity,
           'Unit Price': item.selectedPrice.price,
           'Line Total': item.lineTotal,

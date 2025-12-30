@@ -22,6 +22,18 @@ import { printerService } from '@/services/printerService';
 
 type DateRange = 'today' | 'week' | 'month' | 'all' | 'custom';
 
+const getPricePrefix = (label: string): string => {
+  const lowerLabel = label.toLowerCase();
+  if (lowerLabel === 'standard') return '';
+  if (lowerLabel === 'double') return 'DBL';
+  if (lowerLabel === 'small') return 'SML';
+  if (lowerLabel === 'large') return 'LRG';
+  if (lowerLabel === 'half') return 'HALF';
+  if (lowerLabel === 'schooner') return '2/3PT';
+  if (label === '125ml' || label === '175ml' || label === '250ml') return label;
+  return label === 'standard' ? '' : label;
+};
+
 const formatDate = (date: Date): string => {
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -1199,17 +1211,20 @@ export default function ReportsScreen() {
                 )}
 
                 <Text style={[styles.itemsHeader, { color: colors.text }]}>Items ({selectedTransaction.items.length})</Text>
-                {selectedTransaction.items.map((item, index) => (
+                {selectedTransaction.items.map((item, index) => {
+                  const prefix = getPricePrefix(item.selectedPrice.label);
+                  const displayName = prefix ? `${prefix} ${item.product.name}` : item.product.name;
+                  return (
                   <View key={index} style={[styles.itemRow, { backgroundColor: colors.background }]}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.itemName, { color: colors.text }]}>{item.product.name}</Text>
+                      <Text style={[styles.itemName, { color: colors.text }]}>{displayName}</Text>
                       <Text style={[styles.itemDetails, { color: colors.textSecondary }]}>
                         {item.quantity} × £{item.selectedPrice.price.toFixed(2)}
                       </Text>
                     </View>
                     <Text style={[styles.itemTotal, { color: colors.text }]}>£{item.lineTotal.toFixed(2)}</Text>
                   </View>
-                ))}
+                )})}
 
                 <View style={[styles.totalSection, { borderTopColor: colors.border }]}>
                   <View style={styles.totalRow}>

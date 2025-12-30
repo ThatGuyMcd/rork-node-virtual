@@ -147,7 +147,8 @@ export class ESCPOSGenerator {
     receipt += this.divider('-');
 
     transaction.items.forEach((item) => {
-      const itemName = item.product.name;
+      const prefix = this.getPricePrefix(item.selectedPrice.label);
+      const itemName = prefix ? `${prefix} ${item.product.name}` : item.product.name;
       const quantity = Math.abs(item.quantity);
       const price = Math.abs(item.selectedPrice.price);
       const total = Math.abs(item.lineTotal);
@@ -256,7 +257,8 @@ export class ESCPOSGenerator {
     receipt += '=' .repeat(this.charsPerLine) + '\r\n\r\n';
 
     transaction.items.forEach((item) => {
-      const itemName = item.product.name;
+      const prefix = this.getPricePrefix(item.selectedPrice.label);
+      const itemName = prefix ? `${prefix} ${item.product.name}` : item.product.name;
       const quantity = Math.abs(item.quantity);
       const total = Math.abs(item.lineTotal);
       
@@ -318,6 +320,18 @@ export class ESCPOSGenerator {
     }
 
     return receipt;
+  }
+
+  private getPricePrefix(label: string): string {
+    const lowerLabel = label.toLowerCase();
+    if (lowerLabel === 'standard') return '';
+    if (lowerLabel === 'double') return 'DBL';
+    if (lowerLabel === 'small') return 'SML';
+    if (lowerLabel === 'large') return 'LRG';
+    if (lowerLabel === 'half') return 'HALF';
+    if (lowerLabel === 'schooner') return '2/3PT';
+    if (label === '125ml' || label === '175ml' || label === '250ml') return label;
+    return label === 'standard' ? '' : label;
   }
 
   generateTestReceipt(): Uint8Array {
