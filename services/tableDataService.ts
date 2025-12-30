@@ -388,16 +388,95 @@ class TableDataService {
   }
 
   async getAllTableStatuses(tableIds: string[]): Promise<Map<string, { hasData: boolean; subtotal: number }>> {
-    console.log('[TableDataService] Getting statuses for all tables');
+    console.log(`[TableDataService] Getting statuses for ${tableIds.length} tables (optimized batch mode)`);
+    const startTime = Date.now();
     
     const statusMap = new Map<string, { hasData: boolean; subtotal: number }>();
     
-    await Promise.all(
-      tableIds.map(async (tableId) => {
-        const status = await this.getTableStatus(tableId);
-        statusMap.set(tableId, status);
-      })
-    );
+    try {
+      if (!this.isFileSystemAvailable()) {
+        console.log('[TableDataService] Using in-memory storage for batch status check');
+        for (const tableId of tableIds) {
+          const rows = this.data.get(tableId) || [];
+          const hasData = rows.length > 0;
+          const subtotal = rows.reduce((sum, row) => sum + (row.quantity * row.price), 0);
+          statusMap.set(tableId, { hasData, subtotal });
+        }
+        return statusMap;
+      }
+      
+      const filePath = this.getFilePath();
+      if (!filePath) {
+        tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0 }));
+        return statusMap;
+      }
+      
+      const fileInfo = await FileSystem.getInfoAsync(filePath);
+      
+      if (!fileInfo.exists) {
+        console.log('[TableDataService] CSV file does not exist, all tables empty');
+        tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0 }));
+        return statusMap;
+      }
+
+      console.log('[TableDataService] Reading CSV file once for all tables...');
+      const content = await FileSystem.readAsStringAsync(filePath);
+      const rows = dataParser.parseCSV(content);
+
+      if (rows.length <= 1) {
+        console.log('[TableDataService] CSV file is empty, all tables empty');
+        tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0 }));
+        return statusMap;
+      }
+
+      const header = rows[0].map(h => h.trim());
+      const tableIdIndex = header.findIndex(h => /table.*id/i.test(h));
+      
+      const tableDataMap = new Map<string, TableDataRow[]>();
+      tableIds.forEach(id => tableDataMap.set(id, []));
+
+      console.log('[TableDataService] Parsing and grouping rows by table ID...');
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const rowTableId = tableIdIndex >= 0 ? row[tableIdIndex]?.trim() : '';
+        
+        if (tableIds.includes(rowTableId)) {
+          const tableRow: TableDataRow = {
+            quantity: parseFloat(row[0] || '1'),
+            productName: row[1]?.trim() || '',
+            price: parseFloat(row[2] || '0'),
+            pluFile: row[3]?.trim() || '',
+            group: row[4]?.trim() || '',
+            department: row[5]?.trim() || '',
+            vatCode: row[6]?.trim() || '',
+            vatPercentage: parseFloat(row[7] || '0'),
+            vatAmount: parseFloat(row[8] || '0'),
+            addedBy: row[9]?.trim() || '',
+            timeDate: row[10]?.trim() || '',
+            printer1: row[11]?.trim() || 'NOT SET',
+            printer2: row[12]?.trim() || 'NOT SET',
+            printer3: row[13]?.trim() || 'NOT SET',
+            itemPrinted: row[14]?.trim() || 'NO',
+            tableId: rowTableId,
+          };
+          tableDataMap.get(rowTableId)?.push(tableRow);
+        }
+      }
+
+      console.log('[TableDataService] Calculating statuses for all tables...');
+      for (const tableId of tableIds) {
+        const tableRows = tableDataMap.get(tableId) || [];
+        const hasData = tableRows.length > 0;
+        const subtotal = tableRows.reduce((sum, row) => sum + (row.quantity * row.price), 0);
+        statusMap.set(tableId, { hasData, subtotal });
+      }
+      
+      const elapsed = Date.now() - startTime;
+      console.log(`[TableDataService] Batch status check complete in ${elapsed}ms for ${tableIds.length} tables`);
+    } catch (error) {
+      console.error('[TableDataService] Error in batch status check:', error);
+      tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0 }));
+    }
     
     return statusMap;
   }
