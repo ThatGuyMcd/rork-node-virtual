@@ -1726,10 +1726,14 @@ export default function ProductsScreen() {
                     style={[
                       styles.menuProductCard,
                       { backgroundColor: buttonColor },
+                      getButtonSkinStyle(buttonSkin, buttonColor),
                     ]}
                     onPress={() => handleMenuItemPress(menuProduct)}
                     activeOpacity={0.8}
                   >
+                    {getButtonOverlayStyle(buttonSkin) && (
+                      <View style={getButtonOverlayStyle(buttonSkin) as any} />
+                    )}
                     <Text style={[styles.productName, { color: fontColor }]}>
                       {menuProduct.productName}
                     </Text>
@@ -1762,10 +1766,14 @@ export default function ProductsScreen() {
                     styles.menuProductCard,
                     styles.menuBackButton,
                     styles.menuBackButtonFullWidth,
+                    getButtonSkinStyle(buttonSkin, '#3b82f6'),
                   ]}
                   onPress={handleMenuBack}
                   activeOpacity={0.8}
                 >
+                  {getButtonOverlayStyle(buttonSkin) && (
+                    <View style={getButtonOverlayStyle(buttonSkin) as any} />
+                  )}
                   <ChevronLeft size={24} color="#fff" />
                   <Text style={[styles.productName, { color: '#fff' }]}>Back</Text>
                 </TouchableOpacity>
@@ -2206,7 +2214,6 @@ const styles = StyleSheet.create({
   menuProductCard: {
     width: '47%',
     minHeight: 90,
-    borderRadius: 12,
     padding: 12,
     justifyContent: 'space-between' as const,
     overflow: 'hidden' as const,
