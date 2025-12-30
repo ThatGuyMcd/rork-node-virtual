@@ -449,7 +449,6 @@ export default function BasketScreen() {
                 )}
               </View>
               <View style={styles.quantitySection}>
-                <Text style={[styles.quantityNumber, { color: colors.text }]}>{Math.abs(item.quantity)}</Text>
                 <View style={[styles.quantityControl, { backgroundColor: colors.background, borderColor: colors.border }]}>
                   <TouchableOpacity
                     style={styles.quantityButton}
@@ -460,6 +459,7 @@ export default function BasketScreen() {
                   >
                     <Minus size={14} color={colors.text} />
                   </TouchableOpacity>
+                  <Text style={[styles.quantityNumber, { color: colors.text }]}>{Math.abs(item.quantity)}</Text>
                   <TouchableOpacity
                     style={styles.quantityButton}
                     onPress={() =>
