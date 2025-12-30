@@ -1338,7 +1338,7 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   summaryLabel: {
     fontSize: 16,
@@ -1354,8 +1354,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   totalRow: {
-    marginTop: 12,
-    paddingTop: 12,
+    marginTop: 8,
+    paddingTop: 8,
     borderTopWidth: 1,
     marginBottom: 16,
   },
