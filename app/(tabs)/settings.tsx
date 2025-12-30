@@ -980,6 +980,7 @@ export default function SettingsScreen() {
 
       await loadProductData();
       await loadLastSyncTime();
+      await loadSettingsProfiles();
       
       if (incremental) {
         Alert.alert('Success', 'Incremental sync completed!');
