@@ -63,6 +63,7 @@ export default function BasketScreen() {
   const [changeModalVisible, setChangeModalVisible] = useState(false);
   const [changeAmount, setChangeAmount] = useState(0);
   const [pendingTenderId, setPendingTenderId] = useState<string | null>(null);
+  const [savingTable, setSavingTable] = useState(false);
   const scaleAnim = useState(new Animated.Value(0))[0];
   const availableTenders = getAvailableTenders();
 
@@ -217,7 +218,12 @@ export default function BasketScreen() {
   };
 
   const handleSaveTab = async () => {
-    await saveTableTab();
+    setSavingTable(true);
+    try {
+      await saveTableTab();
+    } finally {
+      setSavingTable(false);
+    }
   };
 
   const openMessageModal = (index: number) => {
@@ -1104,6 +1110,25 @@ export default function BasketScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        transparent
+        visible={savingTable}
+        animationType="fade"
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+          <View style={[styles.savingModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={[styles.savingIconContainer, { backgroundColor: colors.primary + '20' }]}>
+              <Save size={48} color={colors.primary} />
+            </View>
+            
+            <Text style={[styles.savingModalTitle, { color: colors.text }]}>Saving Table...</Text>
+            <Text style={[styles.savingModalSubtitle, { color: colors.textSecondary }]}>
+              Please wait while we save your table data
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1868,5 +1893,30 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#fff',
+  },
+  savingModal: {
+    borderRadius: 20,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  savingIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  savingModalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  savingModalSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
   },
 });
