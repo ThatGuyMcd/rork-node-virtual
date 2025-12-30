@@ -1664,7 +1664,7 @@ export default function SettingsScreen() {
           <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Card Machine Provider</Text>
           
           <TouchableOpacity
-            style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+            style={[styles.dropdownButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
             onPress={() => setShowProviderDropdown(!showProviderDropdown)}
             activeOpacity={0.7}
           >
@@ -3565,8 +3565,16 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 12,
   },
+  dropdownButton: {
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   dropdownText: {
-    flex: 1,
     fontSize: 16,
   },
   dropdown: {
