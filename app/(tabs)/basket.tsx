@@ -1271,13 +1271,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     flexWrap: 'wrap' as const,
+    paddingTop: 2,
   },
   itemPrefix: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
   },
   itemName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     flexShrink: 1,
   },
