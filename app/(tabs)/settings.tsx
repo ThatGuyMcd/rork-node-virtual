@@ -14,7 +14,7 @@ import {
   PanResponder,
 } from 'react-native';
 
-import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, DollarSign, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info } from 'lucide-react-native';
+import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, ChevronUp, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, DollarSign, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info, Server, Users, Menu, Loader } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
 import { printerService } from '@/services/printerService';
 import { transactionUploadService } from '@/services/transactionUploadService';
@@ -793,9 +793,38 @@ export default function SettingsScreen() {
 
       {syncProgress && (
         <View style={[styles.progressCard, { backgroundColor: colors.cardBackground, borderColor: '#f97316', borderWidth: 2, borderStyle: 'dotted' }]}>
-          <Text style={[styles.progressPhase, { color: '#f97316' }]}>
-            {syncProgress.message}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: syncProgress.total > 1 ? 12 : 0 }}>
+            {(() => {
+              const message = syncProgress.message;
+              const iconColor = '#f97316';
+              const iconSize = 20;
+              
+              if (message.includes('Connecting')) {
+                return <Server size={iconSize} color={iconColor} />;
+              } else if (message.includes('Product Database')) {
+                return <Database size={iconSize} color={iconColor} />;
+              } else if (message.includes('Operators')) {
+                return <Users size={iconSize} color={iconColor} />;
+              } else if (message.includes('Tables')) {
+                return <LayoutGrid size={iconSize} color={iconColor} />;
+              } else if (message.includes('Functions')) {
+                return <SettingsIcon size={iconSize} color={iconColor} />;
+              } else if (message.includes('Menus')) {
+                return <Menu size={iconSize} color={iconColor} />;
+              } else if (message.includes('VAT')) {
+                return <Percent size={iconSize} color={iconColor} />;
+              } else if (message.includes('Processing')) {
+                return <Loader size={iconSize} color={iconColor} />;
+              } else if (message.includes('complete')) {
+                return <CheckCircle size={iconSize} color='#10b981' />;
+              } else {
+                return <RefreshCw size={iconSize} color={iconColor} />;
+              }
+            })()}
+            <Text style={[styles.progressPhase, { color: syncProgress.message.includes('complete') ? '#10b981' : '#f97316', flex: 1 }]}>
+              {syncProgress.message}
+            </Text>
+          </View>
           
           {syncProgress.total > 1 && (
             <View style={styles.progressBarContainer}>
@@ -3390,7 +3419,6 @@ const styles = StyleSheet.create({
   progressPhase: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 12,
   },
   progressBarContainer: {
     flexDirection: 'row',
