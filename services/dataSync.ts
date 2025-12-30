@@ -123,25 +123,25 @@ export class DataSyncService {
 
     const files: Map<string, string> = new Map();
 
-    onProgress?.({ phase: 'downloading', current: 0, total: filesToDownload.length, message: 'Downloading files...' });
+    onProgress?.({ phase: 'downloading', current: 0, total: filesToDownload.length, message: 'Syncing files...' });
 
     const getFriendlyName = (folder: string): string => {
       const folderUpper = folder.toUpperCase();
       switch (folderUpper) {
         case 'PLUDATA':
-          return 'Downloading Product Database';
+          return 'Syncing Product Database';
         case 'OPERATORDATA':
-          return 'Downloading Operators';
+          return 'Syncing Operators';
         case 'TABDATA':
-          return 'Downloading Tables and Tabs';
+          return 'Syncing Tables and Tabs';
         case 'FUNCTIONDATA':
-          return 'Downloading Functions';
+          return 'Syncing Functions';
         case 'MENUDATA':
-          return 'Downloading Menus';
+          return 'Syncing Menus';
         case 'VATDATA':
-          return 'Downloading VAT Data';
+          return 'Syncing VAT Data';
         default:
-          return `Downloading from ${folder}`;
+          return `Syncing from ${folder}`;
       }
     };
 
