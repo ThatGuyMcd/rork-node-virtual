@@ -1355,7 +1355,10 @@ export default function ProductsScreen() {
             </Text>
           </TouchableOpacity>
 
-          <Text style={[styles.heading, { color: colors.text }]}>Products</Text>
+          <Text style={[styles.heading, { color: colors.text }]}>{(() => {
+            const dept = departments.find(d => d.id === selectedDepartment);
+            return dept ? trimName(dept.name) : 'Products';
+          })()}</Text>
           <ScrollView
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
