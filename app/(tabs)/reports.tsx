@@ -788,7 +788,15 @@ export default function ReportsScreen() {
             })()}
 
             {(() => {
-              const transactionsWithCashback = filteredTransactions.filter(t => t.cashback && t.cashback > 0);
+              const transactionsWithCashback = filteredTransactions.filter(t => {
+                if (!t.cashback || t.cashback <= 0) return false;
+                
+                if (t.payments && t.payments.length > 0) {
+                  return t.payments.some(p => p.tenderName !== 'Cash');
+                } else {
+                  return t.tenderName !== 'Cash';
+                }
+              });
               const totalCashbackAmount = transactionsWithCashback.reduce((sum, t) => sum + (t.cashback || 0), 0);
               const cashbackCount = transactionsWithCashback.length;
 
@@ -806,26 +814,24 @@ export default function ReportsScreen() {
 
                 if (transaction.payments && transaction.payments.length > 0) {
                   transaction.payments.forEach(payment => {
-                    if (!cashbackByPaymentMethod[payment.tenderName]) {
-                      cashbackByPaymentMethod[payment.tenderName] = { count: 0, total: 0 };
+                    if (payment.tenderName !== 'Cash') {
+                      if (!cashbackByPaymentMethod[payment.tenderName]) {
+                        cashbackByPaymentMethod[payment.tenderName] = { count: 0, total: 0 };
+                      }
+                      cashbackByPaymentMethod[payment.tenderName].count++;
+                      cashbackByPaymentMethod[payment.tenderName].total += transaction.cashback || 0;
                     }
                   });
                 } else {
-                  if (!cashbackByPaymentMethod[transaction.tenderName]) {
-                    cashbackByPaymentMethod[transaction.tenderName] = { count: 0, total: 0 };
+                  if (transaction.tenderName !== 'Cash') {
+                    if (!cashbackByPaymentMethod[transaction.tenderName]) {
+                      cashbackByPaymentMethod[transaction.tenderName] = { count: 0, total: 0 };
+                    }
+                    cashbackByPaymentMethod[transaction.tenderName].count++;
+                    cashbackByPaymentMethod[transaction.tenderName].total += transaction.cashback || 0;
                   }
-                  cashbackByPaymentMethod[transaction.tenderName].count++;
                 }
               });
-
-              const cardCashbackTotal = transactionsWithCashback
-                .filter(t => !t.payments || t.payments.length === 0)
-                .filter(t => t.tenderName === 'Card')
-                .reduce((sum, t) => sum + (t.cashback || 0), 0);
-
-              if (cashbackByPaymentMethod['Card']) {
-                cashbackByPaymentMethod['Card'].total = cardCashbackTotal;
-              }
 
               return (
                 <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
