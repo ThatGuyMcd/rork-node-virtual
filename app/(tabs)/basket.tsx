@@ -1299,8 +1299,8 @@ const styles = StyleSheet.create({
   quantityNumber: {
     fontSize: 16,
     fontWeight: '700',
-    minWidth: 28,
-    textAlign: 'right' as const,
+    width: 40,
+    textAlign: 'center' as const,
   },
   itemBottomRow: {
     flexDirection: 'row',
