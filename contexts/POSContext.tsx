@@ -508,9 +508,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
               }
             }
             
-            const productWithMessage = row.productName.includes(' - ') 
-              ? { ...product, name: row.productName }
-              : product;
+            const productWithMessage = { ...product, name: row.productName };
             const basketItem = {
               product: productWithMessage,
               quantity: row.quantity,
