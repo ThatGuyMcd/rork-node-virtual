@@ -415,6 +415,7 @@ export default function BasketScreen() {
             if (lowerLabel === 'double') return 'DBL';
             if (lowerLabel === 'small') return 'SML';
             if (lowerLabel === 'large') return 'LRG';
+            if (lowerLabel === 'half') return 'HALF';
             if (label === '125ml' || label === '175ml' || label === '250ml') return label;
             return label;
           };
@@ -436,7 +437,7 @@ export default function BasketScreen() {
             <View style={styles.itemTopRow}>
               <View style={styles.itemNameContainer}>
                 {prefix !== '' && (
-                  <Text style={[styles.itemPrefix, { color: colors.textSecondary }]}>[{prefix}] </Text>
+                  <Text style={[styles.itemPrefix, { color: colors.textSecondary }]}>{prefix} </Text>
                 )}
                 <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
                   {item.product.name}
@@ -447,31 +448,32 @@ export default function BasketScreen() {
                   </View>
                 )}
               </View>
-              <Text style={[styles.quantityNumber, { color: colors.text }]}>{Math.abs(item.quantity)}</Text>
+              <View style={styles.quantitySection}>
+                <Text style={[styles.quantityNumber, { color: colors.text }]}>{Math.abs(item.quantity)}</Text>
+                <View style={[styles.quantityControl, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <TouchableOpacity
+                    style={styles.quantityButton}
+                    onPress={() =>
+                      updateBasketItemQuantity(index, item.quantity - 1)
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <Minus size={14} color={colors.text} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.quantityButton}
+                    onPress={() =>
+                      updateBasketItemQuantity(index, item.quantity + 1)
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <Plus size={14} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
 
             <View style={styles.itemBottomRow}>
-              <View style={[styles.quantityControl, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                <TouchableOpacity
-                  style={styles.quantityButton}
-                  onPress={() =>
-                    updateBasketItemQuantity(index, item.quantity - 1)
-                  }
-                  activeOpacity={0.7}
-                >
-                  <Minus size={14} color={colors.text} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.quantityButton}
-                  onPress={() =>
-                    updateBasketItemQuantity(index, item.quantity + 1)
-                  }
-                  activeOpacity={0.7}
-                >
-                  <Plus size={14} color={colors.text} />
-                </TouchableOpacity>
-              </View>
-
               <Text style={[styles.lineTotal, { color: isRefundItem ? colors.error : colors.primary }]}>
                 {isRefundItem ? '-' : ''}£{Math.abs(item.lineTotal).toFixed(2)}
               </Text>
@@ -1260,7 +1262,7 @@ const styles = StyleSheet.create({
   },
   itemTopRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 8,
   },
@@ -1290,6 +1292,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
   },
+  quantitySection: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
   quantityNumber: {
     fontSize: 16,
     fontWeight: '700',
@@ -1300,6 +1306,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    justifyContent: 'flex-end',
   },
   quantityControl: {
     flexDirection: 'row',
