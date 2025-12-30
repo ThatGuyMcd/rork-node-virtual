@@ -1241,11 +1241,11 @@ const styles = StyleSheet.create({
   },
   basketItem: {
     borderRadius: 10,
-    padding: 10,
+    padding: 8,
     borderWidth: 1,
   },
   itemInfo: {
-    marginBottom: 8,
+    marginBottom: 6,
   },
   itemNameRow: {
     flexDirection: 'row',
@@ -1266,7 +1266,7 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   itemPrice: {
     fontSize: 12,
@@ -1275,7 +1275,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 6,
+    gap: 8,
   },
   quantityControl: {
     flexDirection: 'row',
@@ -1300,10 +1300,12 @@ const styles = StyleSheet.create({
     textAlign: 'right' as const,
   },
   messageButton: {
-    padding: 6,
+    padding: 8,
+    marginLeft: 4,
   },
   removeButton: {
-    padding: 6,
+    padding: 8,
+    marginLeft: 4,
   },
   summary: {
     padding: 20,
