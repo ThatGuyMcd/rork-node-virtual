@@ -37,9 +37,25 @@ export const downloadSettingsProfileProcedure = publicProcedure
       }
       
       const fileList = await listResponse.json();
-      console.log('[tRPC] Files found:', fileList);
+      console.log('[tRPC] Raw API response:', JSON.stringify(fileList, null, 2));
+      console.log('[tRPC] Response type:', typeof fileList);
+      console.log('[tRPC] Response keys:', Object.keys(fileList || {}));
       
-      if (!fileList.files || fileList.files.length === 0) {
+      let files: string[] = [];
+      if (Array.isArray(fileList)) {
+        files = fileList;
+        console.log('[tRPC] Response is array, length:', files.length);
+      } else if (fileList.files && Array.isArray(fileList.files)) {
+        files = fileList.files;
+        console.log('[tRPC] Response has .files array, length:', files.length);
+      } else if (fileList.FILES && Array.isArray(fileList.FILES)) {
+        files = fileList.FILES;
+        console.log('[tRPC] Response has .FILES array, length:', files.length);
+      } else {
+        console.log('[tRPC] Could not find file array in response');
+      }
+      
+      if (files.length === 0) {
         console.log('[tRPC] No profile files found');
         return {
           success: true,
@@ -47,8 +63,10 @@ export const downloadSettingsProfileProcedure = publicProcedure
         };
       }
       
+      console.log('[tRPC] Files to download:', files);
+      
       const profiles = [];
-      for (const fileName of fileList.files) {
+      for (const fileName of files) {
         if (!fileName.endsWith('.json')) continue;
         
         const fileUrl = `${API_BASE_URL}/webviewfiles?SITEID=${encodeURIComponent(input.siteId)}&FILE=${encodeURIComponent('DATA/settings-profiles/' + fileName)}`;
