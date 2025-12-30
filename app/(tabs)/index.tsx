@@ -1084,11 +1084,15 @@ export default function ProductsScreen() {
                 { 
                   backgroundColor: currentTable ? currentTable.color : colors.cardBackground,
                   borderColor: currentTable ? 'transparent' : colors.border,
-                }
+                },
+                getButtonSkinStyle(buttonSkin, currentTable ? currentTable.color : colors.cardBackground),
               ]}
               onPress={() => setTableModalVisible(true)}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
+              {getButtonOverlayStyle(buttonSkin) && (
+                <View style={getButtonOverlayStyle(buttonSkin) as any} />
+              )}
               <Grid3x3 size={16} color={currentTable ? "#fff" : colors.textSecondary} />
               <View style={styles.tableChipContent}>
                 <Text style={[styles.tableChipText, { color: currentTable ? '#fff' : colors.textSecondary }]}>
@@ -1101,10 +1105,17 @@ export default function ProductsScreen() {
             </TouchableOpacity>
             {currentTable && (
               <TouchableOpacity
-                style={[styles.saveChip, { backgroundColor: colors.primary }]}
+                style={[
+                  styles.saveChip,
+                  { backgroundColor: colors.primary },
+                  getButtonSkinStyle(buttonSkin, colors.primary),
+                ]}
                 onPress={saveTableTab}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
               >
+                {getButtonOverlayStyle(buttonSkin) && (
+                  <View style={getButtonOverlayStyle(buttonSkin) as any} />
+                )}
                 <Save size={16} color="#fff" />
                 <Text style={styles.saveChipText}>Save</Text>
               </TouchableOpacity>
@@ -2151,13 +2162,8 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 20,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    overflow: 'hidden',
   },
   tableChipContent: {
     flexDirection: 'row',
@@ -2179,12 +2185,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    overflow: 'hidden',
   },
   saveChipText: {
     fontSize: 14,
