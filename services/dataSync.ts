@@ -205,7 +205,8 @@ export class DataSyncService {
     await AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
 
     try {
-      console.log('[DataSync] Downloading settings profiles from server...');
+      console.log('[DataSync] ========== DOWNLOADING SETTINGS PROFILES ==========');
+      console.log('[DataSync] Site ID:', siteInfo.siteId);
       onProgress?.({ phase: 'parsing', current: 0, total: 1, message: 'Downloading settings profiles...' });
       
       const { trpcClient } = await import('@/lib/trpc');
@@ -213,39 +214,50 @@ export class DataSyncService {
         siteId: siteInfo.siteId,
       });
       
+      console.log('[DataSync] Profile download result:', JSON.stringify({
+        success: profilesResult.success,
+        profileCount: profilesResult.profiles.length,
+        error: profilesResult.error || 'none'
+      }));
+      
       if (profilesResult.success && profilesResult.profiles.length > 0) {
-        console.log(`[DataSync] Downloaded ${profilesResult.profiles.length} settings profiles`);
+        console.log(`[DataSync] Downloaded ${profilesResult.profiles.length} settings profiles from server`);
+        console.log('[DataSync] Profile names:', profilesResult.profiles.map((p: any) => p.profileName).join(', '));
         
         const existingProfiles = await AsyncStorage.getItem('pos_settings_profiles');
         const existingProfilesArray = existingProfiles ? JSON.parse(existingProfiles) : [];
+        console.log('[DataSync] Existing local profiles count:', existingProfilesArray.length);
+        
+        const newProfilesArray: any[] = [];
         
         for (const serverProfile of profilesResult.profiles) {
-          const existingIndex = existingProfilesArray.findIndex((p: any) => p.name === serverProfile.profileName);
+          console.log('[DataSync] Processing profile:', serverProfile.profileName);
           
-          if (existingIndex >= 0) {
-            existingProfilesArray[existingIndex] = {
-              name: serverProfile.profileName,
-              timestamp: serverProfile.timestamp,
-              data: serverProfile.profileData,
-            };
-          } else {
-            existingProfilesArray.push({
-              name: serverProfile.profileName,
-              timestamp: serverProfile.timestamp,
-              data: serverProfile.profileData,
-            });
-          }
+          const profileEntry = {
+            name: serverProfile.profileName,
+            timestamp: serverProfile.timestamp,
+          };
           
-          await AsyncStorage.setItem(`pos_settings_profile_${serverProfile.profileName}`, JSON.stringify(serverProfile.profileData));
+          newProfilesArray.push(profileEntry);
+          
+          await AsyncStorage.setItem(
+            `pos_settings_profile_${serverProfile.profileName}`, 
+            JSON.stringify(serverProfile.profileData)
+          );
+          console.log('[DataSync] Stored profile data for:', serverProfile.profileName);
         }
         
-        await AsyncStorage.setItem('pos_settings_profiles', JSON.stringify(existingProfilesArray));
-        console.log('[DataSync] Settings profiles synced successfully');
+        await AsyncStorage.setItem('pos_settings_profiles', JSON.stringify(newProfilesArray));
+        console.log('[DataSync] Stored profiles list:', JSON.stringify(newProfilesArray));
+        console.log('[DataSync] Settings profiles synced successfully - Total:', newProfilesArray.length);
+      } else if (profilesResult.success && profilesResult.profiles.length === 0) {
+        console.log('[DataSync] No settings profiles found on server (empty array)');
       } else {
-        console.log('[DataSync] No settings profiles found on server');
+        console.log('[DataSync] Profile download was not successful:', profilesResult.error);
       }
     } catch (profileError) {
       console.error('[DataSync] Failed to download settings profiles:', profileError);
+      console.error('[DataSync] Error details:', profileError instanceof Error ? profileError.message : String(profileError));
     }
 
     onProgress?.({ phase: 'complete', current: 1, total: 1, message: 'Sync complete!' });

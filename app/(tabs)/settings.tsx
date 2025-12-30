@@ -398,13 +398,24 @@ export default function SettingsScreen() {
 
   const loadSettingsProfiles = async () => {
     try {
+      console.log('[Settings] Loading settings profiles from AsyncStorage...');
       const stored = await AsyncStorage.getItem('pos_settings_profiles');
+      console.log('[Settings] Raw stored value:', stored ? `Found (${stored.length} chars)` : 'null');
+      
       if (stored) {
         const profiles = JSON.parse(stored);
+        console.log('[Settings] Parsed profiles:', JSON.stringify(profiles));
+        console.log('[Settings] Profile count:', profiles.length);
+        console.log('[Settings] Profile names:', profiles.map((p: any) => p.name).join(', '));
         setSettingsProfiles(profiles);
+        console.log('[Settings] Settings profiles state updated with', profiles.length, 'profiles');
+      } else {
+        console.log('[Settings] No profiles found in AsyncStorage');
+        setSettingsProfiles([]);
       }
     } catch (error) {
-      console.error('Error loading settings profiles:', error);
+      console.error('[Settings] Error loading settings profiles:', error);
+      console.error('[Settings] Error details:', error instanceof Error ? error.message : String(error));
     }
   };
 
