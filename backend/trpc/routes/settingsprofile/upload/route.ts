@@ -16,19 +16,19 @@ export const uploadSettingsProfileProcedure = publicProcedure
     try {
       const fileData: Record<string, string> = {};
       for (const [profileName, profileInfo] of Object.entries(input.allProfiles)) {
-        const fileName = `settings-profiles/${profileName}.json`;
+        const fileName = `DATA/settings-profiles/${profileName}.json`;
         fileData[fileName] = JSON.stringify(profileInfo);
       }
       
       const uploadData = {
         SITEID: input.siteId,
         DESTINATIONWEBVIEWFOLDER: '',
-        FOLDERDATA: ['settings-profiles'],
+        FOLDERDATA: ['DATA/settings-profiles'],
         FILEDATA: fileData,
       };
       
       console.log('[tRPC] Posting to: https://app.positron-portal.com/webviewdataupload');
-      console.log('[tRPC] Uploading', Object.keys(fileData).length, 'profiles to settings-profiles folder');
+      console.log('[tRPC] Uploading', Object.keys(fileData).length, 'profiles to DATA/settings-profiles folder');
       
       const response = await fetch('https://app.positron-portal.com/webviewdataupload', {
         method: 'POST',

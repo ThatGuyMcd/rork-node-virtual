@@ -12,7 +12,7 @@ export const downloadSettingsProfileProcedure = publicProcedure
     
     try {
       const API_BASE_URL = 'https://app.positron-portal.com';
-      const listUrl = `${API_BASE_URL}/webviewfiles?SITEID=${encodeURIComponent(input.siteId)}&DIRECTORY=${encodeURIComponent('settings-profiles')}`;
+      const listUrl = `${API_BASE_URL}/webviewfiles?SITEID=${encodeURIComponent(input.siteId)}&DIRECTORY=${encodeURIComponent('DATA/settings-profiles')}`;
       
       console.log('[tRPC] Fetching file list from:', listUrl);
       
@@ -51,7 +51,7 @@ export const downloadSettingsProfileProcedure = publicProcedure
       for (const fileName of fileList.files) {
         if (!fileName.endsWith('.json')) continue;
         
-        const fileUrl = `${API_BASE_URL}/webviewfiles?SITEID=${encodeURIComponent(input.siteId)}&FILE=${encodeURIComponent('settings-profiles/' + fileName)}`;
+        const fileUrl = `${API_BASE_URL}/webviewfiles?SITEID=${encodeURIComponent(input.siteId)}&FILE=${encodeURIComponent('DATA/settings-profiles/' + fileName)}`;
         console.log('[tRPC] Downloading profile:', fileUrl);
         
         try {
