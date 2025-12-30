@@ -576,25 +576,27 @@ export default function BasketScreen() {
           <Text style={[styles.totalValue, { color: colors.primary }]}>£{remainingTotal.toFixed(2)}</Text>
         </View>
 
-        {currentTable && (
+        <View style={styles.buttonRow}>
+          {currentTable && (
+            <TouchableOpacity
+              style={[styles.saveTabButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+              onPress={handleSaveTab}
+              activeOpacity={0.8}
+            >
+              <Save size={20} color={colors.primary} />
+              <Text style={[styles.saveTabButtonText, { color: colors.primary }]}>Save Tab</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
-            style={[styles.saveTabButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-            onPress={handleSaveTab}
+            style={[styles.payButton, { backgroundColor: colors.primary, flex: currentTable ? 1 : undefined }]}
+            onPress={openPaymentModal}
             activeOpacity={0.8}
           >
-            <Save size={20} color={colors.primary} />
-            <Text style={[styles.saveTabButtonText, { color: colors.primary }]}>Save Tab</Text>
+            <CreditCard size={24} color="#fff" />
+            <Text style={styles.payButtonText}>Pay £{remainingTotal.toFixed(2)}</Text>
           </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          style={[styles.payButton, { backgroundColor: colors.primary }]}
-          onPress={openPaymentModal}
-          activeOpacity={0.8}
-        >
-          <CreditCard size={24} color="#fff" />
-          <Text style={styles.payButtonText}>Pay £{remainingTotal.toFixed(2)}</Text>
-        </TouchableOpacity>
+        </View>
       </View>
 
       <Modal
@@ -1335,7 +1337,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   saveTabButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1343,7 +1350,6 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     borderWidth: 2,
-    marginBottom: 12,
   },
   saveTabButtonText: {
     fontSize: 16,
@@ -1356,6 +1362,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 16,
     borderRadius: 12,
+    flex: 1,
   },
   payButtonText: {
     fontSize: 18,
