@@ -11,37 +11,65 @@ export const downloadSettingsProfileProcedure = publicProcedure
     console.log('[tRPC] Downloading settings profiles for site:', input.siteId);
     
     try {
-      const API_BASE_URL = 'https://app.positron-portal.com/api/v1';
-      const url = `${API_BASE_URL}/sites/${encodeURIComponent(input.siteId)}/data/settings-profiles`;
+      const API_BASE_URL = 'https://app.positron-portal.com';
+      const listUrl = `${API_BASE_URL}/webviewfiles?SITEID=${encodeURIComponent(input.siteId)}&DIRECTORY=${encodeURIComponent(input.siteId + '/settings-profiles')}`;
       
-      console.log('[tRPC] Fetching from:', url);
+      console.log('[tRPC] Fetching file list from:', listUrl);
       
-      const response = await fetch(url, {
+      const listResponse = await fetch(listUrl, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
         },
       });
       
-      if (!response.ok) {
-        if (response.status === 404) {
-          console.log('[tRPC] No profiles found on server');
+      if (!listResponse.ok) {
+        if (listResponse.status === 404) {
+          console.log('[tRPC] No profiles folder found on server');
           return {
             success: true,
             profiles: [],
           };
         }
-        const text = await response.text();
-        console.error('[tRPC] Server error response:', response.status, text);
-        throw new Error(`Server returned ${response.status}: ${text}`);
+        const text = await listResponse.text();
+        console.error('[tRPC] Server error response:', listResponse.status, text);
+        throw new Error(`Server returned ${listResponse.status}: ${text}`);
       }
       
-      const result = await response.json();
-      console.log('[tRPC] Downloaded profiles count:', result.profiles?.length || 0);
+      const fileList = await listResponse.json();
+      console.log('[tRPC] Files found:', fileList);
+      
+      if (!fileList.files || fileList.files.length === 0) {
+        console.log('[tRPC] No profile files found');
+        return {
+          success: true,
+          profiles: [],
+        };
+      }
+      
+      const profiles = [];
+      for (const fileName of fileList.files) {
+        if (!fileName.endsWith('.json')) continue;
+        
+        const fileUrl = `${API_BASE_URL}/webviewfiles/${input.siteId}/settings-profiles/${fileName}`;
+        console.log('[tRPC] Downloading profile:', fileUrl);
+        
+        try {
+          const fileResponse = await fetch(fileUrl);
+          if (fileResponse.ok) {
+            const profileData = await fileResponse.json();
+            profiles.push(profileData);
+          }
+        } catch (fileError) {
+          console.error('[tRPC] Error downloading profile file:', fileName, fileError);
+        }
+      }
+      
+      console.log('[tRPC] Downloaded profiles count:', profiles.length);
       
       return {
         success: true,
-        profiles: result.profiles || [],
+        profiles,
       };
     } catch (error: any) {
       console.error('[tRPC] Error downloading profiles from server:', error);

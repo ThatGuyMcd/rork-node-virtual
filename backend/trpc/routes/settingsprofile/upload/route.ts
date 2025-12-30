@@ -15,22 +15,32 @@ export const uploadSettingsProfileProcedure = publicProcedure
     console.log('[tRPC] Site ID:', input.siteId);
     
     try {
-      const API_BASE_URL = 'https://app.positron-portal.com/api/v1';
-      const url = `${API_BASE_URL}/sites/${encodeURIComponent(input.siteId)}/data/settings-profiles`;
+      const fileName = `${input.profileName}.json`;
+      const folderPath = `${input.siteId}/settings-profiles`;
       
-      console.log('[tRPC] Posting to:', url);
+      const uploadData = {
+        SITEID: input.siteId,
+        DESTINATIONWEBVIEWFOLDER: folderPath,
+        FOLDERDATA: ['settings-profiles'],
+        FILEDATA: {
+          [fileName]: JSON.stringify({
+            profileName: input.profileName,
+            profileData: input.profileData,
+            timestamp: input.timestamp,
+          }),
+        },
+      };
       
-      const response = await fetch(url, {
+      console.log('[tRPC] Posting to: https://app.positron-portal.com/webviewdataupload');
+      console.log('[tRPC] Uploading profile to folder:', folderPath);
+      
+      const response = await fetch('https://app.positron-portal.com/webviewdataupload', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          profileName: input.profileName,
-          profileData: input.profileData,
-          timestamp: input.timestamp,
-        }),
+        body: JSON.stringify(uploadData),
       });
       
       if (!response.ok) {
