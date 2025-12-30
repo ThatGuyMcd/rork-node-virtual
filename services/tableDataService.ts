@@ -65,9 +65,16 @@ class TableDataService {
 
       const pluFile = `${item.product.groupId}-${item.product.departmentId}-${item.product.id.replace('prod_', '').padStart(5, '0')}.PLU`;
 
+      const baseName = item.product.name.split(' - ')[0];
+      const messagePrefix = item.product.name.includes(' - ') ? ' - ' + item.product.name.split(' - ').slice(1).join(' - ') : '';
+      const priceLabel = item.selectedPrice.label.toUpperCase();
+      const knownPrefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML'];
+      const shouldAddPrefix = knownPrefixes.includes(priceLabel);
+      const productName = shouldAddPrefix ? `${priceLabel} ${baseName}${messagePrefix}` : item.product.name;
+
       rows.push({
         quantity: item.quantity,
-        productName: item.product.name,
+        productName,
         price: item.selectedPrice.price,
         pluFile,
         group: item.product.groupId,
@@ -118,9 +125,16 @@ class TableDataService {
 
       const pluFile = `${item.product.groupId}-${item.product.departmentId}-${item.product.id.replace('prod_', '').padStart(5, '0')}.PLU`;
 
+      const baseName = item.product.name.split(' - ')[0];
+      const messagePrefix = item.product.name.includes(' - ') ? ' - ' + item.product.name.split(' - ').slice(1).join(' - ') : '';
+      const priceLabel = item.selectedPrice.label.toUpperCase();
+      const knownPrefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML'];
+      const shouldAddPrefix = knownPrefixes.includes(priceLabel);
+      const productName = shouldAddPrefix ? `${priceLabel} ${baseName}${messagePrefix}` : item.product.name;
+
       rows.push({
         quantity: item.quantity,
-        productName: item.product.name,
+        productName,
         price: item.selectedPrice.price,
         pluFile,
         group: item.product.groupId,

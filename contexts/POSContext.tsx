@@ -482,7 +482,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           if (product) {
             let selectedPrice = product.prices[0] || { key: 'PRICE_STANDARD', label: 'standard', price: row.price };
             
-            const prefixes = ['DBL', 'TRIPLE', 'HALF'];
+            const prefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ml', '175ml', '250ml'];
             let detectedPrefix: string | null = null;
             
             for (const prefix of prefixes) {
