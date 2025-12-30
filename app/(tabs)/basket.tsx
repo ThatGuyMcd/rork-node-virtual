@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   StatusBar,
   TextInput,
   Alert,
+  PanResponder,
 } from 'react-native';
 
 import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare, RotateCcw, Percent, Printer } from 'lucide-react-native';
@@ -31,6 +32,153 @@ const getPricePrefix = (label: string): string => {
   if (lowerLabel === 'not set') return 'NOT SET';
   if (label === '125ml' || label === '175ml' || label === '250ml') return label;
   return label === 'standard' ? '' : label;
+};
+
+interface SwipeableBasketItemProps {
+  item: any;
+  index: number;
+  isRefundItem: boolean;
+  prefix: string;
+  displayName: string;
+  colors: any;
+  onQuantityChange: (index: number, newQuantity: number) => void;
+  onMessagePress: (index: number) => void;
+  onDelete: (index: number) => void;
+}
+
+const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
+  item,
+  index,
+  isRefundItem,
+  prefix,
+  displayName,
+  colors,
+  onQuantityChange,
+  onMessagePress,
+  onDelete,
+}) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const deleteButtonWidth = 80;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 10;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dx < 0) {
+          const newValue = Math.max(gestureState.dx, -deleteButtonWidth);
+          translateX.setValue(newValue);
+        } else if (gestureState.dx > 0) {
+          const newValue = Math.min(gestureState.dx * 0.3, 0);
+          translateX.setValue(newValue);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < -deleteButtonWidth / 2) {
+          Animated.spring(translateX, {
+            toValue: -deleteButtonWidth,
+            useNativeDriver: true,
+            tension: 80,
+            friction: 10,
+          }).start();
+        } else {
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 80,
+            friction: 10,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  const handleDelete = () => {
+    Animated.timing(translateX, {
+      toValue: -400,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      onDelete(index);
+    });
+  };
+
+  return (
+    <View style={styles.swipeableContainer}>
+      <View style={[styles.deleteButtonContainer, { width: deleteButtonWidth }]}>
+        <TouchableOpacity
+          style={[styles.deleteButton, { backgroundColor: colors.error }]}
+          onPress={handleDelete}
+          activeOpacity={0.8}
+        >
+          <Trash2 size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+      
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={[
+          styles.basketItem,
+          {
+            backgroundColor: colors.cardBackground,
+            borderColor: isRefundItem ? colors.error : colors.border,
+            borderWidth: isRefundItem ? 2 : 1,
+            transform: [{ translateX }],
+          },
+        ]}
+      >
+        <View style={styles.itemTopRow}>
+          <View style={styles.itemNameContainer}>
+            {prefix !== '' && (
+              <Text style={[styles.itemPrefix, { color: colors.primary }]}>{prefix} </Text>
+            )}
+            <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
+              {displayName}
+            </Text>
+            {isRefundItem && (
+              <View style={[styles.refundBadge, { backgroundColor: colors.error }]}>
+                <Text style={styles.refundBadgeText}>REFUND</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.quantitySection}>
+            <View style={[styles.quantityControl, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <TouchableOpacity
+                style={styles.quantityButton}
+                onPress={() => onQuantityChange(index, item.quantity - 1)}
+                activeOpacity={0.7}
+              >
+                <Minus size={14} color={colors.text} />
+              </TouchableOpacity>
+              <Text style={[styles.quantityNumber, { color: colors.text }]}>{Math.abs(item.quantity)}</Text>
+              <TouchableOpacity
+                style={styles.quantityButton}
+                onPress={() => onQuantityChange(index, item.quantity + 1)}
+                activeOpacity={0.7}
+              >
+                <Plus size={14} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.itemBottomRow}>
+          <TouchableOpacity
+            style={styles.messageButton}
+            onPress={() => onMessagePress(index)}
+            activeOpacity={0.7}
+          >
+            <MessageSquare size={16} color={colors.primary} />
+          </TouchableOpacity>
+
+          <Text style={[styles.lineTotal, { color: isRefundItem ? colors.error : colors.primary }]}>
+            {isRefundItem ? '-' : ''}£{Math.abs(item.lineTotal).toFixed(2)}
+          </Text>
+        </View>
+      </Animated.View>
+    </View>
+  );
 };
 
 export default function BasketScreen() {
@@ -430,79 +578,20 @@ export default function BasketScreen() {
             : item.product.name;
           
           return (
-          <View 
-            key={index} 
-            style={[
-              styles.basketItem, 
-              { 
-                backgroundColor: colors.cardBackground, 
-                borderColor: isRefundItem ? colors.error : colors.border,
-                borderWidth: isRefundItem ? 2 : 1,
-              }
-            ]}
-          >
-            <View style={styles.itemTopRow}>
-              <View style={styles.itemNameContainer}>
-                {prefix !== '' && (
-                  <Text style={[styles.itemPrefix, { color: colors.primary }]}>{prefix} </Text>
-                )}
-                <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
-                  {displayName}
-                </Text>
-                {isRefundItem && (
-                  <View style={[styles.refundBadge, { backgroundColor: colors.error }]}>
-                    <Text style={styles.refundBadgeText}>REFUND</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.quantitySection}>
-                <View style={[styles.quantityControl, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                  <TouchableOpacity
-                    style={styles.quantityButton}
-                    onPress={() =>
-                      updateBasketItemQuantity(index, item.quantity - 1)
-                    }
-                    activeOpacity={0.7}
-                  >
-                    <Minus size={14} color={colors.text} />
-                  </TouchableOpacity>
-                  <Text style={[styles.quantityNumber, { color: colors.text }]}>{Math.abs(item.quantity)}</Text>
-                  <TouchableOpacity
-                    style={styles.quantityButton}
-                    onPress={() =>
-                      updateBasketItemQuantity(index, item.quantity + 1)
-                    }
-                    activeOpacity={0.7}
-                  >
-                    <Plus size={14} color={colors.text} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.itemBottomRow}>
-              <TouchableOpacity
-                style={styles.messageButton}
-                onPress={() => openMessageModal(index)}
-                activeOpacity={0.7}
-              >
-                <MessageSquare size={16} color={colors.primary} />
-              </TouchableOpacity>
-
-              <Text style={[styles.lineTotal, { color: isRefundItem ? colors.error : colors.primary }]}>
-                {isRefundItem ? '-' : ''}£{Math.abs(item.lineTotal).toFixed(2)}
-              </Text>
-
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => removeFromBasket(index)}
-                activeOpacity={0.7}
-              >
-                <Trash2 size={16} color={colors.error} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )})}
+            <SwipeableBasketItem
+              key={index}
+              item={item}
+              index={index}
+              isRefundItem={isRefundItem}
+              prefix={prefix}
+              displayName={displayName}
+              colors={colors}
+              onQuantityChange={updateBasketItemQuantity}
+              onMessagePress={openMessageModal}
+              onDelete={removeFromBasket}
+            />
+          );
+        })}
       </ScrollView>
 
       <View style={[styles.summary, { backgroundColor: colors.cardBackground, borderTopColor: colors.border }]}>
@@ -1285,11 +1374,32 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingBottom: 110,
   },
+  swipeableContainer: {
+    position: 'relative' as const,
+    height: 'auto' as const,
+    marginBottom: 0,
+  },
+  deleteButtonContainer: {
+    position: 'absolute' as const,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center' as const,
+    alignItems: 'flex-end' as const,
+  },
+  deleteButton: {
+    width: 80,
+    height: '100%',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    borderRadius: 10,
+  },
   basketItem: {
     borderRadius: 10,
     padding: 10,
     borderWidth: 1,
     gap: 6,
+    backgroundColor: '#fff',
   },
   itemTopRow: {
     flexDirection: 'row',
@@ -1338,7 +1448,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
   },
   quantityControl: {
     flexDirection: 'row',
@@ -1356,9 +1466,6 @@ const styles = StyleSheet.create({
     textAlign: 'right' as const,
   },
   messageButton: {
-    padding: 8,
-  },
-  removeButton: {
     padding: 8,
   },
   summary: {
