@@ -16,6 +16,7 @@ import {
 
 import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info, Server, Users, Menu, Loader, Edit2 } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { printerService } from '@/services/printerService';
 import { transactionUploadService } from '@/services/transactionUploadService';
 import { useRouter } from 'expo-router';
@@ -156,6 +157,12 @@ export default function SettingsScreen() {
   const [terminalNumber, setTerminalNumber] = useState('01');
   const [terminalNumberModalVisible, setTerminalNumberModalVisible] = useState(false);
   const [terminalNumberInput, setTerminalNumberInput] = useState('');
+  const [settingsProfiles, setSettingsProfiles] = useState<Array<{ name: string; timestamp: string }>>([]);
+  const [createProfileModalVisible, setCreateProfileModalVisible] = useState(false);
+  const [profileNameInput, setProfileNameInput] = useState('');
+  const [loadProfileModalVisible, setLoadProfileModalVisible] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   
   const getButtonSkinStyle = useCallback((skin: ButtonSkin, backgroundColor: string = '#000000') => {
     switch (skin) {
@@ -303,6 +310,7 @@ export default function SettingsScreen() {
     loadPrinterSettings();
     loadBackgroundSyncInterval();
     loadTerminalNumber();
+    loadSettingsProfiles();
   }, []);
 
   useEffect(() => {
@@ -385,6 +393,186 @@ export default function SettingsScreen() {
   const loadTerminalNumber = async () => {
     const number = await transactionUploadService.getTerminalNumber();
     setTerminalNumber(number);
+  };
+
+  const loadSettingsProfiles = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('pos_settings_profiles');
+      if (stored) {
+        const profiles = JSON.parse(stored);
+        setSettingsProfiles(profiles);
+      }
+    } catch (error) {
+      console.error('Error loading settings profiles:', error);
+    }
+  };
+
+  const saveSettingsProfile = async () => {
+    const name = profileNameInput.trim();
+    if (!name) {
+      Alert.alert('Error', 'Please enter a profile name');
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const profileData = {
+        cardPaymentEnabled,
+        cashPaymentEnabled,
+        cardMachineProvider,
+        splitPaymentsEnabled,
+        refundButtonEnabled,
+        changeAllowed,
+        cashbackAllowed,
+        discountSettings,
+        gratuitySettings,
+        tableSelectionRequired,
+        productViewLayout,
+        productViewMode,
+        themePreference,
+        customColors,
+        buttonSkin,
+        productSettings,
+        printerSettings,
+        receiptSettings,
+        backgroundSyncInterval,
+        terminalNumber,
+      };
+
+      const profile = {
+        name,
+        timestamp: new Date().toISOString(),
+        data: profileData,
+      };
+
+      const profiles = [...settingsProfiles];
+      const existingIndex = profiles.findIndex(p => p.name === name);
+      
+      if (existingIndex >= 0) {
+        const shouldOverwrite = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            'Profile Exists',
+            `A profile named "${name}" already exists. Do you want to overwrite it?`,
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Overwrite', style: 'destructive', onPress: () => resolve(true) },
+            ]
+          );
+        });
+        
+        if (!shouldOverwrite) {
+          setIsSavingProfile(false);
+          return;
+        }
+        
+        profiles[existingIndex] = profile;
+      } else {
+        profiles.push(profile);
+      }
+
+      await AsyncStorage.setItem('pos_settings_profiles', JSON.stringify(profiles));
+      await AsyncStorage.setItem(`pos_settings_profile_${name}`, JSON.stringify(profileData));
+      
+      setSettingsProfiles(profiles);
+      setCreateProfileModalVisible(false);
+      setProfileNameInput('');
+      Alert.alert('Success', `Settings profile "${name}" saved successfully!`);
+    } catch (error) {
+      console.error('Error saving settings profile:', error);
+      Alert.alert('Error', 'Failed to save settings profile');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const loadSettingsProfile = async (profileName: string) => {
+    setIsLoadingProfile(true);
+    try {
+      const stored = await AsyncStorage.getItem(`pos_settings_profile_${profileName}`);
+      if (!stored) {
+        Alert.alert('Error', 'Profile data not found');
+        return;
+      }
+
+      const profileData = JSON.parse(stored);
+      
+      if (profileData.cardPaymentEnabled !== undefined) updateCardPaymentEnabled(profileData.cardPaymentEnabled);
+      if (profileData.cashPaymentEnabled !== undefined) updateCashPaymentEnabled(profileData.cashPaymentEnabled);
+      if (profileData.cardMachineProvider !== undefined) updateCardMachineProvider(profileData.cardMachineProvider);
+      if (profileData.splitPaymentsEnabled !== undefined) updateSplitPaymentsEnabled(profileData.splitPaymentsEnabled);
+      if (profileData.refundButtonEnabled !== undefined) updateRefundButtonEnabled(profileData.refundButtonEnabled);
+      if (profileData.changeAllowed !== undefined) updateChangeAllowed(profileData.changeAllowed);
+      if (profileData.cashbackAllowed !== undefined) updateCashbackAllowed(profileData.cashbackAllowed);
+      if (profileData.discountSettings) updateDiscountSettings(profileData.discountSettings);
+      if (profileData.gratuitySettings) updateGratuitySettings(profileData.gratuitySettings);
+      if (profileData.tableSelectionRequired !== undefined) {
+        setTableSelectionRequired(profileData.tableSelectionRequired);
+        await dataSyncService.setTableSelectionRequired(profileData.tableSelectionRequired);
+        updateTableSelectionRequired(profileData.tableSelectionRequired);
+      }
+      if (profileData.productViewLayout) {
+        setProductViewLayout(profileData.productViewLayout);
+        await updateProductViewLayout(profileData.productViewLayout);
+      }
+      if (profileData.productViewMode) {
+        setProductViewMode(profileData.productViewMode);
+        await updateProductViewMode(profileData.productViewMode);
+      }
+      if (profileData.themePreference) await setTheme(profileData.themePreference);
+      if (profileData.customColors) await setCustomColors(profileData.customColors);
+      if (profileData.buttonSkin) await setButtonSkin(profileData.buttonSkin);
+      if (profileData.productSettings) {
+        setProductSettings(profileData.productSettings);
+        await dataSyncService.setProductDisplaySettings(profileData.productSettings);
+      }
+      if (profileData.printerSettings) {
+        setPrinterSettings(profileData.printerSettings);
+        await printerService.saveSettings(profileData.printerSettings);
+      }
+      if (profileData.receiptSettings) updateReceiptSettings(profileData.receiptSettings);
+      if (profileData.backgroundSyncInterval) {
+        setBackgroundSyncInterval(profileData.backgroundSyncInterval);
+        await dataSyncService.setBackgroundSyncInterval(profileData.backgroundSyncInterval);
+      }
+      if (profileData.terminalNumber) {
+        setTerminalNumber(profileData.terminalNumber);
+        await transactionUploadService.setTerminalNumber(profileData.terminalNumber);
+      }
+
+      setLoadProfileModalVisible(false);
+      Alert.alert('Success', `Settings profile "${profileName}" loaded successfully!`);
+    } catch (error) {
+      console.error('Error loading settings profile:', error);
+      Alert.alert('Error', 'Failed to load settings profile');
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
+  const deleteSettingsProfile = async (profileName: string) => {
+    Alert.alert(
+      'Delete Profile',
+      `Are you sure you want to delete the profile "${profileName}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const profiles = settingsProfiles.filter(p => p.name !== profileName);
+              await AsyncStorage.setItem('pos_settings_profiles', JSON.stringify(profiles));
+              await AsyncStorage.removeItem(`pos_settings_profile_${profileName}`);
+              setSettingsProfiles(profiles);
+              Alert.alert('Success', `Profile "${profileName}" deleted`);
+            } catch (error) {
+              console.error('Error deleting profile:', error);
+              Alert.alert('Error', 'Failed to delete profile');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleTerminalNumberUpdate = async () => {
@@ -1072,6 +1260,76 @@ export default function SettingsScreen() {
           </View>
         </View>
       </View>
+
+      {siteInfo && (
+        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <View style={styles.settingHeader}>
+            <Database size={18} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>Settings Profiles</Text>
+              <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>Save and load complete settings configurations</Text>
+            </View>
+          </View>
+
+          <View style={{ marginTop: 16 }}>
+            {settingsProfiles.length === 0 ? (
+              <Text style={[styles.emptyText, { color: colors.textTertiary, textAlign: 'center', marginVertical: 16 }]}>No saved profiles yet</Text>
+            ) : (
+              <View style={{ gap: 8, marginBottom: 12 }}>
+                {settingsProfiles.map((profile) => (
+                  <View
+                    key={profile.name}
+                    style={[styles.profileItem, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.profileName, { color: colors.text }]}>{profile.name}</Text>
+                      <Text style={[styles.profileTimestamp, { color: colors.textTertiary }]}>
+                        {new Date(profile.timestamp).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                    </View>
+                    <View style={styles.profileActions}>
+                      <TouchableOpacity
+                        onPress={() => loadSettingsProfile(profile.name)}
+                        style={[styles.profileActionButton, { backgroundColor: colors.primary }]}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.profileActionButtonText, { color: '#ffffff' }]}>Load</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => deleteSettingsProfile(profile.name)}
+                        style={[styles.profileActionButton, { backgroundColor: colors.textTertiary }]}
+                        activeOpacity={0.7}
+                      >
+                        <Trash2 size={16} color="#ffffff" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, flex: 1, marginBottom: 0 }]}
+                onPress={() => {
+                  setProfileNameInput('');
+                  setCreateProfileModalVisible(true);
+                }}
+                activeOpacity={0.8}
+              >
+                <Database size={20} color="#ffffff" />
+                <Text style={styles.buttonText}>Save Current Settings</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
 
     </>
   );
@@ -3449,6 +3707,54 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={createProfileModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCreateProfileModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Save Settings Profile</Text>
+            
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Profile Name</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+              value={profileNameInput}
+              onChangeText={setProfileNameInput}
+              placeholder="e.g., Restaurant Setup, Bar Config"
+              placeholderTextColor={colors.textTertiary}
+              autoCapitalize="words"
+            />
+
+            <Text style={[styles.infoText, { color: colors.textSecondary, marginTop: 12, fontSize: 13 }]}>This will save all your current settings including payment options, appearance, basket settings, and more.</Text>
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.textTertiary, flex: 1 }]}
+                onPress={() => setCreateProfileModalVisible(false)}
+                activeOpacity={0.8}
+                disabled={isSavingProfile}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, flex: 1 }, isSavingProfile && { opacity: 0.7 }]}
+                onPress={saveSettingsProfile}
+                activeOpacity={0.8}
+                disabled={isSavingProfile}
+              >
+                {isSavingProfile ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.buttonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -4051,5 +4357,38 @@ const styles = StyleSheet.create({
   limitReachedText: {
     fontSize: 14,
     fontStyle: 'italic',
+  },
+  profileItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 12,
+  },
+  profileName: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  profileTimestamp: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  profileActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  profileActionButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 60,
+  },
+  profileActionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
