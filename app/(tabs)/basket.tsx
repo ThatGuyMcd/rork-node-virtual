@@ -58,48 +58,75 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
   onDelete,
 }) => {
   const translateX = useRef(new Animated.Value(0)).current;
+  const currentOffset = useRef(0);
   const deleteButtonWidth = 80;
 
   const panResponder = useRef(
     PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 10;
+        const isHorizontalSwipe = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+        const hasMovedEnough = Math.abs(gestureState.dx) > 5;
+        return isHorizontalSwipe && hasMovedEnough;
+      },
+      onStartShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        const isHorizontalSwipe = Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 2;
+        const hasMovedEnough = Math.abs(gestureState.dx) > 8;
+        return isHorizontalSwipe && hasMovedEnough;
+      },
+      onPanResponderGrant: () => {
+        console.log('[SwipeableItem] Pan started, current offset:', currentOffset.current);
       },
       onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dx < 0) {
-          const newValue = Math.max(gestureState.dx, -deleteButtonWidth);
-          translateX.setValue(newValue);
-        } else if (gestureState.dx > 0) {
-          const newValue = Math.min(gestureState.dx * 0.3, 0);
-          translateX.setValue(newValue);
+        const newValue = currentOffset.current + gestureState.dx;
+        if (gestureState.dx < 0 || currentOffset.current < 0) {
+          const clampedValue = Math.max(Math.min(newValue, 0), -deleteButtonWidth * 1.2);
+          translateX.setValue(clampedValue);
+        } else if (gestureState.dx > 0 && currentOffset.current === 0) {
+          translateX.setValue(gestureState.dx * 0.3);
         }
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx < -deleteButtonWidth / 2) {
+        const finalValue = currentOffset.current + gestureState.dx;
+        
+        if (finalValue < -deleteButtonWidth / 3) {
+          currentOffset.current = -deleteButtonWidth;
           Animated.spring(translateX, {
             toValue: -deleteButtonWidth,
             useNativeDriver: true,
-            tension: 80,
+            tension: 100,
             friction: 10,
           }).start();
         } else {
+          currentOffset.current = 0;
           Animated.spring(translateX, {
             toValue: 0,
             useNativeDriver: true,
-            tension: 80,
+            tension: 100,
             friction: 10,
           }).start();
         }
+      },
+      onPanResponderTerminate: () => {
+        currentOffset.current = 0;
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 10,
+        }).start();
       },
     })
   ).current;
 
   const handleDelete = () => {
     Animated.timing(translateX, {
-      toValue: -400,
-      duration: 300,
+      toValue: -500,
+      duration: 250,
       useNativeDriver: true,
     }).start(() => {
+      translateX.setValue(0);
       onDelete(index);
     });
   };
