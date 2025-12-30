@@ -57,6 +57,16 @@ class TableDataService {
     const dateString = now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const timeDate = `${timeString} - ${dateString}`;
 
+    const labelToPrefixMap: Record<string, string> = {
+      'half': 'HALF',
+      'double': 'DBL',
+      'small': 'SML',
+      'large': 'LRG',
+      '125ml': '125ML',
+      '175ml': '175ML',
+      '250ml': '250ML',
+    };
+
     for (const item of basket) {
       const vatRate = vatRates.find(v => v.code === item.product.vatCode);
       const vatPercentage = vatRate?.percentage || 0;
@@ -67,10 +77,12 @@ class TableDataService {
 
       const baseName = item.product.name.split(' - ')[0];
       const messagePrefix = item.product.name.includes(' - ') ? ' - ' + item.product.name.split(' - ').slice(1).join(' - ') : '';
-      const priceLabel = item.selectedPrice.label.toUpperCase();
-      const knownPrefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML'];
-      const shouldAddPrefix = knownPrefixes.includes(priceLabel);
-      const productName = shouldAddPrefix ? `${priceLabel} ${baseName}${messagePrefix}` : item.product.name;
+      const priceLabelLower = item.selectedPrice.label.toLowerCase();
+      const prefix = labelToPrefixMap[priceLabelLower];
+      const shouldAddPrefix = prefix !== undefined;
+      const productName = shouldAddPrefix ? `${prefix} ${baseName}${messagePrefix}` : item.product.name;
+      
+      console.log(`[TableDataService] Saving item: label="${item.selectedPrice.label}", prefix="${prefix || 'NONE'}", final name="${productName}"`);
 
       rows.push({
         quantity: item.quantity,
@@ -117,6 +129,16 @@ class TableDataService {
     const dateString = now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const timeDate = `${timeString} - ${dateString}`;
 
+    const labelToPrefixMap: Record<string, string> = {
+      'half': 'HALF',
+      'double': 'DBL',
+      'small': 'SML',
+      'large': 'LRG',
+      '125ml': '125ML',
+      '175ml': '175ML',
+      '250ml': '250ML',
+    };
+
     for (const item of basket) {
       const vatRate = vatRates.find(v => v.code === item.product.vatCode);
       const vatPercentage = vatRate?.percentage || 0;
@@ -127,10 +149,12 @@ class TableDataService {
 
       const baseName = item.product.name.split(' - ')[0];
       const messagePrefix = item.product.name.includes(' - ') ? ' - ' + item.product.name.split(' - ').slice(1).join(' - ') : '';
-      const priceLabel = item.selectedPrice.label.toUpperCase();
-      const knownPrefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML'];
-      const shouldAddPrefix = knownPrefixes.includes(priceLabel);
-      const productName = shouldAddPrefix ? `${priceLabel} ${baseName}${messagePrefix}` : item.product.name;
+      const priceLabelLower = item.selectedPrice.label.toLowerCase();
+      const prefix = labelToPrefixMap[priceLabelLower];
+      const shouldAddPrefix = prefix !== undefined;
+      const productName = shouldAddPrefix ? `${prefix} ${baseName}${messagePrefix}` : item.product.name;
+      
+      console.log(`[TableDataService] Saving item: label="${item.selectedPrice.label}", prefix="${prefix || 'NONE'}", final name="${productName}"`);
 
       rows.push({
         quantity: item.quantity,
@@ -527,6 +551,7 @@ class TableDataService {
     csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?');
     
     for (const row of rows) {
+      console.log(`[TableDataService] Syncing row to server: "${row.productName}"`);
       const line = [
         row.quantity.toFixed(3),
         ` ${row.productName}`,
