@@ -422,6 +422,10 @@ export default function BasketScreen() {
           
           const prefix = getPricePrefix(item.selectedPrice.label);
           
+          const displayName = prefix !== '' && item.product.name.startsWith(prefix + ' ') 
+            ? item.product.name.substring(prefix.length + 1)
+            : item.product.name;
+          
           return (
           <View 
             key={index} 
@@ -440,7 +444,7 @@ export default function BasketScreen() {
                   <Text style={[styles.itemPrefix, { color: colors.primary }]}>{prefix} </Text>
                 )}
                 <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
-                  {item.product.name}
+                  {displayName}
                 </Text>
                 {isRefundItem && (
                   <View style={[styles.refundBadge, { backgroundColor: colors.error }]}>
