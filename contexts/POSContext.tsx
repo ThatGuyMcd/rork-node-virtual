@@ -181,7 +181,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   }, []);
 
   const logout = useCallback(async () => {
-    if (currentTable && basket.length > 0 && currentOperator) {
+    if (currentTable && currentOperator) {
       console.log('[POS] Saving table data before logout...');
       await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
     }
