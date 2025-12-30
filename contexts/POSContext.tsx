@@ -480,7 +480,34 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           }
           
           if (product) {
-            const selectedPrice = product.prices[0] || { key: 'PRICE_STANDARD', label: 'standard', price: row.price };
+            let selectedPrice = product.prices[0] || { key: 'PRICE_STANDARD', label: 'standard', price: row.price };
+            
+            const prefixes = ['DBL', 'TRIPLE', 'HALF'];
+            let detectedPrefix: string | null = null;
+            
+            for (const prefix of prefixes) {
+              if (row.productName.startsWith(prefix + ' ')) {
+                detectedPrefix = prefix;
+                break;
+              }
+            }
+            
+            if (detectedPrefix) {
+              const matchingPrice = product.prices.find(p => p.label.toUpperCase() === detectedPrefix);
+              if (matchingPrice) {
+                selectedPrice = matchingPrice;
+                console.log(`[POS] Detected prefix "${detectedPrefix}" for ${row.productName}, using price: ${matchingPrice.price}`);
+              } else {
+                console.warn(`[POS] Could not find matching price for prefix "${detectedPrefix}" in product ${product.name}`);
+              }
+            } else {
+              const standardPrice = product.prices.find(p => p.label.toLowerCase() === 'standard');
+              if (standardPrice) {
+                selectedPrice = standardPrice;
+                console.log(`[POS] No prefix detected for ${row.productName}, using standard price: ${standardPrice.price}`);
+              }
+            }
+            
             const productWithMessage = row.productName.includes(' - ') 
               ? { ...product, name: row.productName }
               : product;
@@ -491,7 +518,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
               lineTotal: row.quantity * row.price,
             };
             loadedBasket.push(basketItem);
-            console.log(`[POS] Added to basket: ${basketItem.product.name} x${basketItem.quantity}`);
+            console.log(`[POS] Added to basket: ${basketItem.product.name} x${basketItem.quantity} with selected price key: ${selectedPrice.key}`);
           } else {
             console.warn('[POS] Could not find product for row:', row);
           }
