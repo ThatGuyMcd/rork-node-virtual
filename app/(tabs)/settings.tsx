@@ -1998,18 +1998,25 @@ export default function SettingsScreen() {
             ))}
           </View>
         )}
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
-          onPress={() => {
-            setEditingDiscountIndex(null);
-            setDiscountInputValue('');
-            setDiscountModalVisible(true);
-          }}
-          activeOpacity={0.8}
-        >
-          <Percent size={20} color="#ffffff" />
-          <Text style={styles.buttonText}>Add Discount Percentage</Text>
-        </TouchableOpacity>
+        {discountPercentages.length < 9 ? (
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
+            onPress={() => {
+              setEditingDiscountIndex(null);
+              setDiscountInputValue('');
+              setDiscountModalVisible(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <Percent size={20} color="#ffffff" />
+            <Text style={styles.buttonText}>Add Discount Percentage ({discountPercentages.length}/9)</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.limitReachedBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Info size={16} color={colors.textSecondary} />
+            <Text style={[styles.limitReachedText, { color: colors.textSecondary }]}>Maximum of 9 slots reached</Text>
+          </View>
+        )}
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -2095,18 +2102,25 @@ export default function SettingsScreen() {
               ))}
             </View>
           )}
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
-            onPress={() => {
-              setEditingGratuityIndex(null);
-              setGratuityInputValue('');
-              setGratuityModalVisible(true);
-            }}
-            activeOpacity={0.8}
-          >
-            <Percent size={20} color="#ffffff" />
-            <Text style={styles.buttonText}>Add Gratuity Percentage</Text>
-          </TouchableOpacity>
+          {gratuityPercentages.length < 9 ? (
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
+              onPress={() => {
+                setEditingGratuityIndex(null);
+                setGratuityInputValue('');
+                setGratuityModalVisible(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <Percent size={20} color="#ffffff" />
+              <Text style={styles.buttonText}>Add Gratuity Percentage ({gratuityPercentages.length}/9)</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.limitReachedBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Info size={16} color={colors.textSecondary} />
+              <Text style={[styles.limitReachedText, { color: colors.textSecondary }]}>Maximum of 9 slots reached</Text>
+            </View>
+          )}
         </View>
       )}
     </>
@@ -2902,12 +2916,17 @@ export default function SettingsScreen() {
                       newPercentages[editingDiscountIndex] = discountInputValue;
                       setDiscountPercentages(newPercentages);
                       updateDiscountSettings({ ...discountSettings, presetPercentages: newPercentages.map(Number) });
+                      setDiscountModalVisible(false);
                     } else {
+                      if (discountPercentages.length >= 9) {
+                        Alert.alert('Limit Reached', 'You can only have up to 9 discount percentages');
+                        return;
+                      }
                       const newPercentages = [...discountPercentages, discountInputValue];
                       setDiscountPercentages(newPercentages);
                       updateDiscountSettings({ ...discountSettings, presetPercentages: newPercentages.map(Number) });
+                      setDiscountModalVisible(false);
                     }
-                    setDiscountModalVisible(false);
                   } else {
                     Alert.alert('Invalid Input', 'Please enter a valid percentage between 0 and 100');
                   }
@@ -2959,12 +2978,17 @@ export default function SettingsScreen() {
                       newPercentages[editingGratuityIndex] = gratuityInputValue;
                       setGratuityPercentages(newPercentages);
                       updateGratuitySettings({ ...gratuitySettings, presetPercentages: newPercentages.map(Number) });
+                      setGratuityModalVisible(false);
                     } else {
+                      if (gratuityPercentages.length >= 9) {
+                        Alert.alert('Limit Reached', 'You can only have up to 9 gratuity percentages');
+                        return;
+                      }
                       const newPercentages = [...gratuityPercentages, gratuityInputValue];
                       setGratuityPercentages(newPercentages);
                       updateGratuitySettings({ ...gratuitySettings, presetPercentages: newPercentages.map(Number) });
+                      setGratuityModalVisible(false);
                     }
-                    setGratuityModalVisible(false);
                   } else {
                     Alert.alert('Invalid Input', 'Please enter a valid percentage between 0 and 100');
                   }
@@ -4014,5 +4038,18 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 8,
     borderWidth: 2,
+  },
+  limitReachedBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 12,
+  },
+  limitReachedText: {
+    fontSize: 14,
+    fontStyle: 'italic',
   },
 });
