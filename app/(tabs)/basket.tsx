@@ -474,6 +474,14 @@ export default function BasketScreen() {
             </View>
 
             <View style={styles.itemBottomRow}>
+              <TouchableOpacity
+                style={styles.messageButton}
+                onPress={() => openMessageModal(index)}
+                activeOpacity={0.7}
+              >
+                <MessageSquare size={16} color={colors.primary} />
+              </TouchableOpacity>
+
               <Text style={[styles.lineTotal, { color: isRefundItem ? colors.error : colors.primary }]}>
                 {isRefundItem ? '-' : ''}£{Math.abs(item.lineTotal).toFixed(2)}
               </Text>
@@ -484,14 +492,6 @@ export default function BasketScreen() {
                 activeOpacity={0.7}
               >
                 <Trash2 size={16} color={colors.error} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.messageButton}
-                onPress={() => openMessageModal(index)}
-                activeOpacity={0.7}
-              >
-                <MessageSquare size={16} color={colors.primary} />
               </TouchableOpacity>
             </View>
           </View>
