@@ -792,7 +792,8 @@ export default function ReportsScreen() {
                 if (!t.cashback || t.cashback <= 0) return false;
                 
                 if (t.payments && t.payments.length > 0) {
-                  return t.payments.some(p => p.tenderName !== 'Cash');
+                  const lastPayment = t.payments[t.payments.length - 1];
+                  return lastPayment.tenderName !== 'Cash';
                 } else {
                   return t.tenderName !== 'Cash';
                 }
@@ -813,15 +814,14 @@ export default function ReportsScreen() {
                 cashbackByOperator[transaction.operatorId].total += transaction.cashback || 0;
 
                 if (transaction.payments && transaction.payments.length > 0) {
-                  transaction.payments.forEach(payment => {
-                    if (payment.tenderName !== 'Cash') {
-                      if (!cashbackByPaymentMethod[payment.tenderName]) {
-                        cashbackByPaymentMethod[payment.tenderName] = { count: 0, total: 0 };
-                      }
-                      cashbackByPaymentMethod[payment.tenderName].count++;
-                      cashbackByPaymentMethod[payment.tenderName].total += transaction.cashback || 0;
+                  const lastPayment = transaction.payments[transaction.payments.length - 1];
+                  if (lastPayment.tenderName !== 'Cash') {
+                    if (!cashbackByPaymentMethod[lastPayment.tenderName]) {
+                      cashbackByPaymentMethod[lastPayment.tenderName] = { count: 0, total: 0 };
                     }
-                  });
+                    cashbackByPaymentMethod[lastPayment.tenderName].count++;
+                    cashbackByPaymentMethod[lastPayment.tenderName].total += transaction.cashback || 0;
+                  }
                 } else {
                   if (transaction.tenderName !== 'Cash') {
                     if (!cashbackByPaymentMethod[transaction.tenderName]) {
