@@ -465,7 +465,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         const products = await dataSyncService.getStoredProducts();
         const loadedBasket: BasketItem[] = [];
 
-        const knownPrefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML'];
+        const knownPrefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML', '2/3PT'];
         const prefixToLabelMap: Record<string, string> = {
           'HALF': 'half',
           'DBL': 'double',
@@ -474,6 +474,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           '125ML': '125ml',
           '175ML': '175ml',
           '250ML': '250ml',
+          '2/3PT': 'schooner',
         };
 
         for (let rowIdx = 0; rowIdx < csvRows.length; rowIdx++) {
