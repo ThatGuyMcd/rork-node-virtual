@@ -13,10 +13,11 @@ import {
 } from 'react-native';
 
 import { useRouter } from 'expo-router';
-import { Lock, RefreshCw, Crown } from 'lucide-react-native';
+import { Lock, RefreshCw, Crown, ShoppingBag } from 'lucide-react-native';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme, type ButtonSkin } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
+import { storedTabService } from '@/services/storedTabService';
 import type { Operator } from '@/types/pos';
 
 const { width } = Dimensions.get('window');
@@ -27,6 +28,7 @@ export default function LoginScreen() {
   const [operators, setOperators] = useState<Operator[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [storedTabStatuses, setStoredTabStatuses] = useState<Map<string, { hasData: boolean; total: number }>>(new Map());
   const { login } = usePOS();
   const { colors, theme, buttonSkin } = useTheme();
   const router = useRouter();
@@ -167,6 +169,11 @@ export default function LoginScreen() {
     try {
       const loadedOperators = await dataSyncService.getStoredOperators();
       setOperators(loadedOperators);
+      
+      const operatorNames = loadedOperators.map(op => op.name);
+      const statuses = await storedTabService.getAllStoredTabStatuses(operatorNames);
+      setStoredTabStatuses(statuses);
+      console.log('[Login] Loaded stored tab statuses for', operatorNames.length, 'operators');
     } catch (error) {
       console.error('Failed to load operators:', error);
     } finally {
@@ -307,13 +314,17 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={true}
         >
           <View style={styles.operatorGrid}>
-            {operators.map((operator) => (
+            {operators.map((operator) => {
+              const storedTabStatus = storedTabStatuses.get(operator.name) || { hasData: false, total: 0 };
+              const hasStoredTab = storedTabStatus.hasData;
+              
+              return (
               <TouchableOpacity
                 key={operator.id}
                 style={[
                   styles.operatorCard,
-                  { backgroundColor: colors.cardBackground },
-                  getButtonSkinStyle(buttonSkin, colors.cardBackground),
+                  { backgroundColor: hasStoredTab ? colors.primary : colors.cardBackground },
+                  getButtonSkinStyle(buttonSkin, hasStoredTab ? colors.primary : colors.cardBackground),
                 ]}
                 onPress={() => handleOperatorSelect(operator)}
                 activeOpacity={0.8}
@@ -326,14 +337,20 @@ export default function LoginScreen() {
                     <Crown size={18} color="#FFD700" fill="#FFD700" />
                   </View>
                 )}
-                <View style={[styles.operatorAvatar, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.operatorInitial}>
+                {hasStoredTab && (
+                  <View style={styles.storedTabBadge}>
+                    <ShoppingBag size={16} color="#fff" />
+                    <Text style={styles.storedTabTotal}>£{storedTabStatus.total.toFixed(2)}</Text>
+                  </View>
+                )}
+                <View style={[styles.operatorAvatar, { backgroundColor: hasStoredTab ? '#fff' : colors.primary }]}>
+                  <Text style={[styles.operatorInitial, { color: hasStoredTab ? colors.primary : '#fff' }]}>
                     {operator.name.charAt(0)}
                   </Text>
                 </View>
-                <Text style={[styles.operatorName, { color: colors.text }]}>{operator.name}</Text>
+                <Text style={[styles.operatorName, { color: hasStoredTab ? '#fff' : colors.text }]}>{operator.name}</Text>
               </TouchableOpacity>
-            ))}
+            )})}
           </View>
         </ScrollView>
       </View>
@@ -520,6 +537,20 @@ const styles = StyleSheet.create({
     top: 8,
     right: 8,
     zIndex: 1,
+  },
+  storedTabBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    zIndex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  storedTabTotal: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
   },
   backButton: {
     marginTop: 40,

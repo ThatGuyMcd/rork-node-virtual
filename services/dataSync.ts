@@ -140,6 +140,20 @@ export class DataSyncService {
       console.error('[DataSync] Error details:', profileError instanceof Error ? profileError.message : String(profileError));
     }
 
+    try {
+      console.log('[DataSync] ========== DOWNLOADING STORED OPERATOR TABS ==========');
+      console.log('[DataSync] Site ID:', siteInfo.siteId);
+      onProgress?.({ phase: 'connecting', current: 0, total: 1, message: 'Downloading stored operator tabs...' });
+      
+      const { storedTabService } = await import('@/services/storedTabService');
+      await storedTabService.downloadStoredTabsFromServer();
+      
+      console.log('[DataSync] Stored operator tabs synced successfully');
+    } catch (tabError) {
+      console.error('[DataSync] Failed to download stored operator tabs:', tabError);
+      console.error('[DataSync] Error details:', tabError instanceof Error ? tabError.message : String(tabError));
+    }
+
     const filteredManifest = this.filterManifest(manifest);
     console.log(`[DataSync] Will check: ${filteredManifest.length} files after filtering`);
     console.log(`[DataSync] Skipped: ${manifest.length - filteredManifest.length} files`);
