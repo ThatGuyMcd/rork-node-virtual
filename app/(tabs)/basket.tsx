@@ -445,7 +445,7 @@ export default function BasketScreen() {
                   }
                   activeOpacity={0.7}
                 >
-                  <Minus size={16} color={colors.text} />
+                  <Minus size={14} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={[styles.quantityText, { color: colors.text }]}>{item.quantity}</Text>
                 <TouchableOpacity
@@ -455,7 +455,7 @@ export default function BasketScreen() {
                   }
                   activeOpacity={0.7}
                 >
-                  <Plus size={16} color={colors.text} />
+                  <Plus size={14} color={colors.text} />
                 </TouchableOpacity>
               </View>
 
@@ -468,7 +468,7 @@ export default function BasketScreen() {
                 onPress={() => openMessageModal(index)}
                 activeOpacity={0.7}
               >
-                <MessageSquare size={18} color={colors.primary} />
+                <MessageSquare size={16} color={colors.primary} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -476,7 +476,7 @@ export default function BasketScreen() {
                 onPress={() => removeFromBasket(index)}
                 activeOpacity={0.7}
               >
-                <Trash2 size={18} color={colors.error} />
+                <Trash2 size={16} color={colors.error} />
               </TouchableOpacity>
             </View>
           </View>
@@ -1236,69 +1236,74 @@ const styles = StyleSheet.create({
   itemsContainer: {
     padding: 16,
     paddingTop: 0,
-    gap: 12,
+    gap: 8,
     paddingBottom: 110,
   },
   basketItem: {
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 10,
+    padding: 10,
     borderWidth: 1,
   },
   itemInfo: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   itemNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     flexWrap: 'wrap' as const,
   },
   refundBadge: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 3,
   },
   refundBadgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     color: '#fff',
   },
   itemName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   itemPrice: {
-    fontSize: 13,
+    fontSize: 12,
   },
   itemActions: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 6,
   },
   quantityControl: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
   },
   quantityButton: {
-    padding: 8,
+    padding: 6,
   },
   quantityText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
+    minWidth: 32,
+    textAlign: 'center' as const,
   },
   lineTotal: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
+    flex: 1,
+    textAlign: 'right' as const,
   },
   messageButton: {
-    padding: 8,
+    padding: 6,
   },
   removeButton: {
-    padding: 8,
+    padding: 6,
   },
   summary: {
     padding: 20,
