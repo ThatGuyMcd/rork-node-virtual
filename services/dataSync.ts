@@ -95,19 +95,24 @@ export class DataSyncService {
     let filesToDownload = filteredManifest;
     
     if (isIncremental) {
-      const previousHashes = await this.getFileHashes();
+      const previousMetadata = await this.getFileMetadata();
       filesToDownload = [];
       
       console.log('[DataSync] Checking for changed files...');
       
-      for (const path of filteredManifest) {
-        const fileHash = await this.computeFileHash(path);
-        if (previousHashes[path] !== fileHash) {
-          filesToDownload.push(path);
+      for (const fileInfo of filteredManifest) {
+        const previousMeta = previousMetadata[fileInfo.path];
+        
+        if (!previousMeta) {
+          console.log(`[DataSync] New file detected: ${fileInfo.path}`);
+          filesToDownload.push(fileInfo);
+        } else if (fileInfo.lastModified && previousMeta.lastModified !== fileInfo.lastModified) {
+          console.log(`[DataSync] Modified file detected: ${fileInfo.path} (was: ${previousMeta.lastModified}, now: ${fileInfo.lastModified})`);
+          filesToDownload.push(fileInfo);
         }
       }
       
-      console.log(`[DataSync] Found ${filesToDownload.length} changed files`);
+      console.log(`[DataSync] Found ${filesToDownload.length} new or changed files`);
       
       if (filesToDownload.length === 0) {
         console.log('[DataSync] No changes detected');
@@ -152,13 +157,13 @@ export class DataSyncService {
       
       console.log(`[DataSync] Downloading batch ${Math.floor(batchStart / BATCH_SIZE) + 1}: files ${batchStart + 1}-${batchEnd} of ${filesToDownload.length}`);
       
-      const batchPromises = batch.map(async (path) => {
+      const batchPromises = batch.map(async (fileInfo) => {
         try {
-          const text = await apiClient.getFile(siteInfo.siteId, path);
-          return { path, text, success: true };
+          const text = await apiClient.getFile(siteInfo.siteId, fileInfo.path);
+          return { path: fileInfo.path, text, success: true };
         } catch (error) {
-          console.error(`[DataSync] Failed to download ${path}:`, error);
-          return { path, text: '', success: false };
+          console.error(`[DataSync] Failed to download ${fileInfo.path}:`, error);
+          return { path: fileInfo.path, text: '', success: false };
         }
       });
 
@@ -196,7 +201,7 @@ export class DataSyncService {
       await this.parseAndStoreData(files);
     }
 
-    await this.saveFileHashes(filteredManifest);
+    await this.saveFileMetadata(filteredManifest);
     await AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
 
     onProgress?.({ phase: 'complete', current: 1, total: 1, message: 'Sync complete!' });
@@ -204,7 +209,7 @@ export class DataSyncService {
     console.log('[DataSync] ========== SYNC COMPLETE ==========');
   }
 
-  private filterManifest(manifest: string[]): string[] {
+  private filterManifest(manifest: { path: string; lastModified?: string }[]): { path: string; lastModified?: string }[] {
     const allowedPrefixes = [
       'PLUDATA',
       'OPERATORDATA',
@@ -214,8 +219,8 @@ export class DataSyncService {
       'VATDATA',
     ];
 
-    const filtered = manifest.filter(path => {
-      const upper = path.toUpperCase();
+    const filtered = manifest.filter(fileInfo => {
+      const upper = fileInfo.path.toUpperCase();
       
       // Only include files from allowed folders
       if (!allowedPrefixes.some(prefix => upper === prefix || upper.startsWith(prefix + '/'))) {
@@ -237,8 +242,8 @@ export class DataSyncService {
 
     // Sort by folder to download one folder at a time
     return filtered.sort((a, b) => {
-      const folderA = a.split('/')[0].toUpperCase();
-      const folderB = b.split('/')[0].toUpperCase();
+      const folderA = a.path.split('/')[0].toUpperCase();
+      const folderB = b.path.split('/')[0].toUpperCase();
       
       // Define priority order for folders
       const folderOrder: Record<string, number> = {
@@ -258,7 +263,7 @@ export class DataSyncService {
       }
       
       // Within the same folder, sort alphabetically
-      return a.localeCompare(b);
+      return a.path.localeCompare(b.path);
     });
   }
 
@@ -912,27 +917,19 @@ export class DataSyncService {
     return await AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC);
   }
 
-  private async computeFileHash(filePath: string): Promise<string> {
-    let hash = 0;
-    for (let i = 0; i < filePath.length; i++) {
-      const char = filePath.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return hash.toString();
-  }
-
-  private async getFileHashes(): Promise<Record<string, string>> {
+  private async getFileMetadata(): Promise<Record<string, { lastModified?: string }>> {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.FILE_HASHES);
     return data ? JSON.parse(data) : {};
   }
 
-  private async saveFileHashes(manifest: string[]): Promise<void> {
-    const hashes: Record<string, string> = {};
-    for (const path of manifest) {
-      hashes[path] = await this.computeFileHash(path);
+  private async saveFileMetadata(manifest: { path: string; lastModified?: string }[]): Promise<void> {
+    const metadata: Record<string, { lastModified?: string }> = {};
+    for (const fileInfo of manifest) {
+      metadata[fileInfo.path] = {
+        lastModified: fileInfo.lastModified,
+      };
     }
-    await AsyncStorage.setItem(STORAGE_KEYS.FILE_HASHES, JSON.stringify(hashes));
+    await AsyncStorage.setItem(STORAGE_KEYS.FILE_HASHES, JSON.stringify(metadata));
   }
 
   private async parseAndMergeData(files: Map<string, string>): Promise<void> {

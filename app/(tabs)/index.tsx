@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from 'expo-router';
 
 import { ChevronLeft, X, RefreshCw, Grid3x3, Save } from 'lucide-react-native';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
@@ -297,8 +297,8 @@ export default function ProductsScreen() {
       }
 
       const manifest = await apiClient.getManifest(siteInfo.siteId);
-      const areaFiles = manifest.filter(path => {
-        const upper = path.toUpperCase();
+      const areaFiles = manifest.filter(fileInfo => {
+        const upper = fileInfo.path.toUpperCase();
         return upper.startsWith(`TABDATA/${area.toUpperCase()}/`);
       });
 
@@ -310,11 +310,11 @@ export default function ProductsScreen() {
       
       for (let i = 0; i < areaFiles.length; i += BATCH_SIZE) {
         const batch = areaFiles.slice(i, i + BATCH_SIZE);
-        const batchPromises = batch.map(path => 
-          apiClient.getFile(siteInfo.siteId, path)
-            .then(content => ({ path, content }))
+        const batchPromises = batch.map(fileInfo => 
+          apiClient.getFile(siteInfo.siteId, fileInfo.path)
+            .then(content => ({ path: fileInfo.path, content }))
             .catch(error => {
-              console.error(`[Products] Failed to download ${path}:`, error);
+              console.error(`[Products] Failed to download ${fileInfo.path}:`, error);
               return null;
             })
         );

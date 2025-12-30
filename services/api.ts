@@ -76,7 +76,7 @@ export class PositronAPI {
     }
   }
 
-  async getManifest(siteId: string): Promise<string[]> {
+  async getManifest(siteId: string): Promise<{ path: string; lastModified?: string }[]> {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -97,14 +97,22 @@ export class PositronAPI {
       if (contentType.includes('json')) {
         const json = await response.json();
         const files = Array.isArray(json) ? json : (json.files || []);
-        return files.map(this.normalizePath);
+        return files.map((item: any) => {
+          if (typeof item === 'string') {
+            return { path: this.normalizePath(item) };
+          }
+          return {
+            path: this.normalizePath(item.path || item.name || item),
+            lastModified: item.lastModified || item.modified || item.mtime,
+          };
+        });
       } else {
         const text = await response.text();
         return text
           .split(/\r?\n/)
           .map(s => s.trim())
           .filter(Boolean)
-          .map(this.normalizePath);
+          .map(path => ({ path: this.normalizePath(path) }));
       }
     } catch (error: any) {
       console.error('Get manifest error:', error);
