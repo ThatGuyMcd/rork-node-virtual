@@ -13,7 +13,7 @@ import {
   PanResponder,
 } from 'react-native';
 
-import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare, RotateCcw, Percent, Printer } from 'lucide-react-native';
+import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare, RotateCcw, Percent, Printer, Undo2 } from 'lucide-react-native';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { printerService } from '@/services/printerService';
@@ -41,9 +41,11 @@ interface SwipeableBasketItemProps {
   prefix: string;
   displayName: string;
   colors: any;
+  isManager: boolean;
   onQuantityChange: (index: number, newQuantity: number) => void;
   onMessagePress: (index: number) => void;
   onDelete: (index: number) => void;
+  onRefund: (index: number) => void;
 }
 
 const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
@@ -53,13 +55,16 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
   prefix,
   displayName,
   colors,
+  isManager,
   onQuantityChange,
   onMessagePress,
   onDelete,
+  onRefund,
 }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const currentOffset = useRef(0);
   const deleteButtonWidth = 80;
+  const refundButtonWidth = 80;
 
   const panResponder = useRef(
     PanResponder.create({
@@ -83,8 +88,9 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
         if (gestureState.dx < 0 || currentOffset.current < 0) {
           const clampedValue = Math.max(Math.min(newValue, 0), -deleteButtonWidth * 1.2);
           translateX.setValue(clampedValue);
-        } else if (gestureState.dx > 0 && currentOffset.current === 0) {
-          translateX.setValue(gestureState.dx * 0.3);
+        } else if (gestureState.dx > 0 || currentOffset.current > 0) {
+          const clampedValue = Math.min(Math.max(newValue, 0), refundButtonWidth * 1.2);
+          translateX.setValue(clampedValue);
         }
       },
       onPanResponderRelease: (_, gestureState) => {
@@ -94,6 +100,14 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
           currentOffset.current = -deleteButtonWidth;
           Animated.spring(translateX, {
             toValue: -deleteButtonWidth,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 10,
+          }).start();
+        } else if (finalValue > refundButtonWidth / 3 && isManager && !isRefundItem) {
+          currentOffset.current = refundButtonWidth;
+          Animated.spring(translateX, {
+            toValue: refundButtonWidth,
             useNativeDriver: true,
             tension: 100,
             friction: 10,
@@ -127,12 +141,37 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
       useNativeDriver: true,
     }).start(() => {
       translateX.setValue(0);
+      currentOffset.current = 0;
       onDelete(index);
+    });
+  };
+
+  const handleRefund = () => {
+    Animated.timing(translateX, {
+      toValue: 500,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      translateX.setValue(0);
+      currentOffset.current = 0;
+      onRefund(index);
     });
   };
 
   return (
     <View style={styles.swipeableContainer}>
+      {isManager && !isRefundItem && (
+        <View style={[styles.refundButtonContainer, { width: refundButtonWidth }]}>
+          <TouchableOpacity
+            style={[styles.refundButtonSwipe, { backgroundColor: colors.warning || '#f59e0b' }]}
+            onPress={handleRefund}
+            activeOpacity={0.8}
+          >
+            <Undo2 size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
+      
       <View style={[styles.deleteButtonContainer, { width: deleteButtonWidth }]}>
         <TouchableOpacity
           style={[styles.deleteButton, { backgroundColor: colors.error }]}
@@ -234,6 +273,7 @@ export default function BasketScreen() {
     cashbackAllowed,
     savingTable,
     processingTransaction,
+    addToBasket,
   } = usePOS();
   const { colors, theme } = useTheme();
 
@@ -491,6 +531,16 @@ export default function BasketScreen() {
     }
   };
 
+  const handleRefundItem = (index: number) => {
+    const item = basket[index];
+    addToBasket(
+      item.product,
+      item.selectedPrice,
+      -Math.abs(item.quantity),
+      item.selectedPrice.price
+    );
+  };
+
   const handleConfirmChange = async () => {
     if (!pendingTenderId) return;
 
@@ -613,9 +663,11 @@ export default function BasketScreen() {
               prefix={prefix}
               displayName={displayName}
               colors={colors}
+              isManager={currentOperator?.isManager || false}
               onQuantityChange={updateBasketItemQuantity}
               onMessagePress={openMessageModal}
               onDelete={removeFromBasket}
+              onRefund={handleRefundItem}
             />
           );
         })}
@@ -1405,6 +1457,22 @@ const styles = StyleSheet.create({
     position: 'relative' as const,
     height: 'auto' as const,
     marginBottom: 0,
+  },
+  refundButtonContainer: {
+    position: 'absolute' as const,
+    left: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center' as const,
+    alignItems: 'flex-start' as const,
+    paddingLeft: 6,
+  },
+  refundButtonSwipe: {
+    width: 70,
+    height: '90%',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    borderRadius: 10,
   },
   deleteButtonContainer: {
     position: 'absolute' as const,
