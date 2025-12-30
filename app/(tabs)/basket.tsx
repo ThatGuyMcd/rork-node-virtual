@@ -46,6 +46,7 @@ interface SwipeableBasketItemProps {
   onMessagePress: (index: number) => void;
   onDelete: (index: number) => void;
   onRefund: (index: number) => void;
+  onUndoRefund: (index: number) => void;
 }
 
 const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
@@ -60,6 +61,7 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
   onMessagePress,
   onDelete,
   onRefund,
+  onUndoRefund,
 }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const currentOffset = useRef(0);
@@ -104,7 +106,7 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
             tension: 100,
             friction: 10,
           }).start();
-        } else if (finalValue > refundButtonWidth / 3 && isManager && !isRefundItem) {
+        } else if (finalValue > refundButtonWidth / 3 && isManager) {
           currentOffset.current = refundButtonWidth;
           Animated.spring(translateX, {
             toValue: refundButtonWidth,
@@ -158,16 +160,32 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
     });
   };
 
+  const handleUndoRefund = () => {
+    Animated.timing(translateX, {
+      toValue: 500,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      translateX.setValue(0);
+      currentOffset.current = 0;
+      onUndoRefund(index);
+    });
+  };
+
   return (
     <View style={styles.swipeableContainer}>
-      {isManager && !isRefundItem && (
+      {isManager && (
         <View style={[styles.refundButtonContainer, { width: refundButtonWidth }]}>
           <TouchableOpacity
-            style={[styles.refundButtonSwipe, { backgroundColor: colors.warning || '#f59e0b' }]}
-            onPress={handleRefund}
+            style={[styles.refundButtonSwipe, { backgroundColor: isRefundItem ? colors.success : (colors.warning || '#f59e0b') }]}
+            onPress={isRefundItem ? handleUndoRefund : handleRefund}
             activeOpacity={0.8}
           >
-            <Undo2 size={24} color="#fff" />
+            {isRefundItem ? (
+              <RotateCcw size={24} color="#fff" />
+            ) : (
+              <Undo2 size={24} color="#fff" />
+            )}
           </TouchableOpacity>
         </View>
       )}
@@ -535,6 +553,10 @@ export default function BasketScreen() {
     refundBasketItem(index);
   };
 
+  const handleUndoRefund = (index: number) => {
+    refundBasketItem(index);
+  };
+
   const handleConfirmChange = async () => {
     if (!pendingTenderId) return;
 
@@ -662,6 +684,7 @@ export default function BasketScreen() {
               onMessagePress={openMessageModal}
               onDelete={removeFromBasket}
               onRefund={handleRefundItem}
+              onUndoRefund={handleUndoRefund}
             />
           );
         })}
