@@ -1181,8 +1181,8 @@ const styles = StyleSheet.create({
   discountGratuityRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 6,
+    marginBottom: 6,
   },
   discountButtonBottom: {
     flex: 1,
@@ -1338,7 +1338,7 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   summaryLabel: {
     fontSize: 16,
