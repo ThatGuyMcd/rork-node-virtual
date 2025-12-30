@@ -14,7 +14,7 @@ import {
   PanResponder,
 } from 'react-native';
 
-import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info, Server, Users, Menu, Loader } from 'lucide-react-native';
+import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info, Server, Users, Menu, Loader, Edit2 } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
 import { printerService } from '@/services/printerService';
 import { transactionUploadService } from '@/services/transactionUploadService';
@@ -1980,7 +1980,7 @@ export default function SettingsScreen() {
                     style={styles.percentageActionButton}
                     activeOpacity={0.7}
                   >
-                    <Paintbrush size={16} color={colors.primary} />
+                    <Edit2 size={16} color={colors.primary} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => {
@@ -2084,7 +2084,7 @@ export default function SettingsScreen() {
                       style={styles.percentageActionButton}
                       activeOpacity={0.7}
                     >
-                      <Paintbrush size={16} color={colors.primary} />
+                      <Edit2 size={16} color={colors.primary} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => {
