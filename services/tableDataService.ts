@@ -66,6 +66,7 @@ class TableDataService {
       '175ml': '175ML',
       '250ml': '250ML',
       'schooner': '2/3PT',
+      'open': 'OPEN',
     };
 
     for (const item of basket) {
@@ -139,6 +140,7 @@ class TableDataService {
       '175ml': '175ML',
       '250ml': '250ML',
       'schooner': '2/3PT',
+      'open': 'OPEN',
     };
 
     for (const item of basket) {
