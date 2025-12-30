@@ -32,6 +32,7 @@ interface POSContextType {
   receiptSettings: ReceiptSettings;
   changeAllowed: boolean;
   cashbackAllowed: boolean;
+  savingTable: boolean;
   updateReceiptSettings: (settings: ReceiptSettings) => Promise<void>;
   updateChangeAllowed: (allowed: boolean) => Promise<void>;
   updateCashbackAllowed: (allowed: boolean) => Promise<void>;
@@ -89,6 +90,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   });
   const [changeAllowed, setChangeAllowed] = useState(true);
   const [cashbackAllowed, setCashbackAllowed] = useState(false);
+  const [savingTable, setSavingTable] = useState(false);
 
   const [tenders, setTenders] = useState<Tender[]>([
     { id: '1', name: 'Cash', color: '#10b981' },
@@ -182,8 +184,13 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
 
   const logout = useCallback(async () => {
     if (currentTable && currentOperator) {
-      console.log('[POS] Saving table data before logout...');
-      await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
+      setSavingTable(true);
+      try {
+        console.log('[POS] Saving table data before logout...');
+        await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
+      } finally {
+        setSavingTable(false);
+      }
     }
     
     setCurrentOperator(null);
@@ -513,6 +520,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       return;
     }
 
+    setSavingTable(true);
     try {
       if (basket.length === 0) {
         await tableDataService.clearTableData(currentTable.id, currentTable);
@@ -529,6 +537,8 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       console.log('[POS] Deselected table and logged out user');
     } catch (error) {
       console.error('[POS] Error saving table tab:', error);
+    } finally {
+      setSavingTable(false);
     }
   }, [currentTable, currentOperator, basket, vatRates]);
 
@@ -722,5 +732,6 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     cashbackAllowed,
     updateChangeAllowed,
     updateCashbackAllowed,
+    savingTable,
   };
 });

@@ -43,6 +43,7 @@ export default function BasketScreen() {
     selectTable,
     changeAllowed,
     cashbackAllowed,
+    savingTable,
   } = usePOS();
   const { colors, theme } = useTheme();
 
@@ -63,7 +64,6 @@ export default function BasketScreen() {
   const [changeModalVisible, setChangeModalVisible] = useState(false);
   const [changeAmount, setChangeAmount] = useState(0);
   const [pendingTenderId, setPendingTenderId] = useState<string | null>(null);
-  const [savingTable, setSavingTable] = useState(false);
   const scaleAnim = useState(new Animated.Value(0))[0];
   const availableTenders = getAvailableTenders();
 
@@ -218,12 +218,7 @@ export default function BasketScreen() {
   };
 
   const handleSaveTab = async () => {
-    setSavingTable(true);
-    try {
-      await saveTableTab();
-    } finally {
-      setSavingTable(false);
-    }
+    await saveTableTab();
   };
 
   const openMessageModal = (index: number) => {

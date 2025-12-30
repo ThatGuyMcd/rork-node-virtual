@@ -206,7 +206,7 @@ export default function ProductsScreen() {
   const [productMsgInput, setProductMsgInput] = useState('');
   const [productMsgProduct, setProductMsgProduct] = useState<Product | null>(null);
   const [productMsgPrice, setProductMsgPrice] = useState<PriceOption | null>(null);
-  const { addToBasket, currentTable, selectTable, isTableSelectionRequired, productViewLayout, productViewMode, saveTableTab } = usePOS();
+  const { addToBasket, currentTable, selectTable, isTableSelectionRequired, productViewLayout, productViewMode, saveTableTab, savingTable } = usePOS();
   const { colors, theme, buttonSkin } = useTheme();
   const navigation = useNavigation();
 
@@ -1102,10 +1102,7 @@ export default function ProductsScreen() {
             {currentTable && (
               <TouchableOpacity
                 style={[styles.saveChip, { backgroundColor: colors.primary }]}
-                onPress={async () => {
-                  await saveTableTab();
-                  showNotification('Table saved and logged out');
-                }}
+                onPress={saveTableTab}
                 activeOpacity={0.7}
               >
                 <Save size={16} color="#fff" />
@@ -1864,6 +1861,25 @@ export default function ProductsScreen() {
           )}
         </Animated.View>
       )}
+
+      <Modal
+        transparent
+        visible={savingTable}
+        animationType="fade"
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+          <View style={[styles.savingModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={[styles.savingIconContainer, { backgroundColor: colors.primary + '20' }]}>
+              <Save size={48} color={colors.primary} />
+            </View>
+            
+            <Text style={[styles.savingModalTitle, { color: colors.text }]}>Saving Table...</Text>
+            <Text style={[styles.savingModalSubtitle, { color: colors.textSecondary }]}>
+              Please wait while we save your table data
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -2339,5 +2355,30 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700' as const,
     color: '#fff',
+  },
+  savingModal: {
+    borderRadius: 20,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center' as const,
+  },
+  savingIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginBottom: 24,
+  },
+  savingModalTitle: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    marginBottom: 8,
+    textAlign: 'center' as const,
+  },
+  savingModalSubtitle: {
+    fontSize: 16,
+    textAlign: 'center' as const,
   },
 });
