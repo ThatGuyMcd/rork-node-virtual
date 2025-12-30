@@ -15,7 +15,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Lock, RefreshCw, Crown } from 'lucide-react-native';
 import { usePOS } from '@/contexts/POSContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme, type ButtonSkin } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
 import type { Operator } from '@/types/pos';
 
@@ -28,9 +28,135 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { login } = usePOS();
-  const { colors, theme } = useTheme();
+  const { colors, theme, buttonSkin } = useTheme();
   const router = useRouter();
   const shakeAnimation = useState(new Animated.Value(0))[0];
+
+  const getButtonSkinStyle = (skin: ButtonSkin, backgroundColor: string = '#000000') => {
+    switch (skin) {
+      case 'rounded':
+        return {
+          borderRadius: 28,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.5,
+          shadowRadius: 12,
+          elevation: 10,
+        };
+      case 'sharp':
+        return {
+          borderRadius: 4,
+          shadowColor: '#000',
+          shadowOffset: { width: 2, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 0,
+          elevation: 4,
+        };
+      case 'soft':
+        return {
+          borderRadius: 20,
+          shadowColor: backgroundColor,
+          shadowOffset: { width: -4, height: -4 },
+          shadowOpacity: 0.4,
+          shadowRadius: 8,
+          elevation: 0,
+        };
+      case 'outlined':
+        return {
+          borderRadius: 16,
+          borderWidth: 3,
+          borderColor: backgroundColor,
+          shadowColor: backgroundColor,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 1,
+          shadowRadius: 20,
+          elevation: 0,
+        };
+      case 'minimal':
+        return {
+          borderRadius: 8,
+          borderWidth: 0,
+          shadowColor: 'transparent',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          elevation: 0,
+        };
+      case 'default':
+      default:
+        return {
+          borderRadius: 12,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 6,
+          elevation: 6,
+        };
+    }
+  };
+
+  const getButtonOverlayStyle = (skin: ButtonSkin) => {
+    switch (skin) {
+      case 'rounded':
+        return [
+          StyleSheet.absoluteFill,
+          {
+            borderRadius: 28,
+            borderTopWidth: 2,
+            borderLeftWidth: 2,
+            borderTopColor: 'rgba(255, 255, 255, 0.4)',
+            borderLeftColor: 'rgba(255, 255, 255, 0.3)',
+            borderBottomWidth: 3,
+            borderRightWidth: 3,
+            borderBottomColor: 'rgba(0, 0, 0, 0.5)',
+            borderRightColor: 'rgba(0, 0, 0, 0.4)',
+          },
+        ];
+      case 'sharp':
+        return [
+          StyleSheet.absoluteFill,
+          {
+            borderRadius: 4,
+            borderTopWidth: 4,
+            borderLeftWidth: 4,
+            borderTopColor: 'rgba(255, 255, 255, 0.5)',
+            borderLeftColor: 'rgba(255, 255, 255, 0.4)',
+            borderBottomWidth: 4,
+            borderRightWidth: 4,
+            borderBottomColor: 'rgba(0, 0, 0, 0.6)',
+            borderRightColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        ];
+      case 'soft':
+        return [
+          StyleSheet.absoluteFill,
+          {
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          },
+        ];
+      case 'outlined':
+        return [
+          StyleSheet.absoluteFill,
+          {
+            borderRadius: 14,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          },
+        ];
+      case 'minimal':
+        return [
+          StyleSheet.absoluteFill,
+          {
+            borderRadius: 8,
+            backgroundColor: 'rgba(255, 255, 255, 0.06)',
+          },
+        ];
+      default:
+        return null;
+    }
+  };
 
   useEffect(() => {
     loadOperators();
@@ -131,7 +257,11 @@ export default function LoginScreen() {
             <Text style={[styles.title, { color: colors.text }]}>No Operators</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Sync your data to get started</Text>
             <TouchableOpacity
-              style={[styles.settingsButton, { backgroundColor: colors.primary, borderColor: colors.primaryDark }]}
+              style={[
+                styles.settingsButton,
+                { backgroundColor: colors.primary },
+                getButtonSkinStyle(buttonSkin, colors.primary),
+              ]}
               onPress={() => {
                 const guestOperator: Operator = {
                   id: 'guest',
@@ -144,8 +274,11 @@ export default function LoginScreen() {
                   router.replace('/(tabs)/settings');
                 });
               }}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
+              {getButtonOverlayStyle(buttonSkin) && (
+                <View style={getButtonOverlayStyle(buttonSkin)!} />
+              )}
               <Text style={styles.settingsButtonText}>Go to Settings</Text>
             </TouchableOpacity>
           </View>
@@ -177,10 +310,17 @@ export default function LoginScreen() {
             {operators.map((operator) => (
               <TouchableOpacity
                 key={operator.id}
-                style={[styles.operatorCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                style={[
+                  styles.operatorCard,
+                  { backgroundColor: colors.cardBackground },
+                  getButtonSkinStyle(buttonSkin, colors.cardBackground),
+                ]}
                 onPress={() => handleOperatorSelect(operator)}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
               >
+                {getButtonOverlayStyle(buttonSkin) && (
+                  <View style={getButtonOverlayStyle(buttonSkin) as any} />
+                )}
                 {operator.isManager && (
                   <View style={styles.crownBadge}>
                     <Crown size={18} color="#FFD700" fill="#FFD700" />
@@ -260,26 +400,47 @@ export default function LoginScreen() {
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
               <TouchableOpacity
                 key={digit}
-                style={[styles.keypadButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                style={[
+                  styles.keypadButton,
+                  { backgroundColor: colors.cardBackground },
+                  getButtonSkinStyle(buttonSkin, colors.cardBackground),
+                ]}
                 onPress={() => handlePinPress(digit.toString())}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
               >
+                {getButtonOverlayStyle(buttonSkin) && (
+                  <View style={getButtonOverlayStyle(buttonSkin) as any} />
+                )}
                 <Text style={[styles.keypadText, { color: colors.text }]}>{digit}</Text>
               </TouchableOpacity>
             ))}
             <View style={styles.keypadButton} />
             <TouchableOpacity
-              style={[styles.keypadButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+              style={[
+                styles.keypadButton,
+                { backgroundColor: colors.cardBackground },
+                getButtonSkinStyle(buttonSkin, colors.cardBackground),
+              ]}
               onPress={() => handlePinPress('0')}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
+              {getButtonOverlayStyle(buttonSkin) && (
+                <View style={getButtonOverlayStyle(buttonSkin)!} />
+              )}
               <Text style={[styles.keypadText, { color: colors.text }]}>0</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.keypadButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+              style={[
+                styles.keypadButton,
+                { backgroundColor: colors.cardBackground },
+                getButtonSkinStyle(buttonSkin, colors.cardBackground),
+              ]}
               onPress={handleBackspace}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
+              {getButtonOverlayStyle(buttonSkin) && (
+                <View style={getButtonOverlayStyle(buttonSkin)!} />
+              )}
               <Text style={[styles.keypadTextSecondary, { color: colors.textSecondary }]}>⌫</Text>
             </TouchableOpacity>
           </View>
@@ -332,10 +493,9 @@ const styles = StyleSheet.create({
   },
   operatorCard: {
     width: (width - 68) / 2,
-    borderRadius: 12,
     padding: 12,
     alignItems: 'center',
-    borderWidth: 1,
+    overflow: 'hidden',
   },
   operatorAvatar: {
     width: 48,
@@ -440,10 +600,9 @@ const styles = StyleSheet.create({
   keypadButton: {
     width: 80,
     height: 72,
-    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    overflow: 'hidden',
   },
   keypadText: {
     fontSize: 28,
@@ -456,8 +615,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingHorizontal: 32,
     paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    overflow: 'hidden',
   },
   settingsButtonText: {
     fontSize: 16,
