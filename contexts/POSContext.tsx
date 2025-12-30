@@ -508,14 +508,19 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   }, [currentTable, basket, tableOrders, currentOperator, vatRates]);
 
   const saveTableTab = useCallback(async () => {
-    if (!currentTable || !currentOperator || basket.length === 0) {
-      console.log('[POS] Cannot save tab: missing table, operator, or empty basket');
+    if (!currentTable || !currentOperator) {
+      console.log('[POS] Cannot save tab: missing table or operator');
       return;
     }
 
     try {
-      await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
-      console.log('[POS] Successfully saved table tab and synced to server');
+      if (basket.length === 0) {
+        await tableDataService.clearTableData(currentTable.id, currentTable);
+        console.log('[POS] Successfully cleared empty table and synced to server');
+      } else {
+        await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
+        console.log('[POS] Successfully saved table tab and synced to server');
+      }
       
       setCurrentTable(null);
       setBasket([]);
