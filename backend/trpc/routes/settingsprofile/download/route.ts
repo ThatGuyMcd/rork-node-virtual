@@ -51,7 +51,7 @@ export const downloadSettingsProfileProcedure = publicProcedure
       for (const fileName of fileList.files) {
         if (!fileName.endsWith('.json')) continue;
         
-        const fileUrl = `${API_BASE_URL}/webviewfiles/settings-profiles/${fileName}`;
+        const fileUrl = `${API_BASE_URL}/webviewfiles?SITEID=${encodeURIComponent(input.siteId)}&FILE=${encodeURIComponent('settings-profiles/' + fileName)}`;
         console.log('[tRPC] Downloading profile:', fileUrl);
         
         try {
