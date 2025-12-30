@@ -411,7 +411,7 @@ export default function BasketScreen() {
           
           const getPricePrefix = (label: string): string => {
             const lowerLabel = label.toLowerCase();
-            if (label === 'Standard') return '';
+            if (lowerLabel === 'standard') return '';
             if (lowerLabel === 'double') return 'DBL';
             if (lowerLabel === 'small') return 'SML';
             if (lowerLabel === 'large') return 'LRG';
@@ -437,7 +437,7 @@ export default function BasketScreen() {
             <View style={styles.itemTopRow}>
               <View style={styles.itemNameContainer}>
                 {prefix !== '' && (
-                  <Text style={[styles.itemPrefix, { color: colors.textSecondary }]}>{prefix} </Text>
+                  <Text style={[styles.itemPrefix, { color: colors.primary }]}>{prefix} </Text>
                 )}
                 <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
                   {item.product.name}
@@ -479,19 +479,19 @@ export default function BasketScreen() {
               </Text>
 
               <TouchableOpacity
-                style={styles.messageButton}
-                onPress={() => openMessageModal(index)}
-                activeOpacity={0.7}
-              >
-                <MessageSquare size={16} color={colors.primary} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
                 style={styles.removeButton}
                 onPress={() => removeFromBasket(index)}
                 activeOpacity={0.7}
               >
                 <Trash2 size={16} color={colors.error} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.messageButton}
+                onPress={() => openMessageModal(index)}
+                activeOpacity={0.7}
+              >
+                <MessageSquare size={16} color={colors.primary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -1305,7 +1305,7 @@ const styles = StyleSheet.create({
   itemBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
     justifyContent: 'flex-end',
   },
   quantityControl: {
