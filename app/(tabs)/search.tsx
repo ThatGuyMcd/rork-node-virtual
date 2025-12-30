@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
 import { Camera, Search as SearchIcon, X, Barcode } from 'lucide-react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { usePOS } from '@/contexts/POSContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme, type ButtonSkin } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
 import type { Product, PriceOption } from '@/types/pos';
 
@@ -28,8 +28,125 @@ export default function SearchScreen() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const { addToBasket, currentTable, isTableSelectionRequired } = usePOS();
-  const { colors, theme } = useTheme();
+  const { colors, theme, buttonSkin } = useTheme();
   const scaleAnim = useState(new Animated.Value(0))[0];
+
+  const getButtonSkinStyle = useCallback((skin: ButtonSkin, backgroundColor: string = '#000000') => {
+    switch (skin) {
+      case 'rounded':
+        return {
+          borderRadius: 28,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.5,
+          shadowRadius: 12,
+          elevation: 10,
+        };
+      case 'sharp':
+        return {
+          borderRadius: 4,
+          shadowColor: '#000',
+          shadowOffset: { width: 2, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 0,
+          elevation: 4,
+        };
+      case 'soft':
+        return {
+          borderRadius: 20,
+          shadowColor: backgroundColor,
+          shadowOffset: { width: -4, height: -4 },
+          shadowOpacity: 0.4,
+          shadowRadius: 8,
+          elevation: 0,
+        };
+      case 'outlined':
+        return {
+          borderRadius: 16,
+          borderWidth: 3,
+          borderColor: backgroundColor,
+          shadowColor: backgroundColor,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 1,
+          shadowRadius: 20,
+          elevation: 0,
+        };
+      case 'minimal':
+        return {
+          borderRadius: 8,
+          borderWidth: 0,
+          shadowColor: 'transparent',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          elevation: 0,
+        };
+      case 'default':
+      default:
+        return {
+          borderRadius: 12,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 6,
+          elevation: 6,
+        };
+    }
+  }, []);
+
+  const getButtonOverlayStyle = useCallback((skin: ButtonSkin) => {
+    const base = StyleSheet.absoluteFillObject;
+    switch (skin) {
+      case 'rounded':
+        return {
+          ...base,
+          borderRadius: 28,
+          borderTopWidth: 2,
+          borderLeftWidth: 2,
+          borderTopColor: 'rgba(255, 255, 255, 0.4)',
+          borderLeftColor: 'rgba(255, 255, 255, 0.3)',
+          borderBottomWidth: 3,
+          borderRightWidth: 3,
+          borderBottomColor: 'rgba(0, 0, 0, 0.5)',
+          borderRightColor: 'rgba(0, 0, 0, 0.4)',
+        };
+      case 'sharp':
+        return {
+          ...base,
+          borderRadius: 4,
+          borderTopWidth: 4,
+          borderLeftWidth: 4,
+          borderTopColor: 'rgba(255, 255, 255, 0.5)',
+          borderLeftColor: 'rgba(255, 255, 255, 0.4)',
+          borderBottomWidth: 4,
+          borderRightWidth: 4,
+          borderBottomColor: 'rgba(0, 0, 0, 0.6)',
+          borderRightColor: 'rgba(0, 0, 0, 0.5)',
+        };
+      case 'soft':
+        return {
+          ...base,
+          borderRadius: 20,
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.2)',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        };
+      case 'outlined':
+        return {
+          ...base,
+          borderRadius: 14,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        };
+      case 'minimal':
+        return {
+          ...base,
+          borderRadius: 8,
+          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        };
+      default:
+        return null;
+    }
+  }, []);
 
   useEffect(() => {
     loadProducts();
@@ -218,10 +335,17 @@ export default function SearchScreen() {
             {filteredProducts.map((product) => (
               <TouchableOpacity
                 key={product.id}
-                style={[styles.productCard, { backgroundColor: product.buttonColor }]}
+                style={[
+                  styles.productCard,
+                  { backgroundColor: product.buttonColor },
+                  getButtonSkinStyle(buttonSkin, product.buttonColor),
+                ]}
                 onPress={() => handleProductPress(product)}
                 activeOpacity={0.8}
               >
+                {getButtonOverlayStyle(buttonSkin) && (
+                  <View style={getButtonOverlayStyle(buttonSkin) as any} />
+                )}
                 <View style={styles.productInfo}>
                   <Text style={[styles.productName, { color: product.fontColor }]}>
                     {product.name}
@@ -422,6 +546,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: 12,
+    overflow: 'hidden',
   },
   productInfo: {
     flex: 1,
