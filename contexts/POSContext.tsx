@@ -7,7 +7,6 @@ import { tableDataService } from '@/services/tableDataService';
 import { transactionService } from '@/services/transactionService';
 import { printerService } from '@/services/printerService';
 import { transactionUploadService } from '@/services/transactionUploadService';
-import { storedTabService } from '@/services/storedTabService';
 import { ESCPOSGenerator } from '@/services/escpos';
 
 interface POSContextType {
@@ -184,121 +183,16 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
   const login = useCallback(async (operator: Operator) => {
     setCurrentOperator(operator);
     await AsyncStorage.setItem('currentOperator', JSON.stringify(operator));
-    
-    console.log('[POS] Downloading latest stored tab from server...');
-    await storedTabService.downloadStoredTabForOperator(operator.name);
-    
-    console.log('[POS] Checking for stored operator tab...');
-    const storedTabRows = await storedTabService.loadStoredTab(operator.name);
-    
-    if (storedTabRows.length > 0) {
-      console.log(`[POS] Found stored tab with ${storedTabRows.length} items, loading into basket...`);
-      const products = await dataSyncService.getStoredProducts();
-      const loadedBasket: BasketItem[] = [];
-
-      const knownPrefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML', '2/3PT', 'OPEN', 'NOT SET'];
-      const prefixToLabelMap: Record<string, string> = {
-        'HALF': 'half',
-        'DBL': 'double',
-        'SML': 'small',
-        'LRG': 'large',
-        '125ML': '125ml',
-        '175ML': '175ml',
-        '250ML': '250ml',
-        '2/3PT': 'schooner',
-        'OPEN': 'open',
-        'NOT SET': 'not set',
-      };
-
-      for (let rowIdx = 0; rowIdx < storedTabRows.length; rowIdx++) {
-        const row = storedTabRows[rowIdx];
-        console.log(`[POS] Processing stored tab row ${rowIdx + 1}/${storedTabRows.length}: ${row.productName}`);
-        
-        let detectedPrefix: string | null = null;
-        let productNameWithoutPrefix = row.productName;
-        
-        for (const prefix of knownPrefixes) {
-          if (row.productName.toUpperCase().startsWith(prefix + ' ')) {
-            detectedPrefix = prefix;
-            productNameWithoutPrefix = row.productName.substring(prefix.length + 1);
-            console.log(`[POS] Row ${rowIdx + 1}: Detected prefix "${detectedPrefix}", stripped name: "${productNameWithoutPrefix}"`);
-            break;
-          }
-        }
-        
-        const baseName = productNameWithoutPrefix.split(' - ')[0];
-        console.log(`[POS] Row ${rowIdx + 1}: Searching for product with baseName "${baseName}"`);
-        
-        let product = products.find(p => p.name === baseName);
-        
-        if (!product && row.pluFile) {
-          console.log(`[POS] Row ${rowIdx + 1}: Product not found by name, trying PLU file: ${row.pluFile}`);
-          product = products.find(p => {
-            const productPlu = `${p.groupId}-${p.departmentId}-${p.id.replace('prod_', '').padStart(5, '0')}.PLU`;
-            return productPlu === row.pluFile;
-          });
-        }
-        
-        if (product) {
-          console.log(`[POS] Row ${rowIdx + 1}: Found product "${product.name}"`);
-          
-          let selectedPrice = product.prices.find(p => p.label.toLowerCase() === 'standard') || product.prices[0];
-          
-          if (detectedPrefix) {
-            const targetLabel = prefixToLabelMap[detectedPrefix];
-            console.log(`[POS] Row ${rowIdx + 1}: Looking for price with label "${targetLabel}" (from prefix "${detectedPrefix}")`);
-            
-            const matchingPrice = product.prices.find(p => p.label.toLowerCase() === targetLabel.toLowerCase());
-            if (matchingPrice) {
-              selectedPrice = matchingPrice;
-              console.log(`[POS] Row ${rowIdx + 1}: Found matching price: ${matchingPrice.label} = £${matchingPrice.price}`);
-            } else {
-              console.warn(`[POS] Row ${rowIdx + 1}: No price found for "${targetLabel}", using standard. Available prices: ${product.prices.map(p => p.label).join(', ')}`);
-            }
-          } else {
-            console.log(`[POS] Row ${rowIdx + 1}: No prefix, using standard price`);
-          }
-          
-          const productWithMessage = { ...product, name: productNameWithoutPrefix };
-          const basketItem: BasketItem = {
-            product: productWithMessage,
-            quantity: row.quantity,
-            selectedPrice: { ...selectedPrice, price: row.price },
-            lineTotal: row.quantity * row.price,
-          };
-          loadedBasket.push(basketItem);
-          console.log(`[POS] Row ${rowIdx + 1}: Added to basket - Product: "${basketItem.product.name}", Qty: ${basketItem.quantity}, Price label: "${selectedPrice.label}", Price: £${row.price}`);
-        } else {
-          console.warn(`[POS] Row ${rowIdx + 1}: Could not find product for "${baseName}" (from "${row.productName}")`);
-        }
-      }
-
-      console.log(`[POS] Loaded stored tab basket with ${loadedBasket.length} items`);
-      setBasket(loadedBasket);
-      
-      await storedTabService.clearStoredTab(operator.name);
-      console.log('[POS] Cleared stored tab after loading');
-    } else {
-      console.log('[POS] No stored tab found for operator');
-    }
   }, []);
 
   const logout = useCallback(async () => {
-    if (currentOperator) {
-      if (currentTable && basket.length > 0) {
-        setSavingTable(true);
-        try {
-          console.log('[POS] Saving table data before logout...');
-          await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
-        } finally {
-          setSavingTable(false);
-        }
-      } else if (!currentTable && basket.length > 0) {
-        console.log('[POS] No table selected, saving basket to stored operator tab (quick sync)...');
-        storedTabService.saveStoredTab(currentOperator, basket, vatRates, true);
-      } else if (!currentTable && basket.length === 0) {
-        console.log('[POS] No basket items, clearing stored operator tab if exists (quick sync)...');
-        storedTabService.clearStoredTab(currentOperator.name, true);
+    if (currentTable && basket.length > 0 && currentOperator) {
+      setSavingTable(true);
+      try {
+        console.log('[POS] Saving table data before logout...');
+        await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
+      } finally {
+        setSavingTable(false);
       }
     }
     

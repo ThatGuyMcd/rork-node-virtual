@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,11 +13,10 @@ import {
 } from 'react-native';
 
 import { useRouter } from 'expo-router';
-import { Lock, RefreshCw, Crown, ShoppingBag } from 'lucide-react-native';
+import { Lock, RefreshCw, Crown } from 'lucide-react-native';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme, type ButtonSkin } from '@/contexts/ThemeContext';
 import { dataSyncService } from '@/services/dataSync';
-import { storedTabService } from '@/services/storedTabService';
 import type { Operator } from '@/types/pos';
 
 const { width } = Dimensions.get('window');
@@ -28,8 +27,7 @@ export default function LoginScreen() {
   const [operators, setOperators] = useState<Operator[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [storedTabStatuses, setStoredTabStatuses] = useState<Map<string, { hasData: boolean; total: number }>>(new Map());
-  const [isPolling, setIsPolling] = useState(false);
+
   const { login } = usePOS();
   const { colors, theme, buttonSkin } = useTheme();
   const router = useRouter();
@@ -166,11 +164,6 @@ export default function LoginScreen() {
     try {
       const loadedOperators = await dataSyncService.getStoredOperators();
       setOperators(loadedOperators);
-      
-      const operatorNames = loadedOperators.map(op => op.name);
-      const statuses = await storedTabService.getAllStoredTabStatuses(operatorNames);
-      setStoredTabStatuses(statuses);
-      console.log('[Login] Loaded stored tab statuses for', operatorNames.length, 'operators');
     } catch (error) {
       console.error('Failed to load operators:', error);
     } finally {
@@ -178,56 +171,15 @@ export default function LoginScreen() {
     }
   };
 
-  const refreshStoredTabStatuses = useCallback(async () => {
-    if (isPolling || operators.length === 0) return;
-    
-    setIsPolling(true);
-    try {
-      console.log('[Login] Polling stored tabs from server...');
-      await storedTabService.downloadStoredTabsFromServer();
-      
-      const operatorNames = operators.map(op => op.name);
-      const statuses = await storedTabService.getAllStoredTabStatuses(operatorNames);
-      setStoredTabStatuses(statuses);
-      console.log('[Login] Stored tab statuses refreshed');
-    } catch (error) {
-      console.error('[Login] Failed to refresh stored tabs:', error);
-    } finally {
-      setIsPolling(false);
-    }
-  }, [isPolling, operators]);
+
 
   useEffect(() => {
     loadOperators();
   }, []);
 
-  useEffect(() => {
-    if (selectedOperator || operators.length === 0) {
-      return;
-    }
 
-    console.log('[Login] Starting periodic stored tab polling (3s interval)');
-    const interval = setInterval(() => {
-      refreshStoredTabStatuses();
-    }, 3000);
-
-    return () => {
-      console.log('[Login] Stopping stored tab polling');
-      clearInterval(interval);
-    };
-  }, [selectedOperator, operators, refreshStoredTabStatuses]);
 
   const handleOperatorSelect = async (operator: Operator) => {
-    console.log('[Login] Operator selected:', operator.name);
-    console.log('[Login] Downloading fresh StoredTab data for operator...');
-    
-    try {
-      await storedTabService.downloadStoredTabForOperator(operator.name);
-      console.log('[Login] Fresh StoredTab data downloaded');
-    } catch (error) {
-      console.error('[Login] Failed to download fresh StoredTab:', error);
-    }
-    
     if (!operator.pin || operator.pin.trim() === '') {
       await login(operator);
       router.replace('/(tabs)');
@@ -360,17 +312,13 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={true}
         >
           <View style={styles.operatorGrid}>
-            {operators.map((operator) => {
-              const storedTabStatus = storedTabStatuses.get(operator.name) || { hasData: false, total: 0 };
-              const hasStoredTab = storedTabStatus.hasData;
-              
-              return (
+            {operators.map((operator) => (
               <TouchableOpacity
                 key={operator.id}
                 style={[
                   styles.operatorCard,
-                  { backgroundColor: hasStoredTab ? colors.primary : colors.cardBackground },
-                  getButtonSkinStyle(buttonSkin, hasStoredTab ? colors.primary : colors.cardBackground),
+                  { backgroundColor: colors.cardBackground },
+                  getButtonSkinStyle(buttonSkin, colors.cardBackground),
                 ]}
                 onPress={() => handleOperatorSelect(operator)}
                 activeOpacity={0.8}
@@ -383,20 +331,14 @@ export default function LoginScreen() {
                     <Crown size={18} color="#FFD700" fill="#FFD700" />
                   </View>
                 )}
-                {hasStoredTab && (
-                  <View style={styles.storedTabBadge}>
-                    <ShoppingBag size={16} color="#fff" />
-                    <Text style={styles.storedTabTotal}>£{storedTabStatus.total.toFixed(2)}</Text>
-                  </View>
-                )}
-                <View style={[styles.operatorAvatar, { backgroundColor: hasStoredTab ? '#fff' : colors.primary }]}>
-                  <Text style={[styles.operatorInitial, { color: hasStoredTab ? colors.primary : '#fff' }]}>
+                <View style={[styles.operatorAvatar, { backgroundColor: colors.primary }]}>
+                  <Text style={[styles.operatorInitial, { color: '#fff' }]}>
                     {operator.name.charAt(0)}
                   </Text>
                 </View>
-                <Text style={[styles.operatorName, { color: hasStoredTab ? '#fff' : colors.text }]}>{operator.name}</Text>
+                <Text style={[styles.operatorName, { color: colors.text }]}>{operator.name}</Text>
               </TouchableOpacity>
-            )})}
+            ))}
           </View>
         </ScrollView>
       </View>
