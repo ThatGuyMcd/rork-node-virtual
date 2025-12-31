@@ -33,7 +33,7 @@ export const uploadTableDataProcedure = publicProcedure
         response = await fetch('https://app.positron-portal.com/webviewdataupload', {
           method: 'POST',
           headers: {
-            'Content-Type': 'text/plain',
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify(input),
           signal: controller.signal,
