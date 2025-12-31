@@ -99,7 +99,7 @@ class StoredTabService {
       await this.syncSingleStoredTabToServer(operator.name, rows);
       console.log('[StoredTab] Stored tab sync successful');
     } catch (error) {
-      console.error('[StoredTab] Stored tab sync failed:', error);
+      console.warn('[StoredTab] Stored tab sync failed (non-critical):', error);
     }
   }
 
@@ -134,7 +134,7 @@ class StoredTabService {
         await this.syncSingleStoredTabToServer(operatorName, []);
         console.log('[StoredTab] Server clear sync successful');
       } catch (error) {
-        console.error('[StoredTab] Server clear sync failed:', error);
+        console.warn('[StoredTab] Server clear sync failed (non-critical):', error);
       }
     } catch (error) {
       console.error('[StoredTab] Error clearing stored tab:', error);
@@ -235,8 +235,8 @@ class StoredTabService {
       console.log('[StoredTab] Sync successful:', result);
       console.log('[StoredTab] ===== STORED TAB SYNC COMPLETE =====');
     } catch (error: any) {
-      console.error('[StoredTab] Upload failed:', error);
-      throw new Error(`Upload failed: ${error.message}`);
+      console.error('[StoredTab] Upload failed (non-critical):', error?.message || error);
+      console.warn('[StoredTab] Continuing despite upload failure...');
     }
   }
 
@@ -303,6 +303,7 @@ class StoredTabService {
       console.log(`[StoredTab] Found ${operators.length} operators to check`);
       
       let uploadedCount = 0;
+      let failedCount = 0;
       for (const operator of operators) {
         try {
           const rows = await this.loadStoredTab(operator.name);
@@ -312,13 +313,14 @@ class StoredTabService {
             uploadedCount++;
           }
         } catch (error) {
-          console.error(`[StoredTab] Failed to upload stored tab for ${operator.name}:`, error);
+          console.warn(`[StoredTab] Failed to upload stored tab for ${operator.name} (non-critical):`, error);
+          failedCount++;
         }
       }
       
-      console.log(`[StoredTab] Uploaded ${uploadedCount} local stored tabs`);
+      console.log(`[StoredTab] Uploaded ${uploadedCount} local stored tabs, ${failedCount} failed`);
     } catch (error) {
-      console.error('[StoredTab] Failed to upload local stored tabs:', error);
+      console.warn('[StoredTab] Failed to upload local stored tabs (non-critical):', error);
     }
     
     console.log('[StoredTab] ===== LOCAL STORED TABS UPLOAD COMPLETE =====');
@@ -359,6 +361,7 @@ class StoredTabService {
       }
       
       let downloadedCount = 0;
+      let failedCount = 0;
       for (const file of storedTabFiles) {
         try {
           console.log('[StoredTab] Downloading:', file.path);
@@ -374,14 +377,14 @@ class StoredTabService {
           downloadedCount++;
           console.log('[StoredTab] Downloaded stored tab for:', operatorName, 'Size:', csvContent.length);
         } catch (error) {
-          console.error('[StoredTab] Error downloading file:', file.path, error);
+          console.warn('[StoredTab] Error downloading file (non-critical):', file.path, error);
+          failedCount++;
         }
       }
       
-      console.log('[StoredTab] Stored tabs synced successfully - Total:', downloadedCount);
+      console.log(`[StoredTab] Stored tabs synced - Downloaded: ${downloadedCount}, Failed: ${failedCount}`);
     } catch (error) {
-      console.error('[StoredTab] Failed to download stored tabs:', error);
-      console.error('[StoredTab] Error details:', error instanceof Error ? error.message : String(error));
+      console.warn('[StoredTab] Failed to download stored tabs (non-critical):', error);
     }
     
     console.log('[StoredTab] ===== STORED TABS DOWNLOAD COMPLETE =====');

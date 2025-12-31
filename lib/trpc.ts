@@ -29,22 +29,18 @@ export const trpcClient = createTRPCClient<AppRouter>({
             ...options,
           });
           
-          const clonedResponse = response.clone();
           const contentType = response.headers.get('content-type');
-          console.log("[TRPC] Response status:", response.status, "Content-Type:", contentType);
-          
-          const text = await clonedResponse.text();
-          console.log("[TRPC] Response body (first 200 chars):", text.substring(0, 200));
-          console.log("[TRPC] Response body (last 100 chars):", text.substring(Math.max(0, text.length - 100)));
           
           if (!response.ok || !contentType?.includes('application/json')) {
-            console.error("[TRPC] Response issue - Status:", response.status, "Content-Type:", contentType);
-            console.error("[TRPC] Full response body:", text);
+            console.warn("[TRPC] Non-JSON or error response - Status:", response.status, "Content-Type:", contentType);
+            if (response.status === 404) {
+              console.warn("[TRPC] Endpoint not found (404) - this may be expected during development");
+            }
           }
           
           return response;
         } catch (error) {
-          console.error("[TRPC] Fetch error:", error);
+          console.warn("[TRPC] Fetch error:", error);
           throw error;
         }
       },
