@@ -239,6 +239,50 @@ class StoredTabService {
     }
   }
 
+  async downloadStoredTabForOperator(operatorName: string): Promise<void> {
+    console.log('[StoredTab] ===== DOWNLOADING STORED TAB FOR OPERATOR:', operatorName, '=====');
+    
+    try {
+      const siteInfo = await dataSyncService.getSiteInfo();
+      if (!siteInfo) {
+        console.warn('[StoredTab] No site info available, skipping download');
+        return;
+      }
+      
+      console.log('[StoredTab] Site ID:', siteInfo.siteId);
+      
+      const result = await trpcClient.storedtab.download.query({
+        siteId: siteInfo.siteId,
+      });
+      
+      console.log('[StoredTab] Download result:', JSON.stringify({
+        success: result.success,
+        tabCount: result.storedTabs.length,
+        error: result.error || 'none'
+      }));
+      
+      if (result.success && result.storedTabs.length > 0) {
+        const serverTab = result.storedTabs.find((t: any) => t.operatorName === operatorName);
+        
+        if (serverTab) {
+          console.log('[StoredTab] Found stored tab for operator:', operatorName);
+          await this.processServerTab(serverTab);
+        } else {
+          console.log('[StoredTab] No stored tab found for operator:', operatorName);
+          await AsyncStorage.removeItem(this.getStoredTabKey(operatorName));
+        }
+      } else {
+        console.log('[StoredTab] No stored tabs available, clearing local data for:', operatorName);
+        await AsyncStorage.removeItem(this.getStoredTabKey(operatorName));
+      }
+    } catch (error) {
+      console.error('[StoredTab] Failed to download stored tab for operator:', error);
+      console.error('[StoredTab] Error details:', error instanceof Error ? error.message : String(error));
+    }
+    
+    console.log('[StoredTab] ===== STORED TAB DOWNLOAD COMPLETE FOR:', operatorName, '=====');
+  }
+
   async downloadStoredTabsFromServer(): Promise<void> {
     console.log('[StoredTab] ===== DOWNLOADING STORED TABS FROM SERVER =====');
     
@@ -266,42 +310,7 @@ class StoredTabService {
         console.log('[StoredTab] Operator names:', result.storedTabs.map((t: any) => t.operatorName).join(', '));
         
         for (const serverTab of result.storedTabs) {
-          console.log('[StoredTab] Processing stored tab for:', serverTab.operatorName);
-          
-          const rows = dataParser.parseCSV(serverTab.csvContent);
-          if (rows.length <= 1) {
-            console.log('[StoredTab] Empty stored tab for:', serverTab.operatorName);
-            continue;
-          }
-
-          const storedTabRows: StoredTabRow[] = [];
-          
-          for (let i = 1; i < rows.length; i++) {
-            const row = rows[i];
-            storedTabRows.push({
-              quantity: parseFloat(row[0] || '1'),
-              productName: row[1]?.trim() || '',
-              price: parseFloat(row[2] || '0'),
-              pluFile: row[3]?.trim() || '',
-              group: row[4]?.trim() || '',
-              department: row[5]?.trim() || '',
-              vatCode: row[6]?.trim() || '',
-              vatPercentage: parseFloat(row[7] || '0'),
-              vatAmount: parseFloat(row[8] || '0'),
-              addedBy: row[9]?.trim() || '',
-              timeDate: row[10]?.trim() || '',
-              printer1: row[11]?.trim() || 'NOT SET',
-              printer2: row[12]?.trim() || 'NOT SET',
-              printer3: row[13]?.trim() || 'NOT SET',
-              itemPrinted: row[14]?.trim() || 'NO',
-            });
-          }
-          
-          await AsyncStorage.setItem(
-            this.getStoredTabKey(serverTab.operatorName), 
-            JSON.stringify(storedTabRows)
-          );
-          console.log('[StoredTab] Stored tab data for:', serverTab.operatorName, 'Rows:', storedTabRows.length);
+          await this.processServerTab(serverTab);
         }
         
         console.log('[StoredTab] Stored tabs synced successfully - Total:', result.storedTabs.length);
@@ -316,6 +325,46 @@ class StoredTabService {
     }
     
     console.log('[StoredTab] ===== STORED TABS DOWNLOAD COMPLETE =====');
+  }
+
+  private async processServerTab(serverTab: any): Promise<void> {
+    console.log('[StoredTab] Processing stored tab for:', serverTab.operatorName);
+    
+    const rows = dataParser.parseCSV(serverTab.csvContent);
+    if (rows.length <= 1) {
+      console.log('[StoredTab] Empty stored tab for:', serverTab.operatorName);
+      await AsyncStorage.removeItem(this.getStoredTabKey(serverTab.operatorName));
+      return;
+    }
+
+    const storedTabRows: StoredTabRow[] = [];
+    
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      storedTabRows.push({
+        quantity: parseFloat(row[0] || '1'),
+        productName: row[1]?.trim() || '',
+        price: parseFloat(row[2] || '0'),
+        pluFile: row[3]?.trim() || '',
+        group: row[4]?.trim() || '',
+        department: row[5]?.trim() || '',
+        vatCode: row[6]?.trim() || '',
+        vatPercentage: parseFloat(row[7] || '0'),
+        vatAmount: parseFloat(row[8] || '0'),
+        addedBy: row[9]?.trim() || '',
+        timeDate: row[10]?.trim() || '',
+        printer1: row[11]?.trim() || 'NOT SET',
+        printer2: row[12]?.trim() || 'NOT SET',
+        printer3: row[13]?.trim() || 'NOT SET',
+        itemPrinted: row[14]?.trim() || 'NO',
+      });
+    }
+    
+    await AsyncStorage.setItem(
+      this.getStoredTabKey(serverTab.operatorName), 
+      JSON.stringify(storedTabRows)
+    );
+    console.log('[StoredTab] Stored tab data for:', serverTab.operatorName, 'Rows:', storedTabRows.length);
   }
 }
 

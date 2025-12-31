@@ -206,10 +206,10 @@ export default function LoginScreen() {
       return;
     }
 
-    console.log('[Login] Starting periodic stored tab polling (10s interval)');
+    console.log('[Login] Starting periodic stored tab polling (3s interval)');
     const interval = setInterval(() => {
       refreshStoredTabStatuses();
-    }, 10000);
+    }, 3000);
 
     return () => {
       console.log('[Login] Stopping stored tab polling');
@@ -218,6 +218,16 @@ export default function LoginScreen() {
   }, [selectedOperator, operators, refreshStoredTabStatuses]);
 
   const handleOperatorSelect = async (operator: Operator) => {
+    console.log('[Login] Operator selected:', operator.name);
+    console.log('[Login] Downloading fresh StoredTab data for operator...');
+    
+    try {
+      await storedTabService.downloadStoredTabForOperator(operator.name);
+      console.log('[Login] Fresh StoredTab data downloaded');
+    } catch (error) {
+      console.error('[Login] Failed to download fresh StoredTab:', error);
+    }
+    
     if (!operator.pin || operator.pin.trim() === '') {
       await login(operator);
       router.replace('/(tabs)');
