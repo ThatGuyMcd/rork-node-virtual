@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import type { BasketItem, Operator, Table } from '@/types/pos';
 import { dataParser } from './dataParser';
 import { dataSyncService } from './dataSync';
-import { apiClient } from './api';
+import { trpcClient } from '@/lib/trpc';
 
 export interface TableDataRow {
   quantity: number;
@@ -571,15 +571,19 @@ class TableDataService {
       const csvContent = csvRows.join('\n');
       console.log('[TableDataService] CSV content size:', csvContent.length, 'bytes');
       
-      // Use direct API call to server
-      const result = await apiClient.saveTableData(
-        siteInfo.siteId,
-        table.area,
-        table.name,
-        csvContent
-      );
+      // Use tRPC backend to proxy to your server
+      const filePath = `${table.area}/${table.name}/TAB.CSV`;
       
-      console.log('[TableDataService] Direct API sync result:', result);
+      const result = await trpcClient.tabledata.upload.mutate({
+        SITEID: siteInfo.siteId,
+        DESTINATIONWEBVIEWFOLDER: 'TABDATA',
+        FOLDERDATA: [table.area, `${table.area}/${table.name}`],
+        FILEDATA: {
+          [filePath]: csvContent,
+        },
+      });
+      
+      console.log('[TableDataService] tRPC sync result:', result);
       
       if (!result.success) {
         console.warn('[TableDataService] Server sync reported failure');
