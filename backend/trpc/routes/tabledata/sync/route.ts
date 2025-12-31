@@ -65,29 +65,33 @@ export const syncTableDataProcedure = publicProcedure
         csvRows.push(line);
       }
       
-      const csvContent = csvRows.join('\n');
+      const csvContent = csvRows.join('\r\n');
       
       // Post to server using the webviewdataupload endpoint
       const SERVER_BASE_URL = 'https://app.positron-portal.com';
       const url = `${SERVER_BASE_URL}/webviewdataupload`;
       
-      const folderPath = `TABDATA/${input.area}/${input.tableName}`;
-      const filePath = `${folderPath}/TAB.CSV`;
+      const destinationFolder = `TABDATA\\${input.area}\\${input.tableName}`;
       
       const payload = {
         SITEID: input.siteId,
-        DESTINATIONWEBVIEWFOLDER: 'TABDATA',
-        FOLDERDATA: [input.area, `${input.area}/${input.tableName}`],
+        DESTINATIONWEBVIEWFOLDER: destinationFolder,
+        FOLDERDATA: [],
         FILEDATA: {
-          [filePath]: csvContent,
+          'TAB.CSV': csvContent,
         },
       };
       
       console.log('[tRPC] Posting to:', url);
-      console.log('[tRPC] Folder path:', folderPath);
-      console.log('[tRPC] File path:', filePath);
+      console.log('[tRPC] Destination folder:', destinationFolder);
       console.log('[tRPC] CSV size:', csvContent.length, 'bytes');
-      console.log('[tRPC] Payload:', JSON.stringify(payload, null, 2).substring(0, 500) + '...');
+      console.log('[tRPC] Payload structure:', {
+        SITEID: payload.SITEID,
+        DESTINATIONWEBVIEWFOLDER: payload.DESTINATIONWEBVIEWFOLDER,
+        FOLDERDATA: payload.FOLDERDATA,
+        FILEDATA_keys: Object.keys(payload.FILEDATA),
+        FILEDATA_size: Object.values(payload.FILEDATA)[0].length,
+      });
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000);
