@@ -11,40 +11,22 @@ console.log('[Hono] Initializing backend...');
 app.use(
   "*",
   cors({
-    origin: (origin) => origin || "*",
+    origin: "*",
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
-    allowHeaders: ["Content-Type", "Authorization", "x-trpc-source"],
+    allowHeaders: ["*"],
     exposeHeaders: ["Content-Type"],
     maxAge: 86400,
     credentials: false,
   })
 );
 
-app.all("*", async (c, next) => {
-  if (c.req.method === "OPTIONS") {
-    console.log("[Hono] Handling OPTIONS preflight:", c.req.path);
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD",
-        "Access-Control-Allow-Headers": "*",
-        "Access-Control-Max-Age": "86400",
-        "Access-Control-Allow-Credentials": "true",
-      },
-    });
-  }
-  await next();
+app.options("*", (c) => {
+  console.log('[Hono] OPTIONS preflight:', c.req.path);
+  return c.body(null, 204 as any);
 });
 
 app.use(
   "/trpc/*",
-  cors({
-    origin: (origin) => origin || "*",
-    allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "x-trpc-source"],
-    credentials: false,
-  }),
   trpcServer({
     router: appRouter,
     createContext,
@@ -70,7 +52,11 @@ app.post("/api/proxy/linkwebviewaccount", async (c) => {
     });
     
     const text = await response.text();
-    return new Response(text, { status: response.status });
+    const contentType = response.headers.get('content-type') || 'text/plain';
+    return c.body(text, response.status as any, {
+      'Content-Type': contentType,
+      'Access-Control-Allow-Origin': '*',
+    });
   } catch (error: any) {
     console.error('[Proxy] linkwebviewaccount error:', error);
     return c.json({ error: error.message }, 500);
@@ -99,7 +85,11 @@ app.post("/api/proxy/webviewdataupload", async (c) => {
     console.log('[Proxy] External server response:', response.status, response.statusText);
     const text = await response.text();
     console.log('[Proxy] External server response body:', text);
-    return new Response(text, { status: response.status });
+    const contentType = response.headers.get('content-type') || 'text/plain';
+    return c.body(text, response.status as any, {
+      'Content-Type': contentType,
+      'Access-Control-Allow-Origin': '*',
+    });
   } catch (error: any) {
     console.error('[Proxy] webviewdataupload error:', error);
     return c.json({ error: error.message }, 500);
@@ -115,12 +105,9 @@ app.get("/api/proxy/sites/:siteId/data/manifest", async (c) => {
     
     const text = await response.text();
     const contentType = response.headers.get('content-type') || 'text/plain';
-    return new Response(text, {
-      status: response.status,
-      headers: {
-        'Content-Type': contentType,
-        'Access-Control-Allow-Origin': '*',
-      }
+    return c.body(text, response.status as any, {
+      'Content-Type': contentType,
+      'Access-Control-Allow-Origin': '*',
     });
   } catch (error: any) {
     console.error('[Proxy] manifest error:', error);
@@ -137,7 +124,11 @@ app.get("/api/proxy/sites/:siteId/data/file", async (c) => {
     });
     
     const text = await response.text();
-    return new Response(text, { status: response.status });
+    const contentType = response.headers.get('content-type') || 'text/plain';
+    return c.body(text, response.status as any, {
+      'Content-Type': contentType,
+      'Access-Control-Allow-Origin': '*',
+    });
   } catch (error: any) {
     console.error('[Proxy] file error:', error);
     return c.json({ error: error.message }, 500);
