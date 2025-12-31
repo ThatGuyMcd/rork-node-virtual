@@ -22,7 +22,7 @@ export default function TabLayout() {
   }, []);
 
   if (!currentOperator) {
-    return <Redirect href="/login" />;
+    return <Redirect href={"/login" as any} />;
   }
 
   const LogoutButton = () => (
