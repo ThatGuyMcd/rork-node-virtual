@@ -8,12 +8,23 @@ const app = new Hono();
 
 console.log('[Hono] Initializing backend...');
 
+const ALLOWED_METHODS = "GET,POST,PUT,DELETE,OPTIONS,PATCH,HEAD";
+const ALLOWED_HEADERS =
+  "Content-Type,Authorization,x-trpc-source,x-trpc-batch,trpc-batch-mode,x-requested-with";
+
 app.use(
   "*",
   cors({
     origin: "*",
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
-    allowHeaders: ["*"],
+    allowHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-trpc-source",
+      "x-trpc-batch",
+      "trpc-batch-mode",
+      "x-requested-with",
+    ],
     exposeHeaders: ["Content-Type"],
     maxAge: 86400,
     credentials: false,
@@ -21,8 +32,21 @@ app.use(
 );
 
 app.options("*", (c) => {
-  console.log('[Hono] OPTIONS preflight:', c.req.path);
+  const origin = c.req.header("origin") ?? "*";
+  console.log("[Hono] OPTIONS preflight:", c.req.path, "origin=", origin);
+  c.header("Access-Control-Allow-Origin", "*");
+  c.header("Vary", "Origin");
+  c.header("Access-Control-Allow-Methods", ALLOWED_METHODS);
+  c.header("Access-Control-Allow-Headers", ALLOWED_HEADERS);
+  c.header("Access-Control-Max-Age", "86400");
   return c.body(null, 204 as any);
+});
+
+app.use("/trpc/*", async (c, next) => {
+  c.header("Access-Control-Allow-Origin", "*");
+  c.header("Access-Control-Allow-Methods", ALLOWED_METHODS);
+  c.header("Access-Control-Allow-Headers", ALLOWED_HEADERS);
+  await next();
 });
 
 app.use(
