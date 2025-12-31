@@ -29,7 +29,7 @@ app.get("/", (c) => {
   return c.json({ status: "ok", message: "API is running" });
 });
 
-app.post("/proxy/linkwebviewaccount", async (c) => {
+app.post("/api/proxy/linkwebviewaccount", async (c) => {
   try {
     const body = await c.req.json();
     const response = await fetch('https://app.positron-portal.com/linkwebviewaccount', {
@@ -48,7 +48,7 @@ app.post("/proxy/linkwebviewaccount", async (c) => {
   }
 });
 
-app.post("/proxy/webviewdataupload", async (c) => {
+app.post("/api/proxy/webviewdataupload", async (c) => {
   try {
     console.log('[Proxy] Received webviewdataupload request');
     const body = await c.req.json();
@@ -77,7 +77,7 @@ app.post("/proxy/webviewdataupload", async (c) => {
   }
 });
 
-app.get("/proxy/sites/:siteId/data/manifest", async (c) => {
+app.get("/api/proxy/sites/:siteId/data/manifest", async (c) => {
   try {
     const siteId = c.req.param('siteId');
     const response = await fetch(`https://app.positron-portal.com/api/v1/sites/${encodeURIComponent(siteId)}/data/manifest`, {
@@ -99,7 +99,7 @@ app.get("/proxy/sites/:siteId/data/manifest", async (c) => {
   }
 });
 
-app.get("/proxy/sites/:siteId/data/file", async (c) => {
+app.get("/api/proxy/sites/:siteId/data/file", async (c) => {
   try {
     const siteId = c.req.param('siteId');
     const path = c.req.query('path');
