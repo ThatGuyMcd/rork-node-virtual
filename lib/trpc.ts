@@ -1,5 +1,5 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { httpLink } from "@trpc/client";
+import { createTRPCClient, httpLink } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 
@@ -14,37 +14,22 @@ const getBaseUrl = () => {
   return "http://localhost:3000";
 };
 
-let trpcClientInstance: ReturnType<typeof trpc.createClient> | null = null;
+const baseUrl = getBaseUrl();
+console.log("[TRPC] Initializing vanilla client with base URL:", baseUrl);
 
-const createTRPCClient = () => {
-  if (trpcClientInstance) return trpcClientInstance;
-  
-  try {
-    const baseUrl = getBaseUrl();
-    console.log("[TRPC] Initializing client with base URL:", baseUrl);
-    
-    trpcClientInstance = trpc.createClient({
-      links: [
-        httpLink({
-          url: `${baseUrl}/api/trpc`,
-          transformer: superjson,
-          fetch: (url, options) => {
-            return fetch(url, {
-              ...options,
-            }).catch(error => {
-              console.error("[TRPC] Fetch error:", error);
-              throw error;
-            });
-          },
-        }),
-      ],
-    });
-    
-    return trpcClientInstance;
-  } catch (error) {
-    console.error("[TRPC] Failed to initialize client:", error);
-    throw error;
-  }
-};
-
-export const trpcClient = createTRPCClient();
+export const trpcClient = createTRPCClient<AppRouter>({
+  links: [
+    httpLink({
+      url: `${baseUrl}/api/trpc`,
+      transformer: superjson,
+      fetch: (url, options) => {
+        return fetch(url, {
+          ...options,
+        }).catch(error => {
+          console.error("[TRPC] Fetch error:", error);
+          throw error;
+        });
+      },
+    }),
+  ],
+});
