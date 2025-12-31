@@ -3,17 +3,6 @@ import { Platform } from 'react-native';
 const EXTERNAL_API_BASE_URL = 'https://app.positron-portal.com/api/v1';
 const EXTERNAL_SERVER_URL = 'https://app.positron-portal.com';
 
-const getProxyBaseUrl = (): string => {
-  const apiBaseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-  if (apiBaseUrl) {
-    return apiBaseUrl;
-  }
-  if (Platform.OS === 'web') {
-    return '';
-  }
-  return 'http://localhost:3000';
-};
-
 export interface AuthCredentials {
   username: string;
   password: string;
@@ -220,12 +209,9 @@ export class PositronAPI {
       
       console.log('[API] Destination folder:', destinationFolder);
       
-      const useProxy = Platform.OS === 'web';
-      const url = useProxy 
-        ? `${getProxyBaseUrl()}/api/proxy/webviewdataupload`
-        : `${EXTERNAL_SERVER_URL}/webviewdataupload`;
+      const url = `${EXTERNAL_SERVER_URL}/webviewdataupload`;
       
-      console.log(`[API] Using ${useProxy ? 'proxy' : 'direct'} endpoint: ${url}`);
+      console.log(`[API] Using direct endpoint: ${url}`);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -290,12 +276,9 @@ export class PositronAPI {
         FILEDATA: fileData,
       };
       
-      const useProxy = Platform.OS === 'web';
-      const url = useProxy 
-        ? `${getProxyBaseUrl()}/api/proxy/webviewdataupload`
-        : `${EXTERNAL_SERVER_URL}/webviewdataupload`;
+      const url = `${EXTERNAL_SERVER_URL}/webviewdataupload`;
       
-      console.log(`[API] Using ${useProxy ? 'proxy' : 'direct'} endpoint: ${url}`);
+      console.log(`[API] Using direct endpoint: ${url}`);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -356,12 +339,9 @@ export class PositronAPI {
         allProfiles,
       };
       
-      const useProxy = Platform.OS === 'web';
-      const url = useProxy 
-        ? `${getProxyBaseUrl()}/api/proxy/uploadsettingsprofile`
-        : `${EXTERNAL_SERVER_URL}/uploadsettingsprofile`;
+      const url = `${EXTERNAL_SERVER_URL}/uploadsettingsprofile`;
       
-      console.log(`[API] Using ${useProxy ? 'proxy' : 'direct'} endpoint: ${url}`);
+      console.log(`[API] Using direct endpoint: ${url}`);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
