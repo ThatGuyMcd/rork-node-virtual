@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import type { BasketItem, Operator, Table } from '@/types/pos';
 import { dataParser } from './dataParser';
 import { dataSyncService } from './dataSync';
-import { apiClient } from './api';
+import { trpcClient } from '@/lib/trpc';
 
 export interface TableDataRow {
   quantity: number;
@@ -523,7 +523,7 @@ class TableDataService {
   }
 
   private async syncSingleTableToServer(table: Table, rows: TableDataRow[]): Promise<void> {
-    console.log('[TableDataService] ===== SYNCING SINGLE TABLE (DIRECT TO POSITRON-PORTAL) =====');
+    console.log('[TableDataService] ===== SYNCING SINGLE TABLE VIA TRPC BACKEND =====');
     console.log('[TableDataService] Table:', table.name, 'Area:', table.area, 'Rows:', rows.length);
     
     const siteInfo = await dataSyncService.getSiteInfo();
@@ -532,42 +532,49 @@ class TableDataService {
       return;
     }
     
-    const csvRows: string[] = [];
-    csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?');
-    
-    for (const row of rows) {
-      console.log(`[TableDataService] Syncing row to server: "${row.productName}"`);
-      const line = [
-        row.quantity.toFixed(3),
-        ` ${row.productName}`,
-        row.price.toFixed(2),
-        row.pluFile,
-        row.group,
-        row.department,
-        row.vatCode,
-        row.vatPercentage.toString(),
-        row.vatAmount.toFixed(2),
-        row.addedBy,
-        row.timeDate,
-        row.printer1,
-        row.printer2,
-        row.printer3,
-        row.itemPrinted,
-      ].join(',');
-      csvRows.push(line);
-    }
-    
-    const csvContent = csvRows.join('\r\n') + '\r\n';
-    
-    console.log(`[TableDataService] Uploading directly to positron-portal...`);
+    console.log(`[TableDataService] Uploading via tRPC backend proxy...`);
     console.log(`[TableDataService] Site ID: ${siteInfo.siteId}`);
     console.log(`[TableDataService] Area: ${table.area}`);
     console.log(`[TableDataService] Table: ${table.name}`);
-    console.log(`[TableDataService] CSV size: ${csvContent.length} bytes`);
+    console.log(`[TableDataService] Rows: ${rows.length}`);
     
-    const result = await apiClient.saveTableData(siteInfo.siteId, table.area, table.name, csvContent);
-    console.log('[TableDataService] Sync successful:', result);
-    console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE =====');
+    try {
+      const result = await trpcClient.tabledata.sync.mutate({
+        siteId: siteInfo.siteId,
+        area: table.area,
+        tableName: table.name,
+        tableId: table.id,
+        tableData: rows.map(row => ({
+          quantity: row.quantity,
+          productName: row.productName,
+          price: row.price,
+          pluFile: row.pluFile,
+          group: row.group,
+          department: row.department,
+          vatCode: row.vatCode,
+          vatPercentage: row.vatPercentage,
+          vatAmount: row.vatAmount,
+          addedBy: row.addedBy,
+          timeDate: row.timeDate,
+          printer1: row.printer1,
+          printer2: row.printer2,
+          printer3: row.printer3,
+          itemPrinted: row.itemPrinted,
+          tableId: row.tableId,
+        })),
+      });
+      
+      console.log('[TableDataService] Sync result:', result);
+      
+      if (!result.success) {
+        console.warn('[TableDataService] Server sync reported failure:', result.error);
+      } else {
+        console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE =====');
+      }
+    } catch (error) {
+      console.error('[TableDataService] tRPC sync error:', error);
+      throw error;
+    }
   }
 
   async syncAllTableDataToServer(): Promise<void> {
