@@ -166,10 +166,13 @@ export class PositronAPI {
 
   async saveTableData(siteId: string, area: string, tableName: string, tableData: string): Promise<{ success: boolean }> {
     try {
-      console.log(`[API] Saving table data for ${area}/${tableName}`);
+      console.log(`[API] ========== SAVING TABLE DATA ==========`);
+      console.log(`[API] Site ID: ${siteId}`);
+      console.log(`[API] Area: ${area}`);
+      console.log(`[API] Table: ${tableName}`);
+      console.log(`[API] Data size: ${tableData.length} bytes`);
       
-      const folderPath = `TABDATA/${area}/${tableName}`;
-      const filePath = `${folderPath}/TAB.CSV`;
+      const filePath = `${area}/${tableName}/TAB.CSV`;
       
       const payload = {
         SITEID: siteId,
@@ -180,16 +183,27 @@ export class PositronAPI {
         },
       };
       
-      console.log('[API] Uploading table via webviewdataupload endpoint');
-      console.log('[API] Folder path:', folderPath);
-      console.log('[API] File path:', filePath);
-      console.log('[API] Data size:', tableData.length, 'bytes');
+      console.log('[API] File path in FILEDATA:', filePath);
+      console.log('[API] Folder structure:', JSON.stringify(payload.FOLDERDATA));
+      console.log('[API] Payload structure:', {
+        SITEID: payload.SITEID,
+        DESTINATIONWEBVIEWFOLDER: payload.DESTINATIONWEBVIEWFOLDER,
+        FOLDERDATA: payload.FOLDERDATA,
+        FILEDATA_keys: Object.keys(payload.FILEDATA),
+      });
       
       const url = `${API_BASE_URL.replace('/api/v1', '')}/webviewdataupload`;
+      console.log('[API] Full URL:', url);
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      const timeoutId = setTimeout(() => {
+        console.log('[API] Request timeout after 60s');
+        controller.abort();
+      }, 60000);
 
+      console.log('[API] Sending POST request...');
+      const startTime = Date.now();
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -201,17 +215,27 @@ export class PositronAPI {
       });
 
       clearTimeout(timeoutId);
+      const elapsed = Date.now() - startTime;
+      
+      console.log(`[API] Response received after ${elapsed}ms`);
+      console.log('[API] Response status:', response.status, response.statusText);
+      console.log('[API] Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
 
       if (!response.ok) {
         const text = await response.text();
-        console.error('[API] Save table data error response:', response.status, text);
+        console.error('[API] Error response body:', text);
         throw new Error(`HTTP ${response.status} ${response.statusText}`);
       }
 
-      console.log('[API] Successfully saved table data');
+      const responseText = await response.text();
+      console.log('[API] Response body:', responseText);
+      console.log('[API] ========== SAVE SUCCESSFUL ==========');
       return { success: true };
     } catch (error: any) {
-      console.error('[API] Save table data error:', error);
+      console.error('[API] ========== SAVE FAILED ==========');
+      console.error('[API] Error name:', error.name);
+      console.error('[API] Error message:', error.message);
+      console.error('[API] Error stack:', error.stack);
       
       if (error.name === 'AbortError') {
         throw new Error('Connection timeout while saving table data.');
