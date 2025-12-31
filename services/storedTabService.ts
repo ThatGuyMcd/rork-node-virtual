@@ -295,10 +295,43 @@ class StoredTabService {
     console.log('[StoredTab] ===== STORED TAB DOWNLOAD COMPLETE FOR:', operatorName, '=====');
   }
 
+  async uploadAllLocalStoredTabs(): Promise<void> {
+    console.log('[StoredTab] ===== UPLOADING ALL LOCAL STORED TABS =====');
+    
+    try {
+      const operators = await dataSyncService.getStoredOperators();
+      console.log(`[StoredTab] Found ${operators.length} operators to check`);
+      
+      let uploadedCount = 0;
+      for (const operator of operators) {
+        try {
+          const rows = await this.loadStoredTab(operator.name);
+          if (rows.length > 0) {
+            console.log(`[StoredTab] Uploading local stored tab for ${operator.name} (${rows.length} items)`);
+            await this.syncSingleStoredTabToServer(operator.name, rows);
+            uploadedCount++;
+          }
+        } catch (error) {
+          console.error(`[StoredTab] Failed to upload stored tab for ${operator.name}:`, error);
+        }
+      }
+      
+      console.log(`[StoredTab] Uploaded ${uploadedCount} local stored tabs`);
+    } catch (error) {
+      console.error('[StoredTab] Failed to upload local stored tabs:', error);
+    }
+    
+    console.log('[StoredTab] ===== LOCAL STORED TABS UPLOAD COMPLETE =====');
+  }
+
   async downloadStoredTabsFromServer(): Promise<void> {
     console.log('[StoredTab] ===== DOWNLOADING STORED TABS FROM SERVER =====');
     
     try {
+      console.log('[StoredTab] First, uploading any local stored tabs...');
+      await this.uploadAllLocalStoredTabs();
+      console.log('[StoredTab] Local upload complete, now downloading from server...');
+      
       const siteInfo = await dataSyncService.getSiteInfo();
       if (!siteInfo) {
         console.warn('[StoredTab] No site info available, skipping download');
