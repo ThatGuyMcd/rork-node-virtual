@@ -6,11 +6,6 @@ import superjson from "superjson";
 export const trpc = createTRPCReact<AppRouter>();
 
 const getBaseUrl = () => {
-  if (process.env.EXPO_PUBLIC_RORK_API_BASE_URL) {
-    return process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-  }
-
-  console.warn("[TRPC] No EXPO_PUBLIC_RORK_API_BASE_URL found, using fallback URL");
   return "http://localhost:3000";
 };
 
@@ -20,7 +15,7 @@ console.log("[TRPC] Initializing vanilla client with base URL:", baseUrl);
 export const trpcClient = createTRPCClient<AppRouter>({
   links: [
     httpLink({
-      url: `${baseUrl}/api/trpc`,
+      url: `${baseUrl}/trpc`,
       transformer: superjson,
       fetch: async (url, options) => {
         console.log("[TRPC] Fetching:", url);
