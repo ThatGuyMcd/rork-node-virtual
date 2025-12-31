@@ -1,4 +1,18 @@
+import { Platform } from 'react-native';
+
 const EXTERNAL_API_BASE_URL = 'https://app.positron-portal.com/api/v1';
+const EXTERNAL_SERVER_URL = 'https://app.positron-portal.com';
+
+const getProxyBaseUrl = (): string => {
+  const apiBaseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+  if (apiBaseUrl) {
+    return apiBaseUrl;
+  }
+  if (Platform.OS === 'web') {
+    return '';
+  }
+  return 'http://localhost:3000';
+};
 
 export interface AuthCredentials {
   username: string;
@@ -191,31 +205,31 @@ export class PositronAPI {
       console.log(`[API] Area: ${area}`);
       console.log(`[API] Table: ${tableName}`);
       console.log(`[API] Data size: ${tableData.length} bytes`);
+      console.log(`[API] Platform: ${Platform.OS}`);
       
-      const filePath = `${area}/${tableName}/TAB.CSV`;
+      const destinationFolder = `TABDATA\\${area}\\${tableName}`;
       
       const payload = {
         SITEID: siteId,
-        DESTINATIONWEBVIEWFOLDER: 'TABDATA',
-        FOLDERDATA: [area, `${area}/${tableName}`],
+        DESTINATIONWEBVIEWFOLDER: destinationFolder,
+        FOLDERDATA: [],
         FILEDATA: {
-          [filePath]: tableData,
+          'TAB.CSV': tableData,
         },
       };
       
-      console.log('[API] File path in FILEDATA:', filePath);
-      console.log('[API] Folder structure:', JSON.stringify(payload.FOLDERDATA));
+      console.log('[API] Destination folder:', destinationFolder);
       
-      const url = 'https://app.positron-portal.com/webviewdataupload';
-      console.log('[API] Full URL:', url);
+      const useProxy = Platform.OS === 'web';
+      const url = useProxy 
+        ? `${getProxyBaseUrl()}/api/proxy/webviewdataupload`
+        : `${EXTERNAL_SERVER_URL}/webviewdataupload`;
+      
+      console.log(`[API] Using ${useProxy ? 'proxy' : 'direct'} endpoint: ${url}`);
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.log('[API] Request timeout after 60s');
-        controller.abort();
-      }, 60000);
-
-      console.log('[API] Sending POST request...');
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const startTime = Date.now();
       
       const response = await fetch(url, {
@@ -226,21 +240,21 @@ export class PositronAPI {
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
-
-      clearTimeout(timeoutId);
-      const elapsed = Date.now() - startTime;
       
+      clearTimeout(timeoutId);
+      
+      const elapsed = Date.now() - startTime;
       console.log(`[API] Response received after ${elapsed}ms`);
       console.log('[API] Response status:', response.status, response.statusText);
-
+      
       if (!response.ok) {
         const text = await response.text();
         console.error('[API] Error response body:', text);
-        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP ${response.status} ${response.statusText}${text ? ` — ${text}` : ''}`);
       }
-
-      const responseText = await response.text();
-      console.log('[API] Response body:', responseText);
+      
+      const result = await response.json().catch(() => ({ success: true }));
+      console.log('[API] Server result:', result);
       console.log('[API] ========== SAVE SUCCESSFUL ==========');
       return { success: true };
     } catch (error: any) {
@@ -257,7 +271,7 @@ export class PositronAPI {
         throw new Error('Network error: Unable to connect to server. Please check your internet connection and server status.');
       }
       
-      throw error;
+      throw new Error(error.message || 'Failed to save table data');
     }
   }
 
@@ -267,24 +281,25 @@ export class PositronAPI {
       console.log(`[API] Site ID: ${siteId}`);
       console.log(`[API] Destination: ${destinationFolder}`);
       console.log(`[API] File count: ${Object.keys(fileData).length}`);
+      console.log(`[API] Platform: ${Platform.OS}`);
       
       const payload = {
         SITEID: siteId,
         DESTINATIONWEBVIEWFOLDER: destinationFolder,
-        FOLDERDATA: [],
+        FOLDERDATA: [] as string[],
         FILEDATA: fileData,
       };
       
-      const url = 'https://app.positron-portal.com/webviewdataupload';
-      console.log('[API] Full URL:', url);
+      const useProxy = Platform.OS === 'web';
+      const url = useProxy 
+        ? `${getProxyBaseUrl()}/api/proxy/webviewdataupload`
+        : `${EXTERNAL_SERVER_URL}/webviewdataupload`;
+      
+      console.log(`[API] Using ${useProxy ? 'proxy' : 'direct'} endpoint: ${url}`);
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.log('[API] Request timeout after 60s');
-        controller.abort();
-      }, 60000);
-
-      console.log('[API] Sending POST request...');
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const startTime = Date.now();
       
       const response = await fetch(url, {
@@ -295,21 +310,21 @@ export class PositronAPI {
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
-
-      clearTimeout(timeoutId);
-      const elapsed = Date.now() - startTime;
       
+      clearTimeout(timeoutId);
+      
+      const elapsed = Date.now() - startTime;
       console.log(`[API] Response received after ${elapsed}ms`);
       console.log('[API] Response status:', response.status, response.statusText);
-
+      
       if (!response.ok) {
         const text = await response.text();
         console.error('[API] Error response body:', text);
         throw new Error(`HTTP ${response.status} ${response.statusText}`);
       }
-
-      const responseText = await response.text();
-      console.log('[API] Response body:', responseText);
+      
+      const result = await response.json().catch(() => ({ success: true }));
+      console.log('[API] Server result:', result);
       console.log('[API] ========== TRANSACTION UPLOAD SUCCESSFUL ==========');
       return { success: true };
     } catch (error: any) {
@@ -325,7 +340,79 @@ export class PositronAPI {
         throw new Error('Network error: Unable to connect to server. Please check your internet connection and server status.');
       }
       
-      throw error;
+      throw new Error(error.message || 'Failed to upload transaction data');
+    }
+  }
+
+  async uploadSettingsProfiles(siteId: string, allProfiles: Record<string, any>): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log('[API] ========== UPLOADING SETTINGS PROFILES ==========');
+      console.log(`[API] Site ID: ${siteId}`);
+      console.log(`[API] Profile count: ${Object.keys(allProfiles).length}`);
+      console.log(`[API] Platform: ${Platform.OS}`);
+      
+      const payload = {
+        siteId,
+        allProfiles,
+      };
+      
+      const useProxy = Platform.OS === 'web';
+      const url = useProxy 
+        ? `${getProxyBaseUrl()}/api/proxy/uploadsettingsprofile`
+        : `${EXTERNAL_SERVER_URL}/uploadsettingsprofile`;
+      
+      console.log(`[API] Using ${useProxy ? 'proxy' : 'direct'} endpoint: ${url}`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      const startTime = Date.now();
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      const elapsed = Date.now() - startTime;
+      console.log(`[API] Response received after ${elapsed}ms`);
+      console.log('[API] Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('[API] Error response body:', text);
+        return { success: false, error: `Server returned ${response.status}: ${text}` };
+      }
+      
+      const result = await response.json().catch(() => ({ success: true }));
+      console.log('[API] Server result:', result);
+      
+      if (result.success === false) {
+        console.error('[API] ========== SETTINGS PROFILES UPLOAD FAILED ==========');
+        return { success: false, error: result.error || 'Unknown error' };
+      }
+      
+      console.log('[API] ========== SETTINGS PROFILES UPLOAD SUCCESSFUL ==========');
+      return { success: true };
+    } catch (error: any) {
+      console.error('[API] ========== SETTINGS PROFILES UPLOAD FAILED ==========');
+      console.error('[API] Error name:', error.name);
+      console.error('[API] Error message:', error.message);
+      
+      if (error.name === 'AbortError') {
+        return { success: false, error: 'Connection timeout while uploading settings profiles.' };
+      }
+      
+      if (error.message === 'Failed to fetch' || error.message === 'Network request failed') {
+        return { success: false, error: 'Network error: Unable to connect to server.' };
+      }
+      
+      return { success: false, error: error.message || 'Failed to upload settings profiles' };
     }
   }
 

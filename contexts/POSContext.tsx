@@ -190,8 +190,15 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       setSavingTable(true);
       try {
         console.log('[POS] Saving table data before logout...');
-        await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
-        console.log('[POS] Table data saved successfully');
+        await tableDataService.saveTableDataLocally(currentTable, basket, currentOperator, vatRates);
+        console.log('[POS] Table data saved locally before logout');
+        
+        try {
+          await tableDataService.syncSingleTableToServerSafe(currentTable, basket, currentOperator, vatRates);
+          console.log('[POS] Table data synced to server successfully');
+        } catch (syncError) {
+          console.warn('[POS] Failed to sync table data to server (will retry later):', syncError);
+        }
       } catch (error) {
         console.error('[POS] Failed to save table data:', error);
       } finally {
@@ -201,8 +208,15 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       setSavingTable(true);
       try {
         console.log('[POS] Clearing empty table before logout...');
-        await tableDataService.clearTableData(currentTable.id, currentTable);
-        console.log('[POS] Table cleared successfully');
+        await tableDataService.clearTableDataLocally(currentTable.id);
+        console.log('[POS] Table cleared locally');
+        
+        try {
+          await tableDataService.syncClearTableToServerSafe(currentTable);
+          console.log('[POS] Table clear synced to server successfully');
+        } catch (syncError) {
+          console.warn('[POS] Failed to sync table clear to server:', syncError);
+        }
       } catch (error) {
         console.error('[POS] Failed to clear table:', error);
       } finally {
@@ -443,8 +457,16 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     }
     
     if (currentTable) {
-      await tableDataService.clearTableData(currentTable.id, currentTable);
-      console.log('[POS] Cleared table data locally and synced to server for table:', currentTable.id);
+      try {
+        await tableDataService.clearTableDataLocally(currentTable.id);
+        console.log('[POS] Cleared table data locally for table:', currentTable.id);
+        
+        tableDataService.syncClearTableToServerSafe(currentTable)
+          .then(() => console.log('[POS] Table clear synced to server for table:', currentTable.id))
+          .catch((err) => console.warn('[POS] Failed to sync table clear to server:', err));
+      } catch (error) {
+        console.error('[POS] Failed to clear table data:', error);
+      }
     }
     
     setBasketDiscount(0);
@@ -489,16 +511,24 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     if (previousTable && previousBasket.length > 0 && currentOperator) {
       console.log(`[POS] Saving previous table ${previousTable.name} with ${previousBasket.length} items before switching`);
       try {
-        await tableDataService.saveTableData(previousTable, previousBasket, currentOperator, vatRates);
-        console.log(`[POS] Previous table saved successfully`);
+        await tableDataService.saveTableDataLocally(previousTable, previousBasket, currentOperator, vatRates);
+        console.log(`[POS] Previous table saved locally`);
+        
+        tableDataService.syncSingleTableToServerSafe(previousTable, previousBasket, currentOperator, vatRates)
+          .then(() => console.log(`[POS] Previous table synced to server`))
+          .catch((err) => console.warn('[POS] Failed to sync previous table to server:', err));
       } catch (error) {
         console.error('[POS] Failed to save previous table:', error);
       }
     } else if (previousTable && previousBasket.length === 0 && currentOperator) {
       console.log(`[POS] Clearing empty previous table ${previousTable.name} before switching`);
       try {
-        await tableDataService.clearTableData(previousTable.id, previousTable);
-        console.log(`[POS] Previous table cleared successfully`);
+        await tableDataService.clearTableDataLocally(previousTable.id);
+        console.log(`[POS] Previous table cleared locally`);
+        
+        tableDataService.syncClearTableToServerSafe(previousTable)
+          .then(() => console.log(`[POS] Previous table clear synced to server`))
+          .catch((err) => console.warn('[POS] Failed to sync previous table clear to server:', err));
       } catch (error) {
         console.error('[POS] Failed to clear previous table:', error);
       }
@@ -615,11 +645,25 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     setSavingTable(true);
     try {
       if (basket.length === 0) {
-        await tableDataService.clearTableData(currentTable.id, currentTable);
-        console.log('[POS] Successfully cleared empty table and synced to server');
+        await tableDataService.clearTableDataLocally(currentTable.id);
+        console.log('[POS] Successfully cleared empty table locally');
+        
+        try {
+          await tableDataService.syncClearTableToServerSafe(currentTable);
+          console.log('[POS] Table clear synced to server successfully');
+        } catch (syncError) {
+          console.warn('[POS] Failed to sync table clear to server (data saved locally):', syncError);
+        }
       } else {
-        await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
-        console.log('[POS] Successfully saved table tab and synced to server');
+        await tableDataService.saveTableDataLocally(currentTable, basket, currentOperator, vatRates);
+        console.log('[POS] Successfully saved table tab locally');
+        
+        try {
+          await tableDataService.syncSingleTableToServerSafe(currentTable, basket, currentOperator, vatRates);
+          console.log('[POS] Table data synced to server successfully');
+        } catch (syncError) {
+          console.warn('[POS] Failed to sync table data to server (data saved locally):', syncError);
+        }
       }
       
       setCurrentTable(null);
@@ -627,7 +671,6 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       console.log('[POS] Deselected table after save');
     } catch (error) {
       console.error('[POS] Error saving table tab:', error);
-      throw error;
     } finally {
       setSavingTable(false);
     }

@@ -159,4 +159,35 @@ app.get("/api/proxy/sites/:siteId/data/file", async (c) => {
   }
 });
 
+app.post("/api/proxy/uploadsettingsprofile", async (c) => {
+  try {
+    console.log('[Proxy] Received uploadsettingsprofile request');
+    const body = await c.req.json();
+    console.log('[Proxy] Request body keys:', Object.keys(body));
+    console.log('[Proxy] Site ID:', body.siteId);
+    console.log('[Proxy] Profile count:', Object.keys(body.allProfiles || {}).length);
+    
+    console.log('[Proxy] Forwarding to external server...');
+    const response = await fetch('https://app.positron-portal.com/uploadsettingsprofile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    
+    console.log('[Proxy] External server response:', response.status, response.statusText);
+    const text = await response.text();
+    console.log('[Proxy] External server response body:', text);
+    const contentType = response.headers.get('content-type') || 'text/plain';
+    return c.body(text, response.status as any, {
+      'Content-Type': contentType,
+      'Access-Control-Allow-Origin': '*',
+    });
+  } catch (error: any) {
+    console.error('[Proxy] uploadsettingsprofile error:', error);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 export default app;

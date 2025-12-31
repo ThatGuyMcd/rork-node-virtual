@@ -4,7 +4,6 @@ import type { BasketItem, Operator, Table } from '@/types/pos';
 import { dataParser } from './dataParser';
 import { dataSyncService } from './dataSync';
 import { apiClient } from './api';
-import { trpcClient } from '@/lib/trpc';
 
 export interface TableDataRow {
   quantity: number;
@@ -536,44 +535,7 @@ class TableDataService {
     console.log(`[TableDataService] Site ID: ${siteInfo.siteId}`);
 
     try {
-      if (Platform.OS === 'web') {
-        console.log('[TableDataService] Using tRPC proxy sync (web-safe)');
-        const result = await trpcClient.tabledata.sync.mutate({
-          siteId: siteInfo.siteId,
-          area: table.area,
-          tableName: table.name,
-          tableId: table.id,
-          tableData: rows.map((r) => ({
-            quantity: r.quantity,
-            productName: r.productName,
-            price: r.price,
-            pluFile: r.pluFile,
-            group: r.group,
-            department: r.department,
-            vatCode: r.vatCode,
-            vatPercentage: r.vatPercentage,
-            vatAmount: r.vatAmount,
-            addedBy: r.addedBy,
-            timeDate: r.timeDate,
-            printer1: r.printer1,
-            printer2: r.printer2,
-            printer3: r.printer3,
-            itemPrinted: r.itemPrinted,
-            tableId: r.tableId ?? table.id,
-          })),
-        });
-
-        console.log('[TableDataService] tRPC sync result:', result);
-
-        if (!result?.success) {
-          throw new Error(result?.error || 'Server sync failed');
-        }
-
-        console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE (tRPC) =====');
-        return;
-      }
-
-      console.log('[TableDataService] Using direct API sync (native)');
+      console.log('[TableDataService] Using direct API sync');
 
       const csvRows: string[] = [];
       csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?,Table ID');
@@ -610,9 +572,89 @@ class TableDataService {
         throw new Error('Server sync reported failure');
       }
 
-      console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE (direct) =====');
+      console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE =====');
     } catch (error) {
       console.error('[TableDataService] Single table sync error:', error);
+      throw error;
+    }
+  }
+
+  async syncSingleTableToServerSafe(
+    table: Table,
+    basket: BasketItem[],
+    operator: Operator,
+    vatRates: { code: string; percentage: number }[]
+  ): Promise<void> {
+    console.log('[TableDataService] Safe sync single table to server:', table.name);
+    
+    try {
+      const rows: TableDataRow[] = [];
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('en-GB', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateString = now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const timeDate = `${timeString} - ${dateString}`;
+
+      const labelToPrefixMap: Record<string, string> = {
+        'half': 'HALF',
+        'double': 'DBL',
+        'small': 'SML',
+        'large': 'LRG',
+        '125ml': '125ML',
+        '175ml': '175ML',
+        '250ml': '250ML',
+        'schooner': '2/3PT',
+        'open': 'OPEN',
+      };
+
+      for (const item of basket) {
+        const vatRate = vatRates.find(v => v.code === item.product.vatCode);
+        const vatPercentage = vatRate?.percentage || 0;
+        const priceExVat = item.selectedPrice.price / (1 + vatPercentage / 100);
+        const vatAmount = item.selectedPrice.price - priceExVat;
+
+        const pluFile = `${item.product.groupId}-${item.product.departmentId}-${item.product.id.replace('prod_', '').padStart(5, '0')}.PLU`;
+
+        const baseName = item.product.name.split(' - ')[0];
+        const messagePrefix = item.product.name.includes(' - ') ? ' - ' + item.product.name.split(' - ').slice(1).join(' - ') : '';
+        const priceLabelLower = item.selectedPrice.label.toLowerCase();
+        const prefix = labelToPrefixMap[priceLabelLower];
+        const shouldAddPrefix = prefix !== undefined;
+        const productName = shouldAddPrefix ? `${prefix} ${baseName}${messagePrefix}` : item.product.name;
+
+        rows.push({
+          quantity: item.quantity,
+          productName,
+          price: item.selectedPrice.price,
+          pluFile,
+          group: item.product.groupId,
+          department: item.product.departmentId,
+          vatCode: item.product.vatCode,
+          vatPercentage,
+          vatAmount,
+          addedBy: operator.name,
+          timeDate,
+          printer1: this.determinePrinter(item.product.groupId),
+          printer2: 'NOT SET',
+          printer3: 'NOT SET',
+          itemPrinted: 'YES',
+          tableId: table.id,
+        });
+      }
+
+      await this.syncSingleTableToServer(table, rows);
+    } catch (error) {
+      console.error('[TableDataService] Safe sync failed:', error);
+      throw error;
+    }
+  }
+
+  async syncClearTableToServerSafe(table: Table): Promise<void> {
+    console.log('[TableDataService] Safe sync clear table to server:', table.name);
+    
+    try {
+      await this.syncSingleTableToServer(table, []);
+    } catch (error) {
+      console.error('[TableDataService] Safe sync clear failed:', error);
       throw error;
     }
   }

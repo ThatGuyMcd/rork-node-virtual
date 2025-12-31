@@ -16,7 +16,7 @@ import {
 
 import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info, Server, Users, Menu, Loader, Edit2 } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
-import { trpcClient } from '@/lib/trpc';
+import { apiClient } from '@/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { printerService } from '@/services/printerService';
 import { transactionUploadService } from '@/services/transactionUploadService';
@@ -507,10 +507,10 @@ export default function SettingsScreen() {
           
           console.log('[Settings] Uploading', Object.keys(allProfilesData).length, 'profiles');
           
-          const uploadResult = await trpcClient.settingsprofile.upload.mutate({
-            siteId: siteInfo.siteId,
-            allProfiles: allProfilesData,
-          });
+          const uploadResult = await apiClient.uploadSettingsProfiles(
+            siteInfo.siteId,
+            allProfilesData
+          );
           
           if (uploadResult.success) {
             console.log('[Settings] All profiles uploaded successfully');
