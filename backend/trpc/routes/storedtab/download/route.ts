@@ -40,16 +40,31 @@ const downloadStoredTabRoute = publicProcedure
         body: JSON.stringify({ SITEID: siteId }),
       });
 
+      const manifestText = await manifestResponse.text();
+      console.log('[StoredTab Download] Manifest response status:', manifestResponse.status);
+      console.log('[StoredTab Download] Manifest response (first 200 chars):', manifestText.substring(0, 200));
+
       if (!manifestResponse.ok) {
-        console.error('[StoredTab Download] Manifest fetch failed:', manifestResponse.status);
+        console.error('[StoredTab Download] Manifest fetch failed:', manifestResponse.status, manifestText);
         return {
           success: false,
           storedTabs: [],
-          error: 'Failed to fetch manifest',
+          error: `Failed to fetch manifest: ${manifestResponse.statusText}`,
         };
       }
 
-      const manifest = await manifestResponse.json();
+      let manifest;
+      try {
+        manifest = JSON.parse(manifestText);
+      } catch (parseError) {
+        console.error('[StoredTab Download] Failed to parse manifest JSON:', parseError);
+        console.error('[StoredTab Download] Response text:', manifestText);
+        return {
+          success: false,
+          storedTabs: [],
+          error: 'Invalid JSON response from manifest endpoint',
+        };
+      }
       console.log('[StoredTab Download] Manifest received, total files:', manifest.length);
 
       const storedTabFiles = manifest.filter((file: any) => {

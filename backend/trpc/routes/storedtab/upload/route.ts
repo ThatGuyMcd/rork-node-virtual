@@ -45,13 +45,23 @@ const uploadStoredTabRoute = publicProcedure
         body: JSON.stringify(payload),
       });
 
+      const responseText = await response.text();
+      console.log('[StoredTab Upload] Response status:', response.status);
+      console.log('[StoredTab Upload] Response text:', responseText.substring(0, 200));
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[StoredTab Upload] Upload failed:', response.status, errorText);
+        console.error('[StoredTab Upload] Upload failed:', response.status, responseText);
         throw new Error(`Upload failed: ${response.statusText}`);
       }
 
-      const result = await response.json().catch(() => ({ success: true }));
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        console.log('[StoredTab Upload] Response is not JSON, treating as success');
+        result = { success: true };
+      }
+
       console.log('[StoredTab Upload] Upload successful:', result);
       console.log('[StoredTab Upload] ========== UPLOAD COMPLETE ==========');
 
