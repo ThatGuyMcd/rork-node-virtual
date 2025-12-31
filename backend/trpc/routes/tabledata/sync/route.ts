@@ -67,25 +67,45 @@ export const syncTableDataProcedure = publicProcedure
       
       const csvContent = csvRows.join('\n');
       
-      // Post to server
-      const API_BASE_URL = 'https://app.positron-portal.com/api/v1';
-      const url = `${API_BASE_URL}/sites/${encodeURIComponent(input.siteId)}/data/table`;
+      // Post to server using the webviewdataupload endpoint
+      const SERVER_BASE_URL = 'https://app.positron-portal.com';
+      const url = `${SERVER_BASE_URL}/webviewdataupload`;
+      
+      const folderPath = `TABDATA/${input.area}/${input.tableName}`;
+      const filePath = `${folderPath}/TAB.CSV`;
+      
+      const payload = {
+        SITEID: input.siteId,
+        DESTINATIONWEBVIEWFOLDER: 'TABDATA',
+        FOLDERDATA: [input.area, `${input.area}/${input.tableName}`],
+        FILEDATA: {
+          [filePath]: csvContent,
+        },
+      };
       
       console.log('[tRPC] Posting to:', url);
+      console.log('[tRPC] Folder path:', folderPath);
+      console.log('[tRPC] File path:', filePath);
       console.log('[tRPC] CSV size:', csvContent.length, 'bytes');
+      console.log('[tRPC] Payload:', JSON.stringify(payload, null, 2).substring(0, 500) + '...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
       
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          'Accept': 'text/plain, application/json',
         },
-        body: JSON.stringify({
-          area: input.area,
-          table: input.tableName,
-          data: csvContent,
-        }),
+        body: JSON.stringify(payload),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
+      
+      console.log('[tRPC] Response status:', response.status);
+      console.log('[tRPC] Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
       
       if (!response.ok) {
         const text = await response.text();
@@ -93,14 +113,14 @@ export const syncTableDataProcedure = publicProcedure
         throw new Error(`Server returned ${response.status}: ${text}`);
       }
       
-      const result = await response.json().catch(() => ({ success: true }));
-      console.log('[tRPC] Server response:', result);
+      const responseText = await response.text();
+      console.log('[tRPC] Server response:', responseText);
       
       return {
         success: true,
         tableId: input.tableId,
         rowCount: input.tableData.length,
-        serverResponse: result,
+        serverResponse: responseText,
       };
     } catch (error: any) {
       console.error('[tRPC] Error syncing to server:', error);
