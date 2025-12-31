@@ -324,7 +324,7 @@ export default function LoginScreen() {
                   isManager: false,
                 };
                 login(guestOperator).then(() => {
-                  router.replace('/(tabs)/settings');
+                  router.replace('/settings' as any);
                 });
               }}
               activeOpacity={0.8}
