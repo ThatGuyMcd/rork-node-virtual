@@ -11,12 +11,12 @@ console.log('[Hono] Initializing backend...');
 app.use(
   "*",
   cors({
-    origin: "*",
+    origin: (origin) => origin || "*",
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
-    allowHeaders: ["*"],
-    exposeHeaders: ["*"],
+    allowHeaders: ["Content-Type", "Authorization", "x-trpc-source"],
+    exposeHeaders: ["Content-Type"],
     maxAge: 86400,
-    credentials: true,
+    credentials: false,
   })
 );
 
@@ -39,9 +39,18 @@ app.all("*", async (c, next) => {
 
 app.use(
   "/trpc/*",
+  cors({
+    origin: (origin) => origin || "*",
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization", "x-trpc-source"],
+    credentials: false,
+  }),
   trpcServer({
     router: appRouter,
     createContext,
+    onError: ({ error, path }) => {
+      console.error(`[tRPC] Error in ${path}:`, error);
+    },
   })
 );
 
