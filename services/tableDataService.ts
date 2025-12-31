@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import type { BasketItem, Operator, Table } from '@/types/pos';
 import { dataParser } from './dataParser';
 import { dataSyncService } from './dataSync';
-import { trpcClient } from '@/lib/trpc';
+import { apiClient } from './api';
 
 export interface TableDataRow {
   quantity: number;
@@ -539,13 +539,10 @@ class TableDataService {
     console.log(`[TableDataService] Rows: ${rows.length}`);
     
     try {
-      // Convert rows to CSV format
       const csvRows: string[] = [];
       
-      // Add header
       csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?,Table ID');
       
-      // Add data rows
       for (const row of rows) {
         const line = [
           row.quantity.toFixed(3),
@@ -571,19 +568,14 @@ class TableDataService {
       const csvContent = csvRows.join('\n');
       console.log('[TableDataService] CSV content size:', csvContent.length, 'bytes');
       
-      // Use tRPC backend to proxy to your server
-      const filePath = `${table.area}/${table.name}/TAB.CSV`;
+      const result = await apiClient.saveTableData(
+        siteInfo.siteId,
+        table.area,
+        table.name,
+        csvContent
+      );
       
-      const result = await trpcClient.tabledata.upload.mutate({
-        SITEID: siteInfo.siteId,
-        DESTINATIONWEBVIEWFOLDER: 'TABDATA',
-        FOLDERDATA: [table.area, `${table.area}/${table.name}`],
-        FILEDATA: {
-          [filePath]: csvContent,
-        },
-      });
-      
-      console.log('[TableDataService] tRPC sync result:', result);
+      console.log('[TableDataService] Direct API sync result:', result);
       
       if (!result.success) {
         console.warn('[TableDataService] Server sync reported failure');
