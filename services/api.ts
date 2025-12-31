@@ -185,12 +185,6 @@ export class PositronAPI {
       
       console.log('[API] File path in FILEDATA:', filePath);
       console.log('[API] Folder structure:', JSON.stringify(payload.FOLDERDATA));
-      console.log('[API] Payload structure:', {
-        SITEID: payload.SITEID,
-        DESTINATIONWEBVIEWFOLDER: payload.DESTINATIONWEBVIEWFOLDER,
-        FOLDERDATA: payload.FOLDERDATA,
-        FILEDATA_keys: Object.keys(payload.FILEDATA),
-      });
       
       const url = `${API_BASE_URL.replace('/api/v1', '')}/webviewdataupload`;
       console.log('[API] Full URL:', url);
@@ -208,7 +202,6 @@ export class PositronAPI {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
@@ -219,7 +212,6 @@ export class PositronAPI {
       
       console.log(`[API] Response received after ${elapsed}ms`);
       console.log('[API] Response status:', response.status, response.statusText);
-      console.log('[API] Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
 
       if (!response.ok) {
         const text = await response.text();
@@ -242,7 +234,8 @@ export class PositronAPI {
       }
       
       if (error.message === 'Failed to fetch' || error.message === 'Network request failed') {
-        throw new Error('Unable to connect to server. Please check your internet connection.');
+        console.error('[API] CORS/Network Error - Server may not be handling OPTIONS preflight or missing Access-Control-Allow-Origin header');
+        throw new Error('CORS error: Server must handle OPTIONS requests and return Access-Control-Allow-Origin header. Check server CORS configuration.');
       }
       
       throw error;
@@ -279,7 +272,6 @@ export class PositronAPI {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
@@ -311,7 +303,8 @@ export class PositronAPI {
       }
       
       if (error.message === 'Failed to fetch' || error.message === 'Network request failed') {
-        throw new Error('Unable to connect to server. Please check your internet connection.');
+        console.error('[API] CORS/Network Error - Server may not be handling OPTIONS preflight or missing Access-Control-Allow-Origin header');
+        throw new Error('CORS error: Server must handle OPTIONS requests and return Access-Control-Allow-Origin header. Check server CORS configuration.');
       }
       
       throw error;
