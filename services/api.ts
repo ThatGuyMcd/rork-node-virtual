@@ -1,6 +1,14 @@
 const EXTERNAL_API_BASE_URL = 'https://app.positron-portal.com/api/v1';
 const USE_PROXY = typeof window !== 'undefined';
-const PROXY_BASE_URL = process.env.EXPO_PUBLIC_RORK_API_BASE_URL || 'http://localhost:8081';
+
+function getProxyBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  return 'http://localhost:8081';
+}
+
+const PROXY_BASE_URL = getProxyBaseUrl();
 
 export interface AuthCredentials {
   username: string;

@@ -8,7 +8,14 @@ const app = new Hono();
 
 console.log('[Hono] Initializing backend...');
 
-app.use("*", cors());
+app.use("*", cors({
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  exposeHeaders: ['Content-Length', 'X-Request-Id'],
+  maxAge: 600,
+  credentials: false,
+}));
 
 app.use(
   "/trpc/*",
