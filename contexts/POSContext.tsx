@@ -185,6 +185,9 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     setCurrentOperator(operator);
     await AsyncStorage.setItem('currentOperator', JSON.stringify(operator));
     
+    console.log('[POS] Downloading latest stored tab from server...');
+    await storedTabService.downloadStoredTabForOperator(operator.name);
+    
     console.log('[POS] Checking for stored operator tab...');
     const storedTabRows = await storedTabService.loadStoredTab(operator.name);
     
