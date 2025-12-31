@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { BasketItem, Operator } from '@/types/pos';
 import { dataParser } from './dataParser';
 import { dataSyncService } from './dataSync';
+import { apiClient } from './api';
 import { trpcClient } from '@/lib/trpc';
 
 export interface StoredTabRow {
@@ -251,28 +252,39 @@ class StoredTabService {
       
       console.log('[StoredTab] Site ID:', siteInfo.siteId);
       
-      const result = await trpcClient.storedtab.download.query({
-        siteId: siteInfo.siteId,
+      const manifest = await apiClient.getManifest(siteInfo.siteId);
+      console.log('[StoredTab] Manifest loaded:', manifest.length, 'files');
+      
+      const storedTabFiles = manifest.filter(file => {
+        const pathUpper = file.path.toUpperCase();
+        return (
+          pathUpper.startsWith('OPERATORDATA/STORED OPERATOR TABS/') &&
+          pathUpper.endsWith('_STOREDTAB.CSV')
+        );
       });
       
-      console.log('[StoredTab] Download result:', JSON.stringify({
-        success: result.success,
-        tabCount: result.storedTabs.length,
-        error: result.error || 'none'
-      }));
+      console.log('[StoredTab] Found', storedTabFiles.length, 'stored tab files');
       
-      if (result.success && result.storedTabs.length > 0) {
-        const serverTab = result.storedTabs.find((t: any) => t.operatorName === operatorName);
+      const targetFile = storedTabFiles.find(f => {
+        const fileName = f.path.split('/').pop() || '';
+        const fileOperator = fileName.replace('_StoredTab.csv', '').replace('_STOREDTAB.CSV', '');
+        return fileOperator.toUpperCase() === operatorName.toUpperCase();
+      });
+      
+      if (targetFile) {
+        console.log('[StoredTab] Downloading file:', targetFile.path);
+        const csvContent = await apiClient.getFile(siteInfo.siteId, targetFile.path);
+        const fileName = targetFile.path.split('/').pop() || '';
+        const fileOperatorName = fileName.replace('_StoredTab.csv', '').replace('_STOREDTAB.CSV', '');
         
-        if (serverTab) {
-          console.log('[StoredTab] Found stored tab for operator:', operatorName);
-          await this.processServerTab(serverTab);
-        } else {
-          console.log('[StoredTab] No stored tab found for operator:', operatorName);
-          await AsyncStorage.removeItem(this.getStoredTabKey(operatorName));
-        }
+        await this.processServerTab({
+          operatorName: fileOperatorName,
+          csvContent,
+          lastModified: targetFile.lastModified || new Date().toISOString(),
+        });
+        console.log('[StoredTab] Successfully downloaded and processed stored tab for:', operatorName);
       } else {
-        console.log('[StoredTab] No stored tabs available, clearing local data for:', operatorName);
+        console.log('[StoredTab] No stored tab file found for operator:', operatorName);
         await AsyncStorage.removeItem(this.getStoredTabKey(operatorName));
       }
     } catch (error) {
@@ -295,30 +307,45 @@ class StoredTabService {
       
       console.log('[StoredTab] Site ID:', siteInfo.siteId);
       
-      const result = await trpcClient.storedtab.download.query({
-        siteId: siteInfo.siteId,
+      const manifest = await apiClient.getManifest(siteInfo.siteId);
+      console.log('[StoredTab] Manifest loaded:', manifest.length, 'files');
+      
+      const storedTabFiles = manifest.filter(file => {
+        const pathUpper = file.path.toUpperCase();
+        return (
+          pathUpper.startsWith('OPERATORDATA/STORED OPERATOR TABS/') &&
+          pathUpper.endsWith('_STOREDTAB.CSV')
+        );
       });
       
-      console.log('[StoredTab] Download result:', JSON.stringify({
-        success: result.success,
-        tabCount: result.storedTabs.length,
-        error: result.error || 'none'
-      }));
+      console.log('[StoredTab] Found', storedTabFiles.length, 'stored tab files');
       
-      if (result.success && result.storedTabs.length > 0) {
-        console.log(`[StoredTab] Downloaded ${result.storedTabs.length} stored tabs from server`);
-        console.log('[StoredTab] Operator names:', result.storedTabs.map((t: any) => t.operatorName).join(', '));
-        
-        for (const serverTab of result.storedTabs) {
-          await this.processServerTab(serverTab);
-        }
-        
-        console.log('[StoredTab] Stored tabs synced successfully - Total:', result.storedTabs.length);
-      } else if (result.success && result.storedTabs.length === 0) {
+      if (storedTabFiles.length === 0) {
         console.log('[StoredTab] No stored tabs found on server');
-      } else {
-        console.log('[StoredTab] Download was not successful:', result.error);
+        return;
       }
+      
+      let downloadedCount = 0;
+      for (const file of storedTabFiles) {
+        try {
+          console.log('[StoredTab] Downloading:', file.path);
+          const csvContent = await apiClient.getFile(siteInfo.siteId, file.path);
+          const fileName = file.path.split('/').pop() || '';
+          const operatorName = fileName.replace('_StoredTab.csv', '').replace('_STOREDTAB.CSV', '');
+          
+          await this.processServerTab({
+            operatorName,
+            csvContent,
+            lastModified: file.lastModified || new Date().toISOString(),
+          });
+          downloadedCount++;
+          console.log('[StoredTab] Downloaded stored tab for:', operatorName, 'Size:', csvContent.length);
+        } catch (error) {
+          console.error('[StoredTab] Error downloading file:', file.path, error);
+        }
+      }
+      
+      console.log('[StoredTab] Stored tabs synced successfully - Total:', downloadedCount);
     } catch (error) {
       console.error('[StoredTab] Failed to download stored tabs:', error);
       console.error('[StoredTab] Error details:', error instanceof Error ? error.message : String(error));
