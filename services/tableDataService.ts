@@ -4,6 +4,7 @@ import type { BasketItem, Operator, Table } from '@/types/pos';
 import { dataParser } from './dataParser';
 import { dataSyncService } from './dataSync';
 import { apiClient } from './api';
+import { trpcClient } from '@/lib/trpc';
 
 export interface TableDataRow {
   quantity: number;
@@ -523,26 +524,60 @@ class TableDataService {
   }
 
   private async syncSingleTableToServer(table: Table, rows: TableDataRow[]): Promise<void> {
-    console.log('[TableDataService] ===== SYNCING SINGLE TABLE DIRECTLY TO SERVER =====');
+    console.log('[TableDataService] ===== SYNCING SINGLE TABLE TO SERVER =====');
     console.log('[TableDataService] Table:', table.name, 'Area:', table.area, 'Rows:', rows.length);
-    
+
     const siteInfo = await dataSyncService.getSiteInfo();
     if (!siteInfo) {
       console.warn('[TableDataService] No site info available, skipping sync');
       return;
     }
-    
-    console.log(`[TableDataService] Uploading directly to server...`);
+
     console.log(`[TableDataService] Site ID: ${siteInfo.siteId}`);
-    console.log(`[TableDataService] Area: ${table.area}`);
-    console.log(`[TableDataService] Table: ${table.name}`);
-    console.log(`[TableDataService] Rows: ${rows.length}`);
-    
+
     try {
+      if (Platform.OS === 'web') {
+        console.log('[TableDataService] Using tRPC proxy sync (web-safe)');
+        const result = await trpcClient.tabledata.sync.mutate({
+          siteId: siteInfo.siteId,
+          area: table.area,
+          tableName: table.name,
+          tableId: table.id,
+          tableData: rows.map((r) => ({
+            quantity: r.quantity,
+            productName: r.productName,
+            price: r.price,
+            pluFile: r.pluFile,
+            group: r.group,
+            department: r.department,
+            vatCode: r.vatCode,
+            vatPercentage: r.vatPercentage,
+            vatAmount: r.vatAmount,
+            addedBy: r.addedBy,
+            timeDate: r.timeDate,
+            printer1: r.printer1,
+            printer2: r.printer2,
+            printer3: r.printer3,
+            itemPrinted: r.itemPrinted,
+            tableId: r.tableId ?? table.id,
+          })),
+        });
+
+        console.log('[TableDataService] tRPC sync result:', result);
+
+        if (!result?.success) {
+          throw new Error(result?.error || 'Server sync failed');
+        }
+
+        console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE (tRPC) =====');
+        return;
+      }
+
+      console.log('[TableDataService] Using direct API sync (native)');
+
       const csvRows: string[] = [];
-      
       csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?,Table ID');
-      
+
       for (const row of rows) {
         const line = [
           row.quantity.toFixed(3),
@@ -564,26 +599,20 @@ class TableDataService {
         ].join(',');
         csvRows.push(line);
       }
-      
+
       const csvContent = csvRows.join('\n');
       console.log('[TableDataService] CSV content size:', csvContent.length, 'bytes');
-      
-      const result = await apiClient.saveTableData(
-        siteInfo.siteId,
-        table.area,
-        table.name,
-        csvContent
-      );
-      
+
+      const result = await apiClient.saveTableData(siteInfo.siteId, table.area, table.name, csvContent);
       console.log('[TableDataService] Direct API sync result:', result);
-      
+
       if (!result.success) {
-        console.warn('[TableDataService] Server sync reported failure');
-      } else {
-        console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE =====');
+        throw new Error('Server sync reported failure');
       }
+
+      console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE (direct) =====');
     } catch (error) {
-      console.error('[TableDataService] Direct API sync error:', error);
+      console.error('[TableDataService] Single table sync error:', error);
       throw error;
     }
   }
