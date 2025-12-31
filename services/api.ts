@@ -1,7 +1,8 @@
 import { Platform } from 'react-native';
 
-const EXTERNAL_API_BASE_URL = 'https://app.positron-portal.com/api/v1';
-const EXTERNAL_SERVER_URL = 'https://app.positron-portal.com';
+const BACKEND_URL = process.env.EXPO_PUBLIC_RORK_API_BASE_URL || '';
+
+console.log('[API] Backend URL configured:', BACKEND_URL);
 
 export interface AuthCredentials {
   username: string;
@@ -20,7 +21,7 @@ export class PositronAPI {
 
   async linkAccount(credentials: AuthCredentials): Promise<LinkResponse> {
     try {
-      const url = 'https://app.positron-portal.com/linkwebviewaccount';
+      const url = `${BACKEND_URL}/api/proxy/linkwebviewaccount`;
       console.log('[API] Attempting to link account to:', url);
       console.log('[API] Using credentials:', { username: credentials.username, password: '***' });
       
@@ -100,7 +101,7 @@ export class PositronAPI {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-      const url = `${EXTERNAL_API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/manifest`;
+      const url = `${BACKEND_URL}/api/proxy/sites/${encodeURIComponent(siteId)}/data/manifest`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -155,7 +156,7 @@ export class PositronAPI {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-      const url = `${EXTERNAL_API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`;
+      const url = `${BACKEND_URL}/api/proxy/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`;
 
       const response = await fetch(
         url,
@@ -209,9 +210,9 @@ export class PositronAPI {
       
       console.log('[API] Destination folder:', destinationFolder);
       
-      const url = `${EXTERNAL_SERVER_URL}/webviewdataupload`;
+      const url = `${BACKEND_URL}/api/proxy/webviewdataupload`;
       
-      console.log(`[API] Using direct endpoint: ${url}`);
+      console.log(`[API] Using backend proxy endpoint: ${url}`);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -276,9 +277,9 @@ export class PositronAPI {
         FILEDATA: fileData,
       };
       
-      const url = `${EXTERNAL_SERVER_URL}/webviewdataupload`;
+      const url = `${BACKEND_URL}/api/proxy/webviewdataupload`;
       
-      console.log(`[API] Using direct endpoint: ${url}`);
+      console.log(`[API] Using backend proxy endpoint: ${url}`);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -339,9 +340,9 @@ export class PositronAPI {
         allProfiles,
       };
       
-      const url = `${EXTERNAL_SERVER_URL}/uploadsettingsprofile`;
+      const url = `${BACKEND_URL}/api/proxy/uploadsettingsprofile`;
       
-      console.log(`[API] Using direct endpoint: ${url}`);
+      console.log(`[API] Using backend proxy endpoint: ${url}`);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
