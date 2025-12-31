@@ -11,9 +11,8 @@ console.log('[Hono] Initializing backend...');
 app.use("*", cors());
 
 app.use(
-  "/api/trpc/*",
+  "/trpc/*",
   trpcServer({
-    endpoint: "/api/trpc",
     router: appRouter,
     createContext,
   })
