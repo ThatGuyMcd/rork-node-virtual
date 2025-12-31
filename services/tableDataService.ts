@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import type { BasketItem, Operator, Table } from '@/types/pos';
 import { dataParser } from './dataParser';
 import { dataSyncService } from './dataSync';
-import { trpcClient } from '@/lib/trpc';
+import { apiClient } from './api';
 
 export interface TableDataRow {
   quantity: number;
@@ -190,13 +190,9 @@ class TableDataService {
       console.log('[TableDataService] Successfully saved table data to CSV');
     }
 
-    try {
-      console.log('[TableDataService] Syncing single table to server...');
-      await this.syncSingleTableToServer(table, rows);
-      console.log('[TableDataService] Single table sync successful');
-    } catch (error) {
-      console.error('[TableDataService] Single table sync failed:', error);
-    }
+    console.log('[TableDataService] Syncing single table to server (BLOCKING)...');
+    await this.syncSingleTableToServer(table, rows);
+    console.log('[TableDataService] Single table sync successful');
   }
 
   async loadTableData(tableId: string): Promise<TableDataRow[]> {
@@ -320,20 +316,12 @@ class TableDataService {
   async clearTableData(tableId: string, table?: Table): Promise<void> {
     console.log('[TableDataService] Clearing table data for table ID:', tableId);
 
-    try {
-      await this.clearTableDataLocally(tableId);
-      
-      if (table) {
-        try {
-          console.log('[TableDataService] Syncing table clear to server...');
-          await this.syncSingleTableToServer(table, []);
-          console.log('[TableDataService] Server clear sync successful');
-        } catch (error) {
-          console.error('[TableDataService] Server clear sync failed:', error);
-        }
-      }
-    } catch (error) {
-      console.error('[TableDataService] Error clearing table data:', error);
+    await this.clearTableDataLocally(tableId);
+    
+    if (table) {
+      console.log('[TableDataService] Syncing table clear to server (BLOCKING)...');
+      await this.syncSingleTableToServer(table, []);
+      console.log('[TableDataService] Server clear sync successful');
     }
   }
 
@@ -535,7 +523,7 @@ class TableDataService {
   }
 
   private async syncSingleTableToServer(table: Table, rows: TableDataRow[]): Promise<void> {
-    console.log('[TableDataService] ===== SYNCING SINGLE TABLE =====');
+    console.log('[TableDataService] ===== SYNCING SINGLE TABLE (DIRECT TO POSITRON-PORTAL) =====');
     console.log('[TableDataService] Table:', table.name, 'Area:', table.area, 'Rows:', rows.length);
     
     const siteInfo = await dataSyncService.getSiteInfo();
@@ -543,13 +531,6 @@ class TableDataService {
       console.warn('[TableDataService] No site info available, skipping sync');
       return;
     }
-    
-    const folderData: string[] = [];
-    const fileData: Record<string, string> = {};
-    
-    folderData.push(table.area);
-    const tableFolderPath = `${table.area}/${table.name}`;
-    folderData.push(tableFolderPath);
     
     const csvRows: string[] = [];
     csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?');
@@ -577,32 +558,16 @@ class TableDataService {
     }
     
     const csvContent = csvRows.join('\r\n') + '\r\n';
-    const tableDataPath = `${tableFolderPath}/tabledata.csv`;
-    fileData[tableDataPath] = csvContent;
     
-    const payload = {
-      SITEID: siteInfo.siteId,
-      DESTINATIONWEBVIEWFOLDER: 'TABDATA',
-      FOLDERDATA: folderData,
-      FILEDATA: fileData,
-    };
+    console.log(`[TableDataService] Uploading directly to positron-portal...`);
+    console.log(`[TableDataService] Site ID: ${siteInfo.siteId}`);
+    console.log(`[TableDataService] Area: ${table.area}`);
+    console.log(`[TableDataService] Table: ${table.name}`);
+    console.log(`[TableDataService] CSV size: ${csvContent.length} bytes`);
     
-    console.log(`[TableDataService] Payload structure:`);
-    console.log(`[TableDataService]   SITEID: ${payload.SITEID}`);
-    console.log(`[TableDataService]   DESTINATIONWEBVIEWFOLDER: ${payload.DESTINATIONWEBVIEWFOLDER}`);
-    console.log(`[TableDataService]   FOLDERDATA: ${JSON.stringify(payload.FOLDERDATA)}`);
-    console.log(`[TableDataService]   FILEDATA keys: ${Object.keys(payload.FILEDATA).join(', ')}`);
-    console.log(`[TableDataService] Payload size: ${JSON.stringify(payload).length} bytes`);
-    console.log(`[TableDataService] Uploading via tRPC backend...`);
-    
-    try {
-      const result = await trpcClient.tabledata.upload.mutate(payload);
-      console.log('[TableDataService] Sync successful:', result);
-      console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE =====');
-    } catch (error: any) {
-      console.error('[TableDataService] Upload failed:', error);
-      throw new Error(`Upload failed: ${error.message}`);
-    }
+    const result = await apiClient.saveTableData(siteInfo.siteId, table.area, table.name, csvContent);
+    console.log('[TableDataService] Sync successful:', result);
+    console.log('[TableDataService] ===== SINGLE TABLE SYNC COMPLETE =====');
   }
 
   async syncAllTableDataToServer(): Promise<void> {
