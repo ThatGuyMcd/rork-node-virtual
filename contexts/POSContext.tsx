@@ -294,20 +294,11 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           setSavingTable(false);
         }
       } else if (!currentTable && basket.length > 0) {
-        setSavingTable(true);
-        try {
-          console.log('[POS] No table selected, saving basket to stored operator tab...');
-          await storedTabService.saveStoredTab(currentOperator, basket, vatRates);
-        } finally {
-          setSavingTable(false);
-        }
+        console.log('[POS] No table selected, saving basket to stored operator tab (quick sync)...');
+        storedTabService.saveStoredTab(currentOperator, basket, vatRates, true);
       } else if (!currentTable && basket.length === 0) {
-        try {
-          console.log('[POS] No basket items, clearing stored operator tab if exists...');
-          await storedTabService.clearStoredTab(currentOperator.name);
-        } catch (error) {
-          console.error('[POS] Error clearing stored tab:', error);
-        }
+        console.log('[POS] No basket items, clearing stored operator tab if exists (quick sync)...');
+        storedTabService.clearStoredTab(currentOperator.name, true);
       }
     }
     

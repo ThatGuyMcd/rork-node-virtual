@@ -36,6 +36,9 @@ const uploadStoredTabRoute = publicProcedure
     console.log('[StoredTab Upload] Destination:', `${siteId}/DATA/OPERATORDATA/Stored Operator Tabs/${fileName}`);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
@@ -43,7 +46,10 @@ const uploadStoredTabRoute = publicProcedure
           'Accept': 'application/json',
         },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       const responseText = await response.text();
       console.log('[StoredTab Upload] Response status:', response.status);

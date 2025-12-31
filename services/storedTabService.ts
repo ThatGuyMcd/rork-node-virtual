@@ -33,9 +33,10 @@ class StoredTabService {
   async saveStoredTab(
     operator: Operator,
     basket: BasketItem[],
-    vatRates: { code: string; percentage: number }[]
+    vatRates: { code: string; percentage: number }[],
+    quickSync: boolean = false
   ): Promise<void> {
-    console.log('[StoredTab] Saving stored tab for operator:', operator.name);
+    console.log('[StoredTab] Saving stored tab for operator:', operator.name, 'quickSync:', quickSync);
 
     const rows: StoredTabRow[] = [];
     const now = new Date();
@@ -94,12 +95,19 @@ class StoredTabService {
     await AsyncStorage.setItem(this.getStoredTabKey(operator.name), JSON.stringify(rows));
     console.log('[StoredTab] Successfully saved stored tab to AsyncStorage');
 
-    try {
-      console.log('[StoredTab] Syncing stored tab to server...');
-      await this.syncSingleStoredTabToServer(operator.name, rows);
-      console.log('[StoredTab] Stored tab sync successful');
-    } catch (error) {
-      console.warn('[StoredTab] Stored tab sync failed (non-critical):', error);
+    if (quickSync) {
+      console.log('[StoredTab] Quick sync mode - fire and forget with 2s timeout');
+      this.syncSingleStoredTabToServer(operator.name, rows, 2000).catch(error => {
+        console.warn('[StoredTab] Quick sync failed (non-critical):', error?.message || error);
+      });
+    } else {
+      try {
+        console.log('[StoredTab] Normal sync mode - waiting for completion');
+        await this.syncSingleStoredTabToServer(operator.name, rows, 5000);
+        console.log('[StoredTab] Stored tab sync successful');
+      } catch (error) {
+        console.warn('[StoredTab] Stored tab sync failed (non-critical):', error);
+      }
     }
   }
 
@@ -122,19 +130,26 @@ class StoredTabService {
     }
   }
 
-  async clearStoredTab(operatorName: string): Promise<void> {
-    console.log('[StoredTab] Clearing stored tab for operator:', operatorName);
+  async clearStoredTab(operatorName: string, quickSync: boolean = false): Promise<void> {
+    console.log('[StoredTab] Clearing stored tab for operator:', operatorName, 'quickSync:', quickSync);
 
     try {
       await AsyncStorage.removeItem(this.getStoredTabKey(operatorName));
       console.log('[StoredTab] Successfully cleared stored tab from AsyncStorage');
 
-      try {
-        console.log('[StoredTab] Syncing stored tab clear to server...');
-        await this.syncSingleStoredTabToServer(operatorName, []);
-        console.log('[StoredTab] Server clear sync successful');
-      } catch (error) {
-        console.warn('[StoredTab] Server clear sync failed (non-critical):', error);
+      if (quickSync) {
+        console.log('[StoredTab] Quick sync mode - fire and forget with 2s timeout');
+        this.syncSingleStoredTabToServer(operatorName, [], 2000).catch(error => {
+          console.warn('[StoredTab] Quick sync clear failed (non-critical):', error?.message || error);
+        });
+      } else {
+        try {
+          console.log('[StoredTab] Normal sync mode - waiting for completion');
+          await this.syncSingleStoredTabToServer(operatorName, [], 5000);
+          console.log('[StoredTab] Server clear sync successful');
+        } catch (error) {
+          console.warn('[StoredTab] Server clear sync failed (non-critical):', error);
+        }
       }
     } catch (error) {
       console.error('[StoredTab] Error clearing stored tab:', error);
@@ -179,7 +194,7 @@ class StoredTabService {
     return 'KITCHEN_PRINTER_1';
   }
 
-  private async syncSingleStoredTabToServer(operatorName: string, rows: StoredTabRow[]): Promise<void> {
+  private async syncSingleStoredTabToServer(operatorName: string, rows: StoredTabRow[], timeoutMs: number = 5000): Promise<void> {
     console.log('[StoredTab] ===== SYNCING STORED TAB =====');
     console.log('[StoredTab] Operator:', operatorName, 'Rows:', rows.length);
     
@@ -228,10 +243,15 @@ class StoredTabService {
     console.log(`[StoredTab]   operatorName: ${payload.operatorName}`);
     console.log(`[StoredTab]   fileName: ${fileName}`);
     console.log(`[StoredTab] CSV size: ${csvContent.length} bytes`);
-    console.log(`[StoredTab] Uploading via tRPC backend...`);
+    console.log(`[StoredTab] Uploading via tRPC backend with ${timeoutMs}ms timeout...`);
     
     try {
-      const result = await trpcClient.storedtab.upload.mutate(payload);
+      const uploadPromise = trpcClient.storedtab.upload.mutate(payload);
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Upload timeout')), timeoutMs)
+      );
+      
+      const result = await Promise.race([uploadPromise, timeoutPromise]);
       
       if (result && typeof result === 'object' && 'success' in result) {
         if (result.success) {
