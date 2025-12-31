@@ -250,7 +250,7 @@ export default function TabLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
-          href: showSettings ? '/settings' : null,
+          href: showSettings ? '/(tabs)/settings' as any : null,
           headerTitle: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Image
