@@ -88,59 +88,6 @@ export class DataSyncService {
     const manifest = await apiClient.getManifest(siteInfo.siteId);
     console.log(`[DataSync] Manifest loaded: ${manifest.length} total files`);
 
-    try {
-      console.log('[DataSync] ========== DOWNLOADING SETTINGS PROFILES ==========');
-      console.log('[DataSync] Site ID:', siteInfo.siteId);
-      onProgress?.({ phase: 'connecting', current: 0, total: 1, message: 'Downloading settings profiles...' });
-      
-      const { trpcClient } = await import('@/lib/trpc');
-      const profilesResult = await trpcClient.settingsprofile.download.query({
-        siteId: siteInfo.siteId,
-      });
-      
-      console.log('[DataSync] Profile download result:', JSON.stringify({
-        success: profilesResult.success,
-        profileCount: profilesResult.profiles.length,
-        error: profilesResult.error || 'none'
-      }));
-      
-      if (profilesResult.success && profilesResult.profiles.length > 0) {
-        console.log(`[DataSync] Downloaded ${profilesResult.profiles.length} settings profiles from server`);
-        console.log('[DataSync] Profile names:', profilesResult.profiles.map((p: any) => p.profileName).join(', '));
-        
-        const newProfilesArray: any[] = [];
-        
-        for (const serverProfile of profilesResult.profiles) {
-          console.log('[DataSync] Processing profile:', serverProfile.profileName);
-          
-          const profileEntry = {
-            name: serverProfile.profileName,
-            timestamp: serverProfile.timestamp,
-          };
-          
-          newProfilesArray.push(profileEntry);
-          
-          await AsyncStorage.setItem(
-            `pos_settings_profile_${serverProfile.profileName}`, 
-            JSON.stringify(serverProfile.profileData)
-          );
-          console.log('[DataSync] Stored profile data for:', serverProfile.profileName);
-        }
-        
-        await AsyncStorage.setItem('pos_settings_profiles', JSON.stringify(newProfilesArray));
-        console.log('[DataSync] Stored profiles list:', JSON.stringify(newProfilesArray));
-        console.log('[DataSync] Settings profiles synced successfully - Total:', newProfilesArray.length);
-      } else if (profilesResult.success && profilesResult.profiles.length === 0) {
-        console.log('[DataSync] No settings profiles found on server (empty array)');
-      } else {
-        console.log('[DataSync] Profile download was not successful:', profilesResult.error);
-      }
-    } catch (profileError) {
-      console.error('[DataSync] Failed to download settings profiles:', profileError);
-      console.error('[DataSync] Error details:', profileError instanceof Error ? profileError.message : String(profileError));
-    }
-
-
 
     const filteredManifest = this.filterManifest(manifest);
     console.log(`[DataSync] Will check: ${filteredManifest.length} files after filtering`);
@@ -194,6 +141,8 @@ export class DataSyncService {
           return 'Syncing Menus';
         case 'VATDATA':
           return 'Syncing VAT Data';
+        case 'DATA':
+          return 'Syncing Settings';
         default:
           return `Syncing from ${folder}`;
       }
@@ -271,6 +220,7 @@ export class DataSyncService {
       'FUNCTIONDATA',
       'MENUDATA',
       'VATDATA',
+      'DATA',
     ];
 
     const filtered = manifest.filter(fileInfo => {
@@ -305,8 +255,9 @@ export class DataSyncService {
         'TABDATA': 2,
         'FUNCTIONDATA': 3,
         'VATDATA': 4,
-        'MENUDATA': 5,
-        'PLUDATA': 6,
+        'DATA': 5,
+        'MENUDATA': 6,
+        'PLUDATA': 7,
       };
       
       const orderA = folderOrder[folderA] || 999;
