@@ -1,4 +1,6 @@
-const API_BASE_URL = 'https://app.positron-portal.com/api/v1';
+const EXTERNAL_API_BASE_URL = 'https://app.positron-portal.com/api/v1';
+const USE_PROXY = typeof window !== 'undefined';
+const PROXY_BASE_URL = process.env.EXPO_PUBLIC_RORK_API_BASE_URL || 'http://localhost:8081';
 
 export interface AuthCredentials {
   username: string;
@@ -17,7 +19,9 @@ export class PositronAPI {
 
   async linkAccount(credentials: AuthCredentials): Promise<LinkResponse> {
     try {
-      const url = `${API_BASE_URL.replace('/api/v1', '')}/linkwebviewaccount`;
+      const url = USE_PROXY 
+        ? `${PROXY_BASE_URL}/proxy/linkwebviewaccount`
+        : 'https://app.positron-portal.com/linkwebviewaccount';
       console.log('[API] Attempting to link account to:', url);
       console.log('[API] Using credentials:', { username: credentials.username, password: '***' });
       
@@ -80,7 +84,11 @@ export class PositronAPI {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-      const response = await fetch(`${API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/manifest`, {
+      const url = USE_PROXY
+        ? `${PROXY_BASE_URL}/proxy/sites/${encodeURIComponent(siteId)}/data/manifest`
+        : `${EXTERNAL_API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/manifest`;
+
+      const response = await fetch(url, {
         method: 'GET',
         signal: controller.signal,
       });
@@ -133,8 +141,12 @@ export class PositronAPI {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
+      const url = USE_PROXY
+        ? `${PROXY_BASE_URL}/proxy/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`
+        : `${EXTERNAL_API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`;
+
       const response = await fetch(
-        `${API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`,
+        url,
         {
           method: 'GET',
           signal: controller.signal,
@@ -185,8 +197,11 @@ export class PositronAPI {
       console.log('[API] File path in FILEDATA:', filePath);
       console.log('[API] Folder structure:', JSON.stringify(payload.FOLDERDATA));
       
-      const url = `${API_BASE_URL.replace('/api/v1', '')}/webviewdataupload`;
+      const url = USE_PROXY
+        ? `${PROXY_BASE_URL}/proxy/webviewdataupload`
+        : 'https://app.positron-portal.com/webviewdataupload';
       console.log('[API] Full URL:', url);
+      console.log('[API] Using proxy:', USE_PROXY);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
@@ -255,8 +270,11 @@ export class PositronAPI {
         FILEDATA: fileData,
       };
       
-      const url = `${API_BASE_URL.replace('/api/v1', '')}/webviewdataupload`;
+      const url = USE_PROXY
+        ? `${PROXY_BASE_URL}/proxy/webviewdataupload`
+        : 'https://app.positron-portal.com/webviewdataupload';
       console.log('[API] Full URL:', url);
+      console.log('[API] Using proxy:', USE_PROXY);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
