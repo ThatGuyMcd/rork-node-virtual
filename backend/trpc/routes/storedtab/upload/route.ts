@@ -51,7 +51,12 @@ const uploadStoredTabRoute = publicProcedure
 
       if (!response.ok) {
         console.error('[StoredTab Upload] Upload failed:', response.status, responseText);
-        throw new Error(`Upload failed: ${response.statusText}`);
+        return {
+          success: false,
+          message: `Upload failed: ${response.status} ${response.statusText}`,
+          filePath,
+          error: responseText,
+        };
       }
 
       let result;
@@ -71,9 +76,14 @@ const uploadStoredTabRoute = publicProcedure
         filePath,
         serverResponse: result,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('[StoredTab Upload] Error:', error);
-      throw error;
+      return {
+        success: false,
+        message: 'Upload failed with error',
+        filePath,
+        error: error.message || String(error),
+      };
     }
   });
 

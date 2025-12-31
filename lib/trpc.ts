@@ -31,16 +31,40 @@ export const trpcClient = createTRPCClient<AppRouter>({
           
           const contentType = response.headers.get('content-type');
           
-          if (!response.ok || !contentType?.includes('application/json')) {
-            console.warn("[TRPC] Non-JSON or error response - Status:", response.status, "Content-Type:", contentType);
-            if (response.status === 404) {
-              console.warn("[TRPC] Endpoint not found (404) - this may be expected during development");
+          if (!response.ok) {
+            console.log(' GET', url, response.status, `(${response.statusText})`);
+            console.error('[TRPC] Response issue - Status:', response.status, 'Content-Type:', contentType || 'unknown');
+            
+            if (!contentType?.includes('application/json')) {
+              const textBody = await response.text();
+              console.error('[TRPC] Response status:', response.status, 'Content-Type:', contentType || 'text/plain');
+              console.error('[TRPC] Response body (first 200 chars):', textBody.substring(0, 200));
+              console.error('[TRPC] Response body (last 100 chars):', textBody.substring(Math.max(0, textBody.length - 100)));
+              console.error('[TRPC] Full response body:', textBody);
+              
+              const errorBody = JSON.stringify({
+                error: {
+                  message: `Server returned ${response.status}: ${textBody}`,
+                  data: {
+                    code: 'INTERNAL_SERVER_ERROR',
+                    httpStatus: response.status,
+                  },
+                },
+              });
+              
+              return new Response(errorBody, {
+                status: response.status,
+                statusText: response.statusText,
+                headers: {
+                  'content-type': 'application/json',
+                },
+              });
             }
           }
           
           return response;
         } catch (error) {
-          console.warn("[TRPC] Fetch error:", error);
+          console.error("[TRPC] Fetch error:", error);
           throw error;
         }
       },

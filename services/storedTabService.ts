@@ -232,7 +232,17 @@ class StoredTabService {
     
     try {
       const result = await trpcClient.storedtab.upload.mutate(payload);
-      console.log('[StoredTab] Sync successful:', result);
+      
+      if (result && typeof result === 'object' && 'success' in result) {
+        if (result.success) {
+          console.log('[StoredTab] Sync successful:', result);
+        } else {
+          console.warn('[StoredTab] Upload failed (non-critical):', result);
+        }
+      } else {
+        console.log('[StoredTab] Sync successful:', result);
+      }
+      
       console.log('[StoredTab] ===== STORED TAB SYNC COMPLETE =====');
     } catch (error: any) {
       console.error('[StoredTab] Upload failed (non-critical):', error?.message || error);
