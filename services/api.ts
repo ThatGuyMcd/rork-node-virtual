@@ -168,10 +168,27 @@ export class PositronAPI {
     try {
       console.log(`[API] Saving table data for ${area}/${tableName}`);
       
-      const url = `${API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/table`;
+      const folderPath = `TABDATA/${area}/${tableName}`;
+      const filePath = `${folderPath}/TAB.CSV`;
+      
+      const payload = {
+        SITEID: siteId,
+        DESTINATIONWEBVIEWFOLDER: 'TABDATA',
+        FOLDERDATA: [area, `${area}/${tableName}`],
+        FILEDATA: {
+          [filePath]: tableData,
+        },
+      };
+      
+      console.log('[API] Uploading table via webviewdataupload endpoint');
+      console.log('[API] Folder path:', folderPath);
+      console.log('[API] File path:', filePath);
+      console.log('[API] Data size:', tableData.length, 'bytes');
+      
+      const url = `${API_BASE_URL.replace('/api/v1', '')}/webviewdataupload`;
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -179,11 +196,7 @@ export class PositronAPI {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          area,
-          table: tableName,
-          data: tableData,
-        }),
+        body: JSON.stringify(payload),
         signal: controller.signal,
       });
 
@@ -191,7 +204,7 @@ export class PositronAPI {
 
       if (!response.ok) {
         const text = await response.text();
-        console.error('[API] Save table data error response:', text);
+        console.error('[API] Save table data error response:', response.status, text);
         throw new Error(`HTTP ${response.status} ${response.statusText}`);
       }
 
