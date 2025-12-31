@@ -1,14 +1,4 @@
 const EXTERNAL_API_BASE_URL = 'https://app.positron-portal.com/api/v1';
-const USE_PROXY = typeof window !== 'undefined';
-
-function getProxyBaseUrl(): string {
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  return 'http://localhost:8081';
-}
-
-const PROXY_BASE_URL = getProxyBaseUrl();
 
 export interface AuthCredentials {
   username: string;
@@ -27,9 +17,7 @@ export class PositronAPI {
 
   async linkAccount(credentials: AuthCredentials): Promise<LinkResponse> {
     try {
-      const url = USE_PROXY 
-        ? `${PROXY_BASE_URL}/api/proxy/linkwebviewaccount`
-        : 'https://app.positron-portal.com/linkwebviewaccount';
+      const url = 'https://app.positron-portal.com/linkwebviewaccount';
       console.log('[API] Attempting to link account to:', url);
       console.log('[API] Using credentials:', { username: credentials.username, password: '***' });
       
@@ -109,9 +97,7 @@ export class PositronAPI {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-      const url = USE_PROXY
-        ? `${PROXY_BASE_URL}/api/proxy/sites/${encodeURIComponent(siteId)}/data/manifest`
-        : `${EXTERNAL_API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/manifest`;
+      const url = `${EXTERNAL_API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/manifest`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -166,9 +152,7 @@ export class PositronAPI {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-      const url = USE_PROXY
-        ? `${PROXY_BASE_URL}/api/proxy/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`
-        : `${EXTERNAL_API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`;
+      const url = `${EXTERNAL_API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`;
 
       const response = await fetch(
         url,
@@ -222,11 +206,8 @@ export class PositronAPI {
       console.log('[API] File path in FILEDATA:', filePath);
       console.log('[API] Folder structure:', JSON.stringify(payload.FOLDERDATA));
       
-      const url = USE_PROXY
-        ? `${PROXY_BASE_URL}/api/proxy/webviewdataupload`
-        : 'https://app.positron-portal.com/webviewdataupload';
+      const url = 'https://app.positron-portal.com/webviewdataupload';
       console.log('[API] Full URL:', url);
-      console.log('[API] Using proxy:', USE_PROXY);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
@@ -273,8 +254,7 @@ export class PositronAPI {
       }
       
       if (error.message === 'Failed to fetch' || error.message === 'Network request failed') {
-        console.error('[API] CORS/Network Error - Server may not be handling OPTIONS preflight or missing Access-Control-Allow-Origin header');
-        throw new Error('CORS error: Server must handle OPTIONS requests and return Access-Control-Allow-Origin header. Check server CORS configuration.');
+        throw new Error('Network error: Unable to connect to server. Please check your internet connection and server status.');
       }
       
       throw error;
@@ -295,11 +275,8 @@ export class PositronAPI {
         FILEDATA: fileData,
       };
       
-      const url = USE_PROXY
-        ? `${PROXY_BASE_URL}/api/proxy/webviewdataupload`
-        : 'https://app.positron-portal.com/webviewdataupload';
+      const url = 'https://app.positron-portal.com/webviewdataupload';
       console.log('[API] Full URL:', url);
-      console.log('[API] Using proxy:', USE_PROXY);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
@@ -345,8 +322,7 @@ export class PositronAPI {
       }
       
       if (error.message === 'Failed to fetch' || error.message === 'Network request failed') {
-        console.error('[API] CORS/Network Error - Server may not be handling OPTIONS preflight or missing Access-Control-Allow-Origin header');
-        throw new Error('CORS error: Server must handle OPTIONS requests and return Access-Control-Allow-Origin header. Check server CORS configuration.');
+        throw new Error('Network error: Unable to connect to server. Please check your internet connection and server status.');
       }
       
       throw error;
