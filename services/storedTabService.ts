@@ -96,14 +96,14 @@ class StoredTabService {
     console.log('[StoredTab] Successfully saved stored tab to AsyncStorage');
 
     if (quickSync) {
-      console.log('[StoredTab] Quick sync mode - fire and forget with 2s timeout');
-      this.syncSingleStoredTabToServer(operator.name, rows, 2000).catch(error => {
+      console.log('[StoredTab] Quick sync mode - fire and forget with 60s timeout');
+      this.syncSingleStoredTabToServer(operator.name, rows, 60000).catch(error => {
         console.warn('[StoredTab] Quick sync failed (non-critical):', error?.message || error);
       });
     } else {
       try {
         console.log('[StoredTab] Normal sync mode - waiting for completion');
-        await this.syncSingleStoredTabToServer(operator.name, rows, 5000);
+        await this.syncSingleStoredTabToServer(operator.name, rows, 60000);
         console.log('[StoredTab] Stored tab sync successful');
       } catch (error) {
         console.warn('[StoredTab] Stored tab sync failed (non-critical):', error);
@@ -138,14 +138,14 @@ class StoredTabService {
       console.log('[StoredTab] Successfully cleared stored tab from AsyncStorage');
 
       if (quickSync) {
-        console.log('[StoredTab] Quick sync mode - fire and forget with 2s timeout');
-        this.syncSingleStoredTabToServer(operatorName, [], 2000).catch(error => {
+        console.log('[StoredTab] Quick sync mode - fire and forget with 60s timeout');
+        this.syncSingleStoredTabToServer(operatorName, [], 60000).catch(error => {
           console.warn('[StoredTab] Quick sync clear failed (non-critical):', error?.message || error);
         });
       } else {
         try {
           console.log('[StoredTab] Normal sync mode - waiting for completion');
-          await this.syncSingleStoredTabToServer(operatorName, [], 5000);
+          await this.syncSingleStoredTabToServer(operatorName, [], 60000);
           console.log('[StoredTab] Server clear sync successful');
         } catch (error) {
           console.warn('[StoredTab] Server clear sync failed (non-critical):', error);
@@ -194,7 +194,7 @@ class StoredTabService {
     return 'KITCHEN_PRINTER_1';
   }
 
-  private async syncSingleStoredTabToServer(operatorName: string, rows: StoredTabRow[], timeoutMs: number = 5000): Promise<void> {
+  private async syncSingleStoredTabToServer(operatorName: string, rows: StoredTabRow[], timeoutMs: number = 60000): Promise<void> {
     console.log('[StoredTab] ===== SYNCING STORED TAB =====');
     console.log('[StoredTab] Operator:', operatorName, 'Rows:', rows.length);
     

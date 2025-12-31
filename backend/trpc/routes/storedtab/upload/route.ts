@@ -37,7 +37,10 @@ const uploadStoredTabRoute = publicProcedure
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => {
+        console.log('[StoredTab Upload] Request timeout after 60 seconds');
+        controller.abort();
+      }, 60000);
       
       const response = await fetch(uploadUrl, {
         method: 'POST',
