@@ -202,6 +202,7 @@ export class PositronAPI {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
@@ -272,6 +273,7 @@ export class PositronAPI {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
