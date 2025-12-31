@@ -28,7 +28,7 @@ export class PositronAPI {
   async linkAccount(credentials: AuthCredentials): Promise<LinkResponse> {
     try {
       const url = USE_PROXY 
-        ? `${PROXY_BASE_URL}/proxy/linkwebviewaccount`
+        ? `${PROXY_BASE_URL}/api/proxy/linkwebviewaccount`
         : 'https://app.positron-portal.com/linkwebviewaccount';
       console.log('[API] Attempting to link account to:', url);
       console.log('[API] Using credentials:', { username: credentials.username, password: '***' });
@@ -49,6 +49,9 @@ export class PositronAPI {
       
       console.log('[API] Response status:', response.status, response.statusText);
       console.log('[API] Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
+      
+      const contentType = response.headers.get('content-type') || '';
+      console.log('[API] Content-Type:', contentType);
 
       if (!response.ok) {
         const text = await response.text();
@@ -58,7 +61,21 @@ export class PositronAPI {
 
       const text = await response.text();
       console.log('[API] Response body:', text);
-      const data = JSON.parse(text);
+      
+      if (!contentType.includes('application/json') && !contentType.includes('text/plain')) {
+        console.error('[API] Received non-JSON response. Content-Type:', contentType);
+        console.error('[API] Response preview:', text.substring(0, 500));
+        throw new Error('Backend server error: Received HTML instead of JSON. The backend may not be running or accessible.');
+      }
+      
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('[API] Failed to parse response as JSON:', parseError);
+        console.error('[API] Response text:', text.substring(0, 500));
+        throw new Error('Backend returned invalid JSON. The backend may not be running or there\'s a server error.');
+      }
       
       console.log('[API] Parsed response:', data);
       
@@ -93,7 +110,7 @@ export class PositronAPI {
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const url = USE_PROXY
-        ? `${PROXY_BASE_URL}/proxy/sites/${encodeURIComponent(siteId)}/data/manifest`
+        ? `${PROXY_BASE_URL}/api/proxy/sites/${encodeURIComponent(siteId)}/data/manifest`
         : `${EXTERNAL_API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/manifest`;
 
       const response = await fetch(url, {
@@ -150,7 +167,7 @@ export class PositronAPI {
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const url = USE_PROXY
-        ? `${PROXY_BASE_URL}/proxy/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`
+        ? `${PROXY_BASE_URL}/api/proxy/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`
         : `${EXTERNAL_API_BASE_URL}/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`;
 
       const response = await fetch(
@@ -206,7 +223,7 @@ export class PositronAPI {
       console.log('[API] Folder structure:', JSON.stringify(payload.FOLDERDATA));
       
       const url = USE_PROXY
-        ? `${PROXY_BASE_URL}/proxy/webviewdataupload`
+        ? `${PROXY_BASE_URL}/api/proxy/webviewdataupload`
         : 'https://app.positron-portal.com/webviewdataupload';
       console.log('[API] Full URL:', url);
       console.log('[API] Using proxy:', USE_PROXY);
@@ -279,7 +296,7 @@ export class PositronAPI {
       };
       
       const url = USE_PROXY
-        ? `${PROXY_BASE_URL}/proxy/webviewdataupload`
+        ? `${PROXY_BASE_URL}/api/proxy/webviewdataupload`
         : 'https://app.positron-portal.com/webviewdataupload';
       console.log('[API] Full URL:', url);
       console.log('[API] Using proxy:', USE_PROXY);
