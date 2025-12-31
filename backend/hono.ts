@@ -6,6 +6,8 @@ import { createContext } from "./trpc/create-context";
 
 const app = new Hono();
 
+console.log('[Hono] Initializing backend with storedtab routes...');
+
 app.use("*", cors());
 
 app.use(
