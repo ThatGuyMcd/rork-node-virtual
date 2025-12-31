@@ -7,15 +7,16 @@ import superjson from "superjson";
 export const trpc = createTRPCReact<AppRouter>();
 
 const getBaseUrl = (): string => {
-  if (Platform.OS === "web") {
-    console.log("[TRPC] Web detected - using relative base URL");
-    return "";
-  }
-
   const apiBaseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+  
   if (apiBaseUrl) {
     console.log("[TRPC] Using EXPO_PUBLIC_RORK_API_BASE_URL:", apiBaseUrl);
     return apiBaseUrl;
+  }
+
+  if (Platform.OS === "web") {
+    console.warn("[TRPC] EXPO_PUBLIC_RORK_API_BASE_URL not set, using relative URL (backend must be on same domain)");
+    return "";
   }
 
   console.warn("[TRPC] EXPO_PUBLIC_RORK_API_BASE_URL not set, falling back to localhost");
