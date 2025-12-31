@@ -191,6 +191,20 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       try {
         console.log('[POS] Saving table data before logout...');
         await tableDataService.saveTableData(currentTable, basket, currentOperator, vatRates);
+        console.log('[POS] Table data saved successfully');
+      } catch (error) {
+        console.error('[POS] Failed to save table data:', error);
+      } finally {
+        setSavingTable(false);
+      }
+    } else if (currentTable && basket.length === 0 && currentOperator) {
+      setSavingTable(true);
+      try {
+        console.log('[POS] Clearing empty table before logout...');
+        await tableDataService.clearTableData(currentTable.id, currentTable);
+        console.log('[POS] Table cleared successfully');
+      } catch (error) {
+        console.error('[POS] Failed to clear table:', error);
       } finally {
         setSavingTable(false);
       }
@@ -474,7 +488,20 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     
     if (previousTable && previousBasket.length > 0 && currentOperator) {
       console.log(`[POS] Saving previous table ${previousTable.name} with ${previousBasket.length} items before switching`);
-      await tableDataService.saveTableData(previousTable, previousBasket, currentOperator, vatRates);
+      try {
+        await tableDataService.saveTableData(previousTable, previousBasket, currentOperator, vatRates);
+        console.log(`[POS] Previous table saved successfully`);
+      } catch (error) {
+        console.error('[POS] Failed to save previous table:', error);
+      }
+    } else if (previousTable && previousBasket.length === 0 && currentOperator) {
+      console.log(`[POS] Clearing empty previous table ${previousTable.name} before switching`);
+      try {
+        await tableDataService.clearTableData(previousTable.id, previousTable);
+        console.log(`[POS] Previous table cleared successfully`);
+      } catch (error) {
+        console.error('[POS] Failed to clear previous table:', error);
+      }
     }
     
     setCurrentTable(table);
@@ -597,11 +624,10 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       
       setCurrentTable(null);
       setBasket([]);
-      setCurrentOperator(null);
-      await AsyncStorage.removeItem('currentOperator');
-      console.log('[POS] Deselected table and logged out user');
+      console.log('[POS] Deselected table after save');
     } catch (error) {
       console.error('[POS] Error saving table tab:', error);
+      throw error;
     } finally {
       setSavingTable(false);
     }

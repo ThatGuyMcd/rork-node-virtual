@@ -526,20 +526,7 @@ const styles = StyleSheet.create({
     right: 8,
     zIndex: 1,
   },
-  storedTabBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    zIndex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  storedTabTotal: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#fff',
-  },
+
   backButton: {
     marginTop: 40,
     marginBottom: 20,
