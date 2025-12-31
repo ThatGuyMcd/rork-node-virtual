@@ -27,7 +27,7 @@ export class PositronAPI {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'text/plain',
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(credentials),
         signal: controller.signal,
@@ -200,7 +200,7 @@ export class PositronAPI {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'text/plain',
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
@@ -270,7 +270,7 @@ export class PositronAPI {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'text/plain',
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
