@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { trpcClient } from '@/lib/trpc';
+import { apiClient } from './api';
 import { transactionService } from './transactionService';
 
 const TERMINAL_NUMBER_KEY = 'pos_terminal_number';
@@ -43,16 +43,15 @@ export class TransactionUploadService {
         console.log(`[TransactionUpload] Added receipt: ${fileName}`);
       });
 
-      console.log('[TransactionUpload] Uploading via tRPC backend...');
+      console.log('[TransactionUpload] Uploading directly to server...');
       console.log(`[TransactionUpload] Destination: ${destinationFolder}`);
       console.log(`[TransactionUpload] File count: ${Object.keys(fileData).length}`);
 
-      const result = await trpcClient.transaction.upload.mutate({
-        SITEID: siteId,
-        DESTINATIONWEBVIEWFOLDER: destinationFolder,
-        FOLDERDATA: [],
-        FILEDATA: fileData,
-      });
+      const result = await apiClient.uploadTransactionData(
+        siteId,
+        destinationFolder,
+        fileData
+      );
 
       console.log('[TransactionUpload] Upload successful:', result);
     } catch (error) {

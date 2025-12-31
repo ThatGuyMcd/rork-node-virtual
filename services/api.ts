@@ -249,6 +249,75 @@ export class PositronAPI {
     }
   }
 
+  async uploadTransactionData(siteId: string, destinationFolder: string, fileData: Record<string, string>): Promise<{ success: boolean }> {
+    try {
+      console.log(`[API] ========== UPLOADING TRANSACTION DATA ==========`);
+      console.log(`[API] Site ID: ${siteId}`);
+      console.log(`[API] Destination: ${destinationFolder}`);
+      console.log(`[API] File count: ${Object.keys(fileData).length}`);
+      
+      const payload = {
+        SITEID: siteId,
+        DESTINATIONWEBVIEWFOLDER: destinationFolder,
+        FOLDERDATA: [],
+        FILEDATA: fileData,
+      };
+      
+      const url = `${API_BASE_URL.replace('/api/v1', '')}/webviewdataupload`;
+      console.log('[API] Full URL:', url);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('[API] Request timeout after 60s');
+        controller.abort();
+      }, 60000);
+
+      console.log('[API] Sending POST request...');
+      const startTime = Date.now();
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      const elapsed = Date.now() - startTime;
+      
+      console.log(`[API] Response received after ${elapsed}ms`);
+      console.log('[API] Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('[API] Error response body:', text);
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
+
+      const responseText = await response.text();
+      console.log('[API] Response body:', responseText);
+      console.log('[API] ========== TRANSACTION UPLOAD SUCCESSFUL ==========');
+      return { success: true };
+    } catch (error: any) {
+      console.error('[API] ========== TRANSACTION UPLOAD FAILED ==========');
+      console.error('[API] Error name:', error.name);
+      console.error('[API] Error message:', error.message);
+      
+      if (error.name === 'AbortError') {
+        throw new Error('Connection timeout while uploading transaction data.');
+      }
+      
+      if (error.message === 'Failed to fetch' || error.message === 'Network request failed') {
+        throw new Error('Unable to connect to server. Please check your internet connection.');
+      }
+      
+      throw error;
+    }
+  }
+
   private normalizePath(path: string): string {
     return String(path || '')
       .replace(/^[.\\/]+/, '')
