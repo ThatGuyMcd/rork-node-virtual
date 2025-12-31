@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { publicProcedure } from '../../../create-context';
 
-export const uploadStoredTabRoute = publicProcedure
+const uploadStoredTabRoute = publicProcedure
   .input(
     z.object({
       siteId: z.string(),
@@ -66,3 +66,5 @@ export const uploadStoredTabRoute = publicProcedure
       throw error;
     }
   });
+
+export default uploadStoredTabRoute;

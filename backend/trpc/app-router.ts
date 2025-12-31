@@ -5,8 +5,8 @@ import uploadTableDataRoute from "./routes/tabledata/upload/route";
 import uploadTransactionDataRoute from "./routes/transaction/upload/route";
 import uploadSettingsProfileRoute from "./routes/settingsprofile/upload/route";
 import downloadSettingsProfileRoute from "./routes/settingsprofile/download/route";
-import { uploadStoredTabRoute } from "./routes/storedtab/upload/route";
-import { downloadStoredTabRoute } from "./routes/storedtab/download/route";
+import uploadStoredTabRoute from "./routes/storedtab/upload/route";
+import downloadStoredTabRoute from "./routes/storedtab/download/route";
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
