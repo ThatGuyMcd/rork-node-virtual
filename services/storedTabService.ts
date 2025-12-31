@@ -230,34 +230,21 @@ class StoredTabService {
     }
     
     const csvContent = csvRows.join('\r\n') + '\r\n';
-    const fileName = `${operatorName}_StoredTab.csv`;
-    
-    const folderData: string[] = [];
-    const fileData: Record<string, string> = {};
-    
-    folderData.push('OPERATORDATA');
-    folderData.push('OPERATORDATA/Stored Operator Tabs');
-    
-    const filePath = `OPERATORDATA/Stored Operator Tabs/${fileName}`;
-    fileData[filePath] = csvContent;
     
     const payload = {
-      SITEID: siteInfo.siteId,
-      DESTINATIONWEBVIEWFOLDER: 'OPERATORDATA',
-      FOLDERDATA: folderData,
-      FILEDATA: fileData,
+      siteId: siteInfo.siteId,
+      operatorName: operatorName,
+      csvContent: csvContent,
     };
     
     console.log(`[StoredTab] Payload structure:`);
-    console.log(`[StoredTab]   SITEID: ${payload.SITEID}`);
-    console.log(`[StoredTab]   DESTINATIONWEBVIEWFOLDER: ${payload.DESTINATIONWEBVIEWFOLDER}`);
-    console.log(`[StoredTab]   FOLDERDATA: ${JSON.stringify(payload.FOLDERDATA)}`);
-    console.log(`[StoredTab]   FILEDATA keys: ${Object.keys(payload.FILEDATA).join(', ')}`);
+    console.log(`[StoredTab]   siteId: ${payload.siteId}`);
+    console.log(`[StoredTab]   operatorName: ${payload.operatorName}`);
     console.log(`[StoredTab] CSV size: ${csvContent.length} bytes`);
-    console.log(`[StoredTab] Uploading via tRPC backend with ${timeoutMs}ms timeout...`);
+    console.log(`[StoredTab] Uploading via tRPC storedtab.upload with ${timeoutMs}ms timeout...`);
     
     try {
-      const uploadPromise = trpcClient.tabledata.upload.mutate(payload);
+      const uploadPromise = trpcClient.storedtab.upload.mutate(payload);
       const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('Upload timeout')), timeoutMs)
       );
