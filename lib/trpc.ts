@@ -29,7 +29,7 @@ console.log("[TRPC] Initializing vanilla client with base URL:", baseUrl);
 export const trpcClient = createTRPCClient<AppRouter>({
   links: [
     httpLink({
-      url: `${baseUrl}/trpc`,
+      url: `${baseUrl}/api/trpc`,
       transformer: superjson,
       fetch: async (url, options) => {
         console.log("[TRPC] Fetching:", url);
