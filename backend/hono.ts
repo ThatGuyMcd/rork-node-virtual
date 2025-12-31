@@ -8,14 +8,31 @@ const app = new Hono();
 
 console.log('[Hono] Initializing backend...');
 
-app.use("*", cors({
-  origin: '*',
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  exposeHeaders: ['Content-Length', 'X-Request-Id'],
-  maxAge: 600,
-  credentials: false,
-}));
+app.use(
+  "*",
+  cors({
+    origin: (origin) => {
+      const resolved = origin || "*";
+      console.log("[Hono] CORS origin:", resolved);
+      return resolved;
+    },
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-trpc-source",
+      "trpc-batch-mode",
+    ],
+    exposeHeaders: ["Content-Length", "X-Request-Id"],
+    maxAge: 600,
+    credentials: false,
+  })
+);
+
+app.options("*", (c) => {
+  console.log("[Hono] Handling OPTIONS preflight:", c.req.path);
+  return c.body(null, 204);
+});
 
 app.use(
   "/trpc/*",
