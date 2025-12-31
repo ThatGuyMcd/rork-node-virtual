@@ -1408,7 +1408,7 @@ export default function SettingsScreen() {
         <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>View transaction history, analytics, and generate reports</Text>
         <TouchableOpacity
           style={[styles.button, { backgroundColor: colors.primary, marginBottom: 0 }]}
-          onPress={() => router.push('/reports')}
+          onPress={() => router.push('/reports' as any)}
           activeOpacity={0.8}
         >
           <FileText size={20} color="#ffffff" />
