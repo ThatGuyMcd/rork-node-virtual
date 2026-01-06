@@ -150,11 +150,19 @@ class TableDataService {
       return;
     }
 
-    const allFiles = await this.getAllTableFiles(table);
+    let allFiles = await this.getAllTableFiles(table);
     
     if (Object.keys(allFiles).length === 0) {
-      console.warn('[TableDataService] No files to upload for table:', table.name);
-      throw new Error('No files to upload');
+      console.log('[TableDataService] No files from file system, checking memory data');
+      const memoryRows = this.data.get(table.id);
+      if (memoryRows && memoryRows.length > 0) {
+        console.log('[TableDataService] Found memory data, using it for upload');
+        const csvContent = this.rowsToCSV(memoryRows);
+        allFiles = { 'tabledata.csv': csvContent };
+      } else {
+        console.warn('[TableDataService] No files or memory data to upload for table:', table.name);
+        throw new Error('No files to upload');
+      }
     }
     
     const result = await apiClient.saveSingleTableData(
@@ -556,12 +564,22 @@ class TableDataService {
     vatRates: { code: string; percentage: number }[]
   ): Promise<void> {
     const rows = this.createRows(table, basket, operator, vatRates);
-    await this.saveTableDataToTableFolder(table, rows);
+    
+    if (!this.isFileSystemAvailable()) {
+      this.data.set(table.id, rows);
+      console.log('[TableDataService] Stored table data in memory for web upload');
+    } else {
+      await this.saveTableDataToTableFolder(table, rows);
+    }
+    
     await this.syncToServer(table);
   }
 
   async syncClearTableToServerSafe(table: Table): Promise<void> {
-    if (this.isFileSystemAvailable() && FileSystem.documentDirectory) {
+    if (!this.isFileSystemAvailable()) {
+      this.data.delete(table.id);
+      console.log('[TableDataService] Cleared table data from memory for web upload');
+    } else if (FileSystem.documentDirectory) {
       const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
       const folderInfo = await FileSystem.getInfoAsync(tableFolder);
       if (folderInfo.exists) {
