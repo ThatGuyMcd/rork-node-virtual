@@ -197,32 +197,56 @@ class TableDataService {
     const additionalFiles: Record<string, string> = {};
     
     if (!this.isFileSystemAvailable() || !FileSystem.documentDirectory) {
+      console.log('[TableDataService] File system not available for additional files');
       return additionalFiles;
     }
 
     try {
       const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+      console.log('[TableDataService] Checking for additional files in:', tableFolder);
+      
       const folderInfo = await FileSystem.getInfoAsync(tableFolder);
       
-      if (!folderInfo.exists || !folderInfo.isDirectory) {
+      if (!folderInfo.exists) {
+        console.log('[TableDataService] Table folder does not exist, no additional files to upload');
+        return additionalFiles;
+      }
+      
+      if (!folderInfo.isDirectory) {
+        console.log('[TableDataService] Path exists but is not a directory');
         return additionalFiles;
       }
 
       const files = await FileSystem.readDirectoryAsync(tableFolder);
+      console.log('[TableDataService] Files found in table folder:', files);
       
       for (const file of files) {
-        if (file === 'tableopen.ini' || file === 'tabledata.csv') {
+        if (file === 'tableopen.ini') {
+          console.log('[TableDataService] Skipping tableopen.ini');
+          continue;
+        }
+        
+        if (file === 'tabledata.csv') {
+          console.log('[TableDataService] Skipping tabledata.csv (uploaded separately)');
           continue;
         }
         
         const filePath = `${tableFolder}${file}`;
-        const content = await FileSystem.readAsStringAsync(filePath);
-        additionalFiles[file] = content;
+        const fileInfo = await FileSystem.getInfoAsync(filePath);
+        
+        if (fileInfo.exists && !fileInfo.isDirectory) {
+          const content = await FileSystem.readAsStringAsync(filePath);
+          additionalFiles[file] = content;
+          console.log(`[TableDataService] Added file: ${file} (${content.length} bytes)`);
+        }
       }
       
-      console.log(`[TableDataService] Found ${Object.keys(additionalFiles).length} additional files for table ${table.area}/${table.name}`);
+      console.log(`[TableDataService] Total additional files to upload: ${Object.keys(additionalFiles).length}`);
+      if (Object.keys(additionalFiles).length > 0) {
+        console.log('[TableDataService] Additional file names:', Object.keys(additionalFiles));
+      }
     } catch (error) {
-      console.log('[TableDataService] No additional files found or error reading:', error);
+      console.log('[TableDataService] Error reading additional files:', error);
     }
     
     return additionalFiles;
