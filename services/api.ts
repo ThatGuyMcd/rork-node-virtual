@@ -162,6 +162,12 @@ export class PositronAPI {
   }
 
   async saveTableData(siteId: string, area: string, tableName: string, csvContent: string): Promise<{ success: boolean }> {
+    console.log('[API] ====== saveTableData CALLED ======');
+    console.log('[API] siteId:', siteId);
+    console.log('[API] area:', area);
+    console.log('[API] tableName:', tableName);
+    console.log('[API] csvContent length:', csvContent?.length || 0);
+    
     const destinationFolder = `TABDATA\\${area}\\${tableName}`;
     const baseUrl = getApiUrl();
     const url = `${baseUrl}/webviewdataupload`;
@@ -178,15 +184,29 @@ export class PositronAPI {
     console.log('[API] POST', url);
     console.log('[API] Uploading table data:', area, '/', tableName);
     console.log('[API] Payload keys:', Object.keys(payload));
+    console.log('[API] Payload size:', JSON.stringify(payload).length, 'bytes');
     
     try {
+      console.log('[API] About to call fetch...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('[API] Request timeout after 30s');
+        controller.abort();
+      }, 30000);
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
       
+      clearTimeout(timeoutId);
+      console.log('[API] Fetch completed, response received');
+      
       console.log('[API] Table data response status:', response.status);
+      console.log('[API] Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
       
       if (!response.ok) {
         const text = await response.text();
@@ -199,14 +219,24 @@ export class PositronAPI {
       console.log('[API] Table data uploaded successfully');
       return { success: true };
     } catch (error: any) {
-      console.error('[API] Upload failed:', error);
-      console.error('[API] Error type:', error.constructor.name);
+      console.error('[API] ====== TABLE UPLOAD ERROR ======');
+      console.error('[API] Error name:', error.name);
+      console.error('[API] Error type:', error.constructor?.name);
       console.error('[API] Error message:', error.message);
+      console.error('[API] Full error:', error);
+      if (error.name === 'AbortError') {
+        throw new Error('Upload timeout after 30 seconds');
+      }
       throw error;
     }
   }
 
   async uploadTransactionData(siteId: string, destinationFolder: string, fileData: Record<string, string>): Promise<{ success: boolean }> {
+    console.log('[API] ====== uploadTransactionData CALLED ======');
+    console.log('[API] siteId:', siteId);
+    console.log('[API] destinationFolder:', destinationFolder);
+    console.log('[API] fileData keys:', Object.keys(fileData));
+    
     const baseUrl = getApiUrl();
     const url = `${baseUrl}/webviewdataupload`;
     
@@ -220,15 +250,29 @@ export class PositronAPI {
     console.log('[API] POST', url);
     console.log('[API] Uploading', Object.keys(fileData).length, 'transaction files');
     console.log('[API] Destination folder:', destinationFolder);
+    console.log('[API] Payload size:', JSON.stringify(payload).length, 'bytes');
     
     try {
+      console.log('[API] About to call fetch...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('[API] Transaction upload timeout after 30s');
+        controller.abort();
+      }, 30000);
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
       
+      clearTimeout(timeoutId);
+      console.log('[API] Fetch completed, response received');
+      
       console.log('[API] Transaction upload response status:', response.status);
+      console.log('[API] Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
       
       if (!response.ok) {
         const text = await response.text();
@@ -241,29 +285,54 @@ export class PositronAPI {
       console.log('[API] Transactions uploaded successfully');
       return { success: true };
     } catch (error: any) {
-      console.error('[API] Transaction upload failed:', error);
-      console.error('[API] Error type:', error.constructor.name);
+      console.error('[API] ====== TRANSACTION UPLOAD ERROR ======');
+      console.error('[API] Error name:', error.name);
+      console.error('[API] Error type:', error.constructor?.name);
       console.error('[API] Error message:', error.message);
+      console.error('[API] Full error:', error);
+      if (error.name === 'AbortError') {
+        throw new Error('Upload timeout after 30 seconds');
+      }
       throw error;
     }
   }
 
   async uploadSettingsProfiles(siteId: string, allProfiles: Record<string, any>): Promise<{ success: boolean; error?: string }> {
+    console.log('[API] ====== uploadSettingsProfiles CALLED ======');
+    console.log('[API] siteId:', siteId);
+    console.log('[API] allProfiles keys:', Object.keys(allProfiles));
+    
     const baseUrl = getApiUrl();
     const url = `${baseUrl}/uploadsettingsprofile`;
+    
+    const payload = { siteId, allProfiles };
     
     console.log('[API] POST', url);
     console.log('[API] Uploading', Object.keys(allProfiles).length, 'settings profiles');
     console.log('[API] Site ID:', siteId);
+    console.log('[API] Payload size:', JSON.stringify(payload).length, 'bytes');
     
     try {
+      console.log('[API] About to call fetch...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('[API] Settings upload timeout after 30s');
+        controller.abort();
+      }, 30000);
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteId, allProfiles }),
+        body: JSON.stringify(payload),
+        signal: controller.signal,
       });
       
+      clearTimeout(timeoutId);
+      console.log('[API] Fetch completed, response received');
+      
       console.log('[API] Settings upload response status:', response.status);
+      console.log('[API] Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
       
       if (!response.ok) {
         const text = await response.text();
@@ -276,9 +345,14 @@ export class PositronAPI {
       console.log('[API] Settings profiles uploaded successfully');
       return { success: true };
     } catch (error: any) {
-      console.error('[API] Settings upload failed:', error);
-      console.error('[API] Error type:', error.constructor.name);
+      console.error('[API] ====== SETTINGS UPLOAD ERROR ======');
+      console.error('[API] Error name:', error.name);
+      console.error('[API] Error type:', error.constructor?.name);
       console.error('[API] Error message:', error.message);
+      console.error('[API] Full error:', error);
+      if (error.name === 'AbortError') {
+        return { success: false, error: 'Upload timeout after 30 seconds' };
+      }
       return { success: false, error: error.message || 'Upload failed' };
     }
   }
