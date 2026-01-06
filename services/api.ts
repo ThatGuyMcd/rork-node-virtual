@@ -1,7 +1,15 @@
+import { Platform } from 'react-native';
+
 const getApiUrl = () => {
-  const url = 'https://app.positron-portal.com';
-  console.log('[API] Using Positron server URL:', url);
-  return url;
+  if (Platform.OS === 'web') {
+    const url = '';
+    console.log('[API] Using proxy (web):', url);
+    return url;
+  } else {
+    const url = 'https://app.positron-portal.com';
+    console.log('[API] Using direct Positron server (native):', url);
+    return url;
+  }
 };
 
 export interface AuthCredentials {
@@ -22,7 +30,8 @@ export class PositronAPI {
   async linkAccount(credentials: AuthCredentials): Promise<LinkResponse> {
     try {
       const baseUrl = getApiUrl();
-      const url = `${baseUrl}/linkwebviewaccount`;
+      const isWeb = Platform.OS === 'web';
+      const url = isWeb ? `${baseUrl}/proxy/linkwebviewaccount` : `${baseUrl}/linkwebviewaccount`;
       console.log('[API] POST', url);
       console.log('[API] Request body:', JSON.stringify(credentials));
       
@@ -76,7 +85,10 @@ export class PositronAPI {
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const baseUrl = getApiUrl();
-      const url = `${baseUrl}/api/v1/sites/${encodeURIComponent(siteId)}/data/manifest`;
+      const isWeb = Platform.OS === 'web';
+      const url = isWeb 
+        ? `${baseUrl}/proxy/sites/${encodeURIComponent(siteId)}/data/manifest`
+        : `${baseUrl}/api/v1/sites/${encodeURIComponent(siteId)}/data/manifest`;
       console.log('[API] GET', url);
 
       const response = await fetch(url, {
@@ -133,7 +145,10 @@ export class PositronAPI {
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const baseUrl = getApiUrl();
-      const url = `${baseUrl}/api/v1/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`;
+      const isWeb = Platform.OS === 'web';
+      const url = isWeb
+        ? `${baseUrl}/proxy/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`
+        : `${baseUrl}/api/v1/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`;
       console.log('[API] GET file:', path);
 
       const response = await fetch(url, {
@@ -170,7 +185,8 @@ export class PositronAPI {
     
     const destinationFolder = `TABDATA\\${area}\\${tableName}`;
     const baseUrl = getApiUrl();
-    const url = `${baseUrl}/webviewdataupload`;
+    const isWeb = Platform.OS === 'web';
+    const url = isWeb ? `${baseUrl}/proxy/webviewdataupload` : `${baseUrl}/webviewdataupload`;
     
     const payload = {
       SITEID: siteId,
@@ -238,7 +254,8 @@ export class PositronAPI {
     console.log('[API] fileData keys:', Object.keys(fileData));
     
     const baseUrl = getApiUrl();
-    const url = `${baseUrl}/webviewdataupload`;
+    const isWeb = Platform.OS === 'web';
+    const url = isWeb ? `${baseUrl}/proxy/webviewdataupload` : `${baseUrl}/webviewdataupload`;
     
     const payload = {
       SITEID: siteId,
@@ -303,7 +320,8 @@ export class PositronAPI {
     console.log('[API] allProfiles keys:', Object.keys(allProfiles));
     
     const baseUrl = getApiUrl();
-    const url = `${baseUrl}/uploadsettingsprofile`;
+    const isWeb = Platform.OS === 'web';
+    const url = isWeb ? `${baseUrl}/proxy/uploadsettingsprofile` : `${baseUrl}/uploadsettingsprofile`;
     
     const payload = { siteId, allProfiles };
     
