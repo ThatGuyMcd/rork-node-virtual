@@ -262,47 +262,55 @@ export class ESCPOSGenerator {
       const quantity = Math.abs(item.quantity);
       const total = Math.abs(item.lineTotal);
       
-      receipt += `${quantity} x ${itemName}`.padEnd(this.charsPerLine - 7) + `£${total.toFixed(2)}`.padStart(7) + '\r\n';
+      receipt += `${quantity} x ${itemName}`.padEnd(this.charsPerLine - 7) + `\u00A3${total.toFixed(2)}`.padStart(7) + '\r\n';
     });
 
     receipt += '\r\n';
     const subtotal = Math.abs(transaction.subtotal);
-    receipt += 'Total (inc VAT): '.padEnd(this.charsPerLine - 7) + `£${subtotal.toFixed(2)}`.padStart(7) + '\r\n';
-    receipt += 'Subtotal: '.padEnd(this.charsPerLine - 7) + `£${subtotal.toFixed(2)}`.padStart(7) + '\r\n';
+    receipt += 'Total (inc VAT): '.padEnd(this.charsPerLine - 7) + `\u00A3${subtotal.toFixed(2)}`.padStart(7) + '\r\n';
+    receipt += 'Subtotal: '.padEnd(this.charsPerLine - 7) + `\u00A3${subtotal.toFixed(2)}`.padStart(7) + '\r\n';
     receipt += '=' .repeat(this.charsPerLine) + '\r\n';
 
     if (transaction.payments && transaction.payments.length > 0) {
       transaction.payments.forEach((payment) => {
         receipt += `Paid By: ${payment.tenderName}`.padEnd(this.charsPerLine) + '\r\n';
-        receipt += `Amount Paid: £${payment.amount.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
+        receipt += `Amount Paid: \u00A3${payment.amount.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
       });
     } else {
       receipt += `Paid By: ${transaction.tenderName}`.padEnd(this.charsPerLine) + '\r\n';
       const total = Math.abs(transaction.total);
-      receipt += `Amount Paid: £${total.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
+      receipt += `Amount Paid: \u00A3${total.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
     }
 
     if (transaction.cashback && transaction.cashback > 0) {
-      receipt += `Change: £${transaction.cashback.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
+      receipt += `Change: \u00A3${transaction.cashback.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
     } else {
-      receipt += 'Change: £0.00'.padEnd(this.charsPerLine) + '\r\n';
+      receipt += 'Change: \u00A30.00'.padEnd(this.charsPerLine) + '\r\n';
     }
     
     receipt += '=' .repeat(this.charsPerLine) + '\r\n';
 
     Object.entries(transaction.vatBreakdown).forEach(([vatCode, vatAmount]) => {
-      receipt += `CODE = ${vatCode} - STANDARD: £${vatAmount.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
-      receipt += `VAT Total: £${vatAmount.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
+      receipt += `CODE = ${vatCode}: \u00A3${vatAmount.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
+      receipt += `VAT Total: \u00A3${vatAmount.toFixed(2)}`.padEnd(this.charsPerLine) + '\r\n';
     });
 
     receipt += '=' .repeat(this.charsPerLine) + '\r\n';
+    
+    if (transaction.tableName) {
+      receipt += `Table: ${transaction.tableName}\r\n`;
+    }
+    
     receipt += `Served by: ${transaction.operatorName}\r\n`;
     
     if (terminalId && terminalName) {
       receipt += `Terminal ID: ${terminalId} - ${terminalName}\r\n`;
     }
     
-    receipt += `Transaction ID: ${transaction.id}\r\n`;
+    const transactionIdShort = transaction.id.includes('_') 
+      ? transaction.id.substring(0, transaction.id.lastIndexOf('_')) 
+      : transaction.id;
+    receipt += `Transaction ID: ${transactionIdShort}\r\n`;
     
     const date = new Date(transaction.timestamp);
     const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
