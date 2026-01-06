@@ -311,14 +311,14 @@ export class PositronAPI {
     
     const fileData: Record<string, string> = {};
     for (const [profileName, profileInfo] of Object.entries(allProfiles)) {
-      const fileName = `DATA/settings-profiles/${profileName}.json`;
+      const fileName = `${profileName}.json`;
       fileData[fileName] = JSON.stringify(profileInfo);
     }
     
     const payload = {
       SITEID: siteId,
-      DESTINATIONWEBVIEWFOLDER: '',
-      FOLDERDATA: ['DATA/settings-profiles'],
+      DESTINATIONWEBVIEWFOLDER: 'DATA\\settings-profiles',
+      FOLDERDATA: [] as string[],
       FILEDATA: fileData,
     };
     
