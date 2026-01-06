@@ -235,6 +235,119 @@ export class PositronAPI {
     }
   }
 
+  async saveAllTableData(siteId: string, allTableData: Map<string, any[]>): Promise<{ success: boolean }> {
+    console.log('[API] ====== saveAllTableData CALLED ======');
+    console.log('[API] siteId:', siteId);
+    console.log('[API] Number of tables:', allTableData.size);
+    
+    const baseUrl = getApiUrl();
+    const url = `${baseUrl}/webviewdataupload`;
+    
+    const folderData: string[] = [];
+    const fileData: Record<string, string> = {};
+    const areaSet = new Set<string>();
+    
+    for (const [tableKey, rows] of allTableData.entries()) {
+      const parts = tableKey.split('/');
+      const area = parts[0];
+      const tableName = parts[1];
+      
+      areaSet.add(area);
+      
+      const areaTableFolder = `${area}/${tableName}`;
+      if (!folderData.includes(area)) {
+        folderData.push(area);
+      }
+      if (!folderData.includes(areaTableFolder)) {
+        folderData.push(areaTableFolder);
+      }
+      
+      const csvRows: string[] = [];
+      csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?');
+      
+      for (const row of rows) {
+        const line = [
+          row.quantity.toFixed(3),
+          ` ${row.productName}`,
+          row.price.toFixed(2),
+          row.pluFile,
+          row.group,
+          row.department,
+          row.vatCode,
+          row.vatPercentage.toString(),
+          row.vatAmount.toFixed(2),
+          row.addedBy,
+          row.timeDate,
+          row.printer1,
+          row.printer2,
+          row.printer3,
+          row.itemPrinted,
+        ].join(',');
+        csvRows.push(line);
+      }
+      
+      const csvContent = csvRows.join('\n');
+      fileData[`${areaTableFolder}/tabledata.csv`] = csvContent;
+    }
+    
+    const payload = {
+      SITEID: siteId,
+      DESTINATIONWEBVIEWFOLDER: 'TABDATA',
+      FOLDERDATA: folderData,
+      FILEDATA: fileData,
+    };
+    
+    console.log('[API] POST', url);
+    console.log('[API] Uploading all table data');
+    console.log('[API] Areas:', Array.from(areaSet));
+    console.log('[API] Total tables:', allTableData.size);
+    console.log('[API] Payload size:', JSON.stringify(payload).length, 'bytes');
+    
+    try {
+      console.log('[API] About to call fetch...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('[API] Request timeout after 30s');
+        controller.abort();
+      }, 30000);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      console.log('[API] Fetch completed, response received');
+      
+      console.log('[API] All table data response status:', response.status);
+      console.log('[API] Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
+      
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('[API] All table data error response:', text);
+        throw new Error(`Server error ${response.status}: ${text}`);
+      }
+      
+      const responseText = await response.text();
+      console.log('[API] All table data response:', responseText);
+      console.log('[API] All table data uploaded successfully');
+      return { success: true };
+    } catch (error: any) {
+      console.error('[API] ====== ALL TABLE UPLOAD ERROR ======');
+      console.error('[API] Error name:', error.name);
+      console.error('[API] Error type:', error.constructor?.name);
+      console.error('[API] Error message:', error.message);
+      console.error('[API] Full error:', error);
+      if (error.name === 'AbortError') {
+        throw new Error('Upload timeout after 30 seconds');
+      }
+      throw error;
+    }
+  }
+
   async uploadTransactionData(siteId: string, destinationFolder: string, fileData: Record<string, string>): Promise<{ success: boolean }> {
     console.log('[API] ====== uploadTransactionData CALLED ======');
     console.log('[API] siteId:', siteId);

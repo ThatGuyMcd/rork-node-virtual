@@ -73,7 +73,10 @@ class TableDataService {
       const priceExVat = item.selectedPrice.price / (1 + vatPercentage / 100);
       const vatAmount = item.selectedPrice.price - priceExVat;
 
-      const pluFile = `${item.product.groupId}-${item.product.departmentId}-${item.product.id.replace('prod_', '').padStart(5, '0')}.PLU`;
+      const groupIdNum = item.product.groupId.split('-')[0].trim();
+      const deptIdNum = item.product.departmentId.split('-')[0].trim();
+      const prodIdNum = item.product.id.replace('prod_', '').padStart(5, '0');
+      const pluFile = `${groupIdNum}-${deptIdNum}-${prodIdNum}.PLU`;
 
       const baseName = item.product.name.split(' - ')[0];
       const messagePrefix = item.product.name.includes(' - ') ? ' - ' + item.product.name.split(' - ').slice(1).join(' - ') : '';
@@ -146,8 +149,11 @@ class TableDataService {
       return;
     }
 
-    const csvContent = this.rowsToCSV(rows);
-    const result = await apiClient.saveTableData(siteInfo.siteId, table.area, table.name, csvContent);
+    const allTableData = await this.getAllTableDataGrouped();
+    
+    allTableData.set(`${table.area}/${table.name}`, rows);
+    
+    const result = await apiClient.saveAllTableData(siteInfo.siteId, allTableData);
     
     if (!result.success) {
       throw new Error('Server sync failed');
@@ -156,7 +162,7 @@ class TableDataService {
 
   private rowsToCSV(rows: TableDataRow[]): string {
     const csvRows: string[] = [];
-    csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?,Table ID');
+    csvRows.push('X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?');
 
     for (const row of rows) {
       const line = [
@@ -175,7 +181,6 @@ class TableDataService {
         row.printer2,
         row.printer3,
         row.itemPrinted,
-        row.tableId || '',
       ].join(',');
       csvRows.push(line);
     }
@@ -469,20 +474,77 @@ class TableDataService {
       return;
     }
     
-    const tables = await dataSyncService.getStoredTables();
-    if (tables.length === 0) {
+    const allTableData = await this.getAllTableDataGrouped();
+    
+    if (allTableData.size === 0) {
       return;
     }
     
-    for (const table of tables) {
-      try {
-        const tableRows = await this.loadTableData(table.id);
-        await this.syncToServer(table, tableRows);
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } catch (error) {
-        console.error(`[TableDataService] Failed to sync ${table.area}/${table.name}:`, error);
-      }
+    const result = await apiClient.saveAllTableData(siteInfo.siteId, allTableData);
+    if (!result.success) {
+      throw new Error('Failed to sync all tables');
     }
+  }
+
+  private async getAllTableDataGrouped(): Promise<Map<string, TableDataRow[]>> {
+    const groupedData = new Map<string, TableDataRow[]>();
+    
+    try {
+      if (!this.isFileSystemAvailable()) {
+        for (const [tableId, rows] of this.data.entries()) {
+          groupedData.set(tableId, rows);
+        }
+        return groupedData;
+      }
+      
+      const filePath = this.getFilePath();
+      if (!filePath) return groupedData;
+      
+      const fileInfo = await FileSystem.getInfoAsync(filePath);
+      if (!fileInfo.exists) return groupedData;
+
+      const content = await FileSystem.readAsStringAsync(filePath);
+      const rows = dataParser.parseCSV(content);
+
+      if (rows.length <= 1) return groupedData;
+
+      const header = rows[0].map(h => h.trim());
+      const tableIdIndex = header.findIndex(h => /table.*id/i.test(h));
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const rowTableId = tableIdIndex >= 0 ? row[tableIdIndex]?.trim() : '';
+        
+        if (rowTableId) {
+          if (!groupedData.has(rowTableId)) {
+            groupedData.set(rowTableId, []);
+          }
+          
+          groupedData.get(rowTableId)!.push({
+            quantity: parseFloat(row[0] || '1'),
+            productName: row[1]?.trim() || '',
+            price: parseFloat(row[2] || '0'),
+            pluFile: row[3]?.trim() || '',
+            group: row[4]?.trim() || '',
+            department: row[5]?.trim() || '',
+            vatCode: row[6]?.trim() || '',
+            vatPercentage: parseFloat(row[7] || '0'),
+            vatAmount: parseFloat(row[8] || '0'),
+            addedBy: row[9]?.trim() || '',
+            timeDate: row[10]?.trim() || '',
+            printer1: row[11]?.trim() || 'NOT SET',
+            printer2: row[12]?.trim() || 'NOT SET',
+            printer3: row[13]?.trim() || 'NOT SET',
+            itemPrinted: row[14]?.trim() || 'NO',
+            tableId: rowTableId,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('[TableDataService] Error getting grouped data:', error);
+    }
+    
+    return groupedData;
   }
 }
 
