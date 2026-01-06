@@ -181,7 +181,7 @@ export class PositronAPI {
       DESTINATIONWEBVIEWFOLDER: destinationFolder,
       FOLDERDATA: [] as string[],
       FILEDATA: {
-        'TAB.CSV': csvContent,
+        'tabledata.csv': csvContent,
       },
     };
     
