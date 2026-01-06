@@ -307,13 +307,24 @@ export class PositronAPI {
     console.log('[API] allProfiles keys:', Object.keys(allProfiles));
     
     const baseUrl = getApiUrl();
-    const url = `${baseUrl}/uploadsettingsprofile`;
+    const url = `${baseUrl}/webviewdataupload`;
     
-    const payload = { siteId, allProfiles };
+    const fileData: Record<string, string> = {};
+    for (const [profileName, profileInfo] of Object.entries(allProfiles)) {
+      const fileName = `DATA/settings-profiles/${profileName}.json`;
+      fileData[fileName] = JSON.stringify(profileInfo);
+    }
+    
+    const payload = {
+      SITEID: siteId,
+      DESTINATIONWEBVIEWFOLDER: '',
+      FOLDERDATA: ['DATA/settings-profiles'],
+      FILEDATA: fileData,
+    };
     
     console.log('[API] POST', url);
     console.log('[API] Uploading', Object.keys(allProfiles).length, 'settings profiles');
-    console.log('[API] Site ID:', siteId);
+    console.log('[API] Destination: DATA/settings-profiles');
     console.log('[API] Payload size:', JSON.stringify(payload).length, 'bytes');
     
     try {
