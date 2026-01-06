@@ -137,27 +137,32 @@ class TableDataService {
     } else {
       await this.clearTableDataLocally(table.id);
       await this.appendRowsToCSV(rows);
+      await this.saveTableDataToTableFolder(table, rows);
     }
 
-    await this.syncToServer(table, rows);
+    await this.syncToServer(table);
   }
 
-  private async syncToServer(table: Table, rows: TableDataRow[]): Promise<void> {
+  private async syncToServer(table: Table): Promise<void> {
     const siteInfo = await dataSyncService.getSiteInfo();
     if (!siteInfo) {
       console.warn('[TableDataService] No site info, skipping sync');
       return;
     }
 
-    const csvContent = this.rowsToCSV(rows);
-    const additionalFiles = await this.getAdditionalTableFiles(table);
+    const allFiles = await this.getAllTableFiles(table);
+    
+    if (Object.keys(allFiles).length === 0) {
+      console.warn('[TableDataService] No files to upload for table:', table.name);
+      throw new Error('No files to upload');
+    }
     
     const result = await apiClient.saveSingleTableData(
       siteInfo.siteId,
       table.area,
       table.name,
-      csvContent,
-      additionalFiles
+      allFiles['tabledata.csv'] || '',
+      Object.fromEntries(Object.entries(allFiles).filter(([key]) => key !== 'tabledata.csv'))
     );
     
     if (!result.success) {
@@ -193,28 +198,54 @@ class TableDataService {
     return csvRows.join('\n');
   }
 
-  private async getAdditionalTableFiles(table: Table): Promise<Record<string, string>> {
-    const additionalFiles: Record<string, string> = {};
-    
+  private async saveTableDataToTableFolder(table: Table, rows: TableDataRow[]): Promise<void> {
     if (!this.isFileSystemAvailable() || !FileSystem.documentDirectory) {
-      console.log('[TableDataService] File system not available for additional files');
-      return additionalFiles;
+      console.log('[TableDataService] File system not available, skipping table folder save');
+      return;
     }
 
     try {
       const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
-      console.log('[TableDataService] Checking for additional files in:', tableFolder);
+      console.log('[TableDataService] Ensuring table folder exists:', tableFolder);
+      
+      const folderInfo = await FileSystem.getInfoAsync(tableFolder);
+      if (!folderInfo.exists) {
+        await FileSystem.makeDirectoryAsync(tableFolder, { intermediates: true });
+        console.log('[TableDataService] Created table folder');
+      }
+      
+      const csvContent = this.rowsToCSV(rows);
+      const filePath = `${tableFolder}tabledata.csv`;
+      await FileSystem.writeAsStringAsync(filePath, csvContent);
+      console.log(`[TableDataService] Saved tabledata.csv to table folder (${csvContent.length} bytes)`);
+    } catch (error) {
+      console.error('[TableDataService] Error saving tabledata.csv to table folder:', error);
+      throw error;
+    }
+  }
+
+  private async getAllTableFiles(table: Table): Promise<Record<string, string>> {
+    const allFiles: Record<string, string> = {};
+    
+    if (!this.isFileSystemAvailable() || !FileSystem.documentDirectory) {
+      console.log('[TableDataService] File system not available');
+      return allFiles;
+    }
+
+    try {
+      const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+      console.log('[TableDataService] Reading all files from:', tableFolder);
       
       const folderInfo = await FileSystem.getInfoAsync(tableFolder);
       
       if (!folderInfo.exists) {
-        console.log('[TableDataService] Table folder does not exist, no additional files to upload');
-        return additionalFiles;
+        console.log('[TableDataService] Table folder does not exist');
+        return allFiles;
       }
       
       if (!folderInfo.isDirectory) {
         console.log('[TableDataService] Path exists but is not a directory');
-        return additionalFiles;
+        return allFiles;
       }
 
       const files = await FileSystem.readDirectoryAsync(tableFolder);
@@ -226,30 +257,24 @@ class TableDataService {
           continue;
         }
         
-        if (file === 'tabledata.csv') {
-          console.log('[TableDataService] Skipping tabledata.csv (uploaded separately)');
-          continue;
-        }
-        
         const filePath = `${tableFolder}${file}`;
         const fileInfo = await FileSystem.getInfoAsync(filePath);
         
         if (fileInfo.exists && !fileInfo.isDirectory) {
           const content = await FileSystem.readAsStringAsync(filePath);
-          additionalFiles[file] = content;
+          allFiles[file] = content;
           console.log(`[TableDataService] Added file: ${file} (${content.length} bytes)`);
         }
       }
       
-      console.log(`[TableDataService] Total additional files to upload: ${Object.keys(additionalFiles).length}`);
-      if (Object.keys(additionalFiles).length > 0) {
-        console.log('[TableDataService] Additional file names:', Object.keys(additionalFiles));
-      }
+      console.log(`[TableDataService] Total files to upload: ${Object.keys(allFiles).length}`);
+      console.log('[TableDataService] File names:', Object.keys(allFiles));
     } catch (error) {
-      console.log('[TableDataService] Error reading additional files:', error);
+      console.error('[TableDataService] Error reading table files:', error);
+      throw error;
     }
     
-    return additionalFiles;
+    return allFiles;
   }
 
   async loadTableData(tableId: string): Promise<TableDataRow[]> {
@@ -351,8 +376,14 @@ class TableDataService {
   async clearTableData(tableId: string, table?: Table): Promise<void> {
     await this.clearTableDataLocally(tableId);
     
-    if (table) {
-      await this.syncToServer(table, []);
+    if (table && this.isFileSystemAvailable() && FileSystem.documentDirectory) {
+      const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+      const folderInfo = await FileSystem.getInfoAsync(tableFolder);
+      if (folderInfo.exists) {
+        await FileSystem.deleteAsync(tableFolder, { idempotent: true });
+        console.log('[TableDataService] Deleted table folder:', tableFolder);
+      }
+      await this.syncToServer(table);
     }
   }
 
@@ -525,11 +556,20 @@ class TableDataService {
     vatRates: { code: string; percentage: number }[]
   ): Promise<void> {
     const rows = this.createRows(table, basket, operator, vatRates);
-    await this.syncToServer(table, rows);
+    await this.saveTableDataToTableFolder(table, rows);
+    await this.syncToServer(table);
   }
 
   async syncClearTableToServerSafe(table: Table): Promise<void> {
-    await this.syncToServer(table, []);
+    if (this.isFileSystemAvailable() && FileSystem.documentDirectory) {
+      const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+      const folderInfo = await FileSystem.getInfoAsync(tableFolder);
+      if (folderInfo.exists) {
+        await FileSystem.deleteAsync(tableFolder, { idempotent: true });
+        console.log('[TableDataService] Deleted table folder for clear sync:', tableFolder);
+      }
+    }
+    await this.syncToServer(table);
   }
 
   async syncAllTableDataToServer(): Promise<void> {
