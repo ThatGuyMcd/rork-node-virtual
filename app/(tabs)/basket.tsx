@@ -12,6 +12,7 @@ import {
   Alert,
   PanResponder,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare, RotateCcw, Percent, Printer } from 'lucide-react-native';
 import { usePOS } from '@/contexts/POSContext';
@@ -444,8 +445,10 @@ export default function BasketScreen() {
   const [changeModalVisible, setChangeModalVisible] = useState(false);
   const [changeAmount, setChangeAmount] = useState(0);
   const [pendingTenderId, setPendingTenderId] = useState<string | null>(null);
+  const [saveErrorModalVisible, setSaveErrorModalVisible] = useState(false);
   const scaleAnim = useState(new Animated.Value(0))[0];
   const availableTenders = getAvailableTenders();
+  const router = useRouter();
 
   useEffect(() => {
     const checkPrinterConnection = async () => {
@@ -598,7 +601,13 @@ export default function BasketScreen() {
   };
 
   const handleSaveTab = async () => {
-    await saveTableTab();
+    try {
+      await saveTableTab();
+      router.replace('/login');
+    } catch (error) {
+      console.error('[Basket] Failed to save table:', error);
+      setSaveErrorModalVisible(true);
+    }
   };
 
   const openMessageModal = (index: number) => {
@@ -1522,6 +1531,34 @@ export default function BasketScreen() {
             <Text style={[styles.processingModalSubtitle, { color: colors.textSecondary }]}>
               Please wait while we post your transaction to the server
             </Text>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        transparent
+        visible={saveErrorModalVisible}
+        onRequestClose={() => setSaveErrorModalVisible(false)}
+        animationType="fade"
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+          <View style={[styles.changeModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={[styles.changeIconContainer, { backgroundColor: colors.error + '20' }]}>
+              <X size={48} color={colors.error} />
+            </View>
+            
+            <Text style={[styles.changeModalTitle, { color: colors.text }]}>Save Failed</Text>
+            <Text style={[styles.changeModalSubtitle, { color: colors.textSecondary }]}>
+              The table didn&apos;t save. Please try again.
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.confirmChangeButton, { backgroundColor: colors.primary }]}
+              onPress={() => setSaveErrorModalVisible(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.confirmChangeButtonText}>OK</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

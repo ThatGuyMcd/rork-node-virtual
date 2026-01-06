@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
-import { useNavigation } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 import { ChevronLeft, X, RefreshCw, Grid3x3, Save } from 'lucide-react-native';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
@@ -86,6 +86,8 @@ export default function ProductsScreen() {
   const [menuModalVisible, setMenuModalVisible] = useState(false);
   const [currentMenuId, setCurrentMenuId] = useState<string | null>(null);
   const [menuStack, setMenuStack] = useState<string[]>([]);
+  const [saveErrorModalVisible, setSaveErrorModalVisible] = useState(false);
+  const router = useRouter();
 
   const getButtonSkinStyle = useCallback((skin: ButtonSkin, backgroundColor: string = '#000000') => {
     switch (skin) {
@@ -208,7 +210,16 @@ export default function ProductsScreen() {
   const [productMsgPrice, setProductMsgPrice] = useState<PriceOption | null>(null);
   const { addToBasket, currentTable, selectTable, isTableSelectionRequired, productViewLayout, productViewMode, saveTableTab, savingTable } = usePOS();
   const { colors, theme, buttonSkin } = useTheme();
-  const navigation = useNavigation();
+
+  const handleSaveTab = async () => {
+    try {
+      await saveTableTab();
+      router.replace('/login');
+    } catch (error) {
+      console.error('[Products] Failed to save table:', error);
+      setSaveErrorModalVisible(true);
+    }
+  };
 
   const scaleAnim = useState(new Animated.Value(0))[0];
   const notificationOpacity = useState(new Animated.Value(0))[0];
@@ -219,15 +230,7 @@ export default function ProductsScreen() {
     loadDisplaySettings();
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('tabPress' as any, () => {
-      console.log('[Products] Tab pressed, resetting to default view');
-      setSelectedDepartment(null);
-      setSelectedGroup(null);
-    });
 
-    return unsubscribe;
-  }, [navigation]);
 
   useEffect(() => {
     if (tableModalVisible && tables.length > 0) {
@@ -1110,7 +1113,7 @@ export default function ProductsScreen() {
                   { backgroundColor: colors.primary },
                   getButtonSkinStyle(buttonSkin, colors.primary),
                 ]}
-                onPress={saveTableTab}
+                onPress={handleSaveTab}
                 activeOpacity={0.8}
               >
                 {getButtonOverlayStyle(buttonSkin) && (
@@ -1888,6 +1891,34 @@ export default function ProductsScreen() {
             <Text style={[styles.savingModalSubtitle, { color: colors.textSecondary }]}>
               Please wait while we save your table data
             </Text>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        transparent
+        visible={saveErrorModalVisible}
+        onRequestClose={() => setSaveErrorModalVisible(false)}
+        animationType="fade"
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+          <View style={[styles.savingModal, { backgroundColor: colors.cardBackground }]}>
+            <View style={[styles.savingIconContainer, { backgroundColor: colors.error + '20' }]}>
+              <X size={48} color={colors.error} />
+            </View>
+            
+            <Text style={[styles.savingModalTitle, { color: colors.text }]}>Save Failed</Text>
+            <Text style={[styles.savingModalSubtitle, { color: colors.textSecondary }]}>
+              The table didn&apos;t save. Please try again.
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.submitPriceButton, { backgroundColor: colors.primary, marginTop: 24 }]}
+              onPress={() => setSaveErrorModalVisible(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.submitPriceText}>OK</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
