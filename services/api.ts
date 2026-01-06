@@ -179,19 +179,25 @@ export class PositronAPI {
     console.log('[API] csvContent length:', csvContent?.length || 0);
     console.log('[API] Additional files:', Object.keys(additionalFiles));
     
-    const destinationFolder = `TABDATA\\${area}\\${tableName}`;
     const baseUrl = getApiUrl();
     const url = `${baseUrl}/webviewdataupload`;
     
-    const fileData: Record<string, string> = {
-      'tabledata.csv': csvContent,
-      ...additionalFiles,
-    };
+    // Build file data with full paths (matching settings-profiles pattern)
+    const fileData: Record<string, string> = {};
+    const folderPath = `DATA/TABDATA/${area}/${tableName}`;
+    
+    // Add tabledata.csv
+    fileData[`${folderPath}/tabledata.csv`] = csvContent;
+    
+    // Add additional files
+    for (const [filename, content] of Object.entries(additionalFiles)) {
+      fileData[`${folderPath}/${filename}`] = content;
+    }
     
     const payload = {
       SITEID: siteId,
-      DESTINATIONWEBVIEWFOLDER: destinationFolder,
-      FOLDERDATA: [] as string[],
+      DESTINATIONWEBVIEWFOLDER: '',
+      FOLDERDATA: [folderPath],
       FILEDATA: fileData,
     };
     
