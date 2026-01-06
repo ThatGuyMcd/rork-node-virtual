@@ -149,11 +149,16 @@ class TableDataService {
       return;
     }
 
-    const allTableData = await this.getAllTableDataGrouped();
+    const csvContent = this.rowsToCSV(rows);
+    const additionalFiles = await this.getAdditionalTableFiles(table);
     
-    allTableData.set(`${table.area}/${table.name}`, rows);
-    
-    const result = await apiClient.saveAllTableData(siteInfo.siteId, allTableData);
+    const result = await apiClient.saveSingleTableData(
+      siteInfo.siteId,
+      table.area,
+      table.name,
+      csvContent,
+      additionalFiles
+    );
     
     if (!result.success) {
       throw new Error('Server sync failed');
@@ -186,6 +191,41 @@ class TableDataService {
     }
 
     return csvRows.join('\n');
+  }
+
+  private async getAdditionalTableFiles(table: Table): Promise<Record<string, string>> {
+    const additionalFiles: Record<string, string> = {};
+    
+    if (!this.isFileSystemAvailable() || !FileSystem.documentDirectory) {
+      return additionalFiles;
+    }
+
+    try {
+      const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+      const folderInfo = await FileSystem.getInfoAsync(tableFolder);
+      
+      if (!folderInfo.exists || !folderInfo.isDirectory) {
+        return additionalFiles;
+      }
+
+      const files = await FileSystem.readDirectoryAsync(tableFolder);
+      
+      for (const file of files) {
+        if (file === 'tableopen.ini' || file === 'tabledata.csv') {
+          continue;
+        }
+        
+        const filePath = `${tableFolder}${file}`;
+        const content = await FileSystem.readAsStringAsync(filePath);
+        additionalFiles[file] = content;
+      }
+      
+      console.log(`[TableDataService] Found ${Object.keys(additionalFiles).length} additional files for table ${table.area}/${table.name}`);
+    } catch (error) {
+      console.log('[TableDataService] No additional files found or error reading:', error);
+    }
+    
+    return additionalFiles;
   }
 
   async loadTableData(tableId: string): Promise<TableDataRow[]> {

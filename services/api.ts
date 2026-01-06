@@ -165,29 +165,39 @@ export class PositronAPI {
     }
   }
 
-  async saveTableData(siteId: string, area: string, tableName: string, csvContent: string): Promise<{ success: boolean }> {
-    console.log('[API] ====== saveTableData CALLED ======');
+  async saveSingleTableData(
+    siteId: string,
+    area: string,
+    tableName: string,
+    csvContent: string,
+    additionalFiles: Record<string, string> = {}
+  ): Promise<{ success: boolean }> {
+    console.log('[API] ====== saveSingleTableData CALLED ======');
     console.log('[API] siteId:', siteId);
     console.log('[API] area:', area);
     console.log('[API] tableName:', tableName);
     console.log('[API] csvContent length:', csvContent?.length || 0);
+    console.log('[API] Additional files:', Object.keys(additionalFiles));
     
     const destinationFolder = `TABDATA\\${area}\\${tableName}`;
     const baseUrl = getApiUrl();
     const url = `${baseUrl}/webviewdataupload`;
     
+    const fileData: Record<string, string> = {
+      'tabledata.csv': csvContent,
+      ...additionalFiles,
+    };
+    
     const payload = {
       SITEID: siteId,
       DESTINATIONWEBVIEWFOLDER: destinationFolder,
       FOLDERDATA: [] as string[],
-      FILEDATA: {
-        'tabledata.csv': csvContent,
-      },
+      FILEDATA: fileData,
     };
     
     console.log('[API] POST', url);
     console.log('[API] Uploading table data:', area, '/', tableName);
-    console.log('[API] Payload keys:', Object.keys(payload));
+    console.log('[API] Files to upload:', Object.keys(fileData));
     console.log('[API] Payload size:', JSON.stringify(payload).length, 'bytes');
     
     try {
@@ -220,10 +230,10 @@ export class PositronAPI {
       
       const responseText = await response.text();
       console.log('[API] Table data response:', responseText);
-      console.log('[API] Table data uploaded successfully');
+      console.log('[API] Single table data uploaded successfully');
       return { success: true };
     } catch (error: any) {
-      console.error('[API] ====== TABLE UPLOAD ERROR ======');
+      console.error('[API] ====== SINGLE TABLE UPLOAD ERROR ======');
       console.error('[API] Error name:', error.name);
       console.error('[API] Error type:', error.constructor?.name);
       console.error('[API] Error message:', error.message);
