@@ -317,14 +317,14 @@ export class PositronAPI {
     
     const payload = {
       SITEID: siteId,
-      DESTINATIONWEBVIEWFOLDER: 'DATA\\settings-profiles',
+      DESTINATIONWEBVIEWFOLDER: 'settings-profiles',
       FOLDERDATA: [] as string[],
       FILEDATA: fileData,
     };
     
     console.log('[API] POST', url);
     console.log('[API] Uploading', Object.keys(allProfiles).length, 'settings profiles');
-    console.log('[API] Destination: DATA/settings-profiles');
+    console.log('[API] Destination: settings-profiles');
     console.log('[API] Payload size:', JSON.stringify(payload).length, 'bytes');
     
     try {
