@@ -479,8 +479,43 @@ class TableDataService {
     return { hasData, subtotal };
   }
 
-  async getAllTableStatuses(tableIds: string[]): Promise<Map<string, { hasData: boolean; subtotal: number }>> {
-    const statusMap = new Map<string, { hasData: boolean; subtotal: number }>();
+  private async isTableLockedInMemory(tableId: string): Promise<boolean> {
+    for (const [tableKey, files] of this.tableFiles.entries()) {
+      if (files.has('tableopen.ini')) {
+        const tables = await dataSyncService.getStoredTables();
+        const table = tables.find(t => `${t.area}/${t.name}` === tableKey && t.id === tableId);
+        if (table) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private async isTableLockedInFileSystem(tableId: string): Promise<boolean> {
+    if (!this.isFileSystemAvailable() || !FileSystem.documentDirectory) {
+      return false;
+    }
+    
+    try {
+      const tables = await dataSyncService.getStoredTables();
+      const table = tables.find(t => t.id === tableId);
+      if (!table) {
+        return false;
+      }
+      
+      const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+      const tableopenPath = `${tableFolder}tableopen.ini`;
+      const fileInfo = await FileSystem.getInfoAsync(tableopenPath);
+      return fileInfo.exists;
+    } catch (error) {
+      console.error('[TableDataService] Error checking table lock:', error);
+      return false;
+    }
+  }
+
+  async getAllTableStatuses(tableIds: string[]): Promise<Map<string, { hasData: boolean; subtotal: number; isLocked: boolean }>> {
+    const statusMap = new Map<string, { hasData: boolean; subtotal: number; isLocked: boolean }>();
     
     try {
       if (!this.isFileSystemAvailable()) {
@@ -488,21 +523,22 @@ class TableDataService {
           const rows = this.data.get(tableId) || [];
           const hasData = rows.length > 0;
           const subtotal = rows.reduce((sum, row) => sum + (row.quantity * row.price), 0);
-          statusMap.set(tableId, { hasData, subtotal });
+          const isLocked = await this.isTableLockedInMemory(tableId);
+          statusMap.set(tableId, { hasData, subtotal, isLocked });
         }
         return statusMap;
       }
       
       const filePath = this.getFilePath();
       if (!filePath) {
-        tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0 }));
+        tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0, isLocked: false }));
         return statusMap;
       }
       
       const fileInfo = await FileSystem.getInfoAsync(filePath);
       
       if (!fileInfo.exists) {
-        tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0 }));
+        tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0, isLocked: false }));
         return statusMap;
       }
 
@@ -510,7 +546,7 @@ class TableDataService {
       const rows = dataParser.parseCSV(content);
 
       if (rows.length <= 1) {
-        tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0 }));
+        tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0, isLocked: false }));
         return statusMap;
       }
 
@@ -551,11 +587,12 @@ class TableDataService {
         const tableRows = tableDataMap.get(tableId) || [];
         const hasData = tableRows.length > 0;
         const subtotal = tableRows.reduce((sum, row) => sum + (row.quantity * row.price), 0);
-        statusMap.set(tableId, { hasData, subtotal });
+        const isLocked = await this.isTableLockedInFileSystem(tableId);
+        statusMap.set(tableId, { hasData, subtotal, isLocked });
       }
     } catch (error) {
       console.error('[TableDataService] Batch status error:', error);
-      tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0 }));
+      tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0, isLocked: false }));
     }
     
     return statusMap;

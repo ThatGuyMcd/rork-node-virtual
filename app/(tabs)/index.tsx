@@ -280,11 +280,7 @@ export default function ProductsScreen() {
     console.log('[Products] Loading table statuses...');
     const tableIds = tables.map(t => t.id);
     const statuses = await tableDataService.getAllTableStatuses(tableIds);
-    const statusesWithLock = new Map<string, { hasData: boolean; subtotal: number; isLocked: boolean }>();
-    statuses.forEach((status, tableId) => {
-      statusesWithLock.set(tableId, { ...status, isLocked: false });
-    });
-    setTableStatuses(statusesWithLock);
+    setTableStatuses(statuses);
     console.log('[Products] Table statuses loaded:', statuses.size);
   };
 
