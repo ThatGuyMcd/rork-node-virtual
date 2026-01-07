@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { memo, useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
+  FlatList,
   StyleSheet,
   Modal,
   Animated,
@@ -19,7 +20,7 @@ import { usePOS } from '@/contexts/POSContext';
 import { useTheme, type ButtonSkin } from '@/contexts/ThemeContext';
 import { printerService } from '@/services/printerService';
 import { transactionService } from '@/services/transactionService';
-import type { Transaction } from '@/types/pos';
+import type { BasketItem, Transaction } from '@/types/pos';
 
 const getPricePrefix = (label: string): string => {
   const lowerLabel = label.toLowerCase();
@@ -36,7 +37,7 @@ const getPricePrefix = (label: string): string => {
 };
 
 interface SwipeableBasketItemProps {
-  item: any;
+  item: BasketItem;
   index: number;
   isRefundItem: boolean;
   prefix: string;
@@ -53,7 +54,7 @@ interface SwipeableBasketItemProps {
   getButtonOverlayStyle: (skin: ButtonSkin) => any;
 }
 
-const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
+const SwipeableBasketItem = memo(({
   item,
   index,
   isRefundItem,
@@ -69,7 +70,7 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
   buttonSkin,
   getButtonSkinStyle,
   getButtonOverlayStyle,
-}) => {
+}: SwipeableBasketItemProps) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const currentOffset = useRef(0);
   const deleteButtonWidth = 80;
@@ -143,7 +144,7 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
     })
   ).current;
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     Animated.timing(translateX, {
       toValue: -500,
       duration: 250,
@@ -153,9 +154,9 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
       currentOffset.current = 0;
       onDelete(index);
     });
-  };
+  }, [index, onDelete, translateX]);
 
-  const handleRefund = () => {
+  const handleRefund = useCallback(() => {
     Animated.timing(translateX, {
       toValue: 500,
       duration: 250,
@@ -165,9 +166,9 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
       currentOffset.current = 0;
       onRefund(index);
     });
-  };
+  }, [index, onRefund, translateX]);
 
-  const handleUndoRefund = () => {
+  const handleUndoRefund = useCallback(() => {
     Animated.timing(translateX, {
       toValue: 500,
       duration: 250,
@@ -177,7 +178,27 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
       currentOffset.current = 0;
       onUndoRefund(index);
     });
-  };
+  }, [index, onUndoRefund, translateX]);
+
+  const handleDecrement = useCallback(() => {
+    onQuantityChange(index, item.quantity - 1);
+  }, [index, item.quantity, onQuantityChange]);
+
+  const handleIncrement = useCallback(() => {
+    onQuantityChange(index, item.quantity + 1);
+  }, [index, item.quantity, onQuantityChange]);
+
+  const handleMessage = useCallback(() => {
+    onMessagePress(index);
+  }, [index, onMessagePress]);
+
+  const handleRefundPress = useCallback(() => {
+    if (isRefundItem) {
+      handleUndoRefund();
+    } else {
+      handleRefund();
+    }
+  }, [handleRefund, handleUndoRefund, isRefundItem]);
 
   return (
     <View style={styles.swipeableContainer}>
@@ -189,8 +210,9 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
               { backgroundColor: isRefundItem ? colors.success : colors.error },
               getButtonSkinStyle(buttonSkin, isRefundItem ? colors.success : colors.error),
             ]}
-            onPress={isRefundItem ? handleUndoRefund : handleRefund}
+            onPress={handleRefundPress}
             activeOpacity={0.8}
+            testID={`basket-item-${index}-refund`}
           >
             {getButtonOverlayStyle(buttonSkin) && (
               <View style={getButtonOverlayStyle(buttonSkin) as any} />
@@ -209,6 +231,7 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
           ]}
           onPress={handleDelete}
           activeOpacity={0.8}
+          testID={`basket-item-${index}-delete`}
         >
           {getButtonOverlayStyle(buttonSkin) && (
             <View style={getButtonOverlayStyle(buttonSkin) as any} />
@@ -247,16 +270,18 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
             <View style={[styles.quantityControl, { backgroundColor: colors.background, borderColor: colors.border }]}>
               <TouchableOpacity
                 style={styles.quantityButton}
-                onPress={() => onQuantityChange(index, item.quantity - 1)}
+                onPress={handleDecrement}
                 activeOpacity={0.7}
+                testID={`basket-item-${index}-decrement`}
               >
                 <Minus size={14} color={colors.text} />
               </TouchableOpacity>
               <Text style={[styles.quantityNumber, { color: colors.text }]}>{Math.abs(item.quantity)}</Text>
               <TouchableOpacity
                 style={styles.quantityButton}
-                onPress={() => onQuantityChange(index, item.quantity + 1)}
+                onPress={handleIncrement}
                 activeOpacity={0.7}
+                testID={`basket-item-${index}-increment`}
               >
                 <Plus size={14} color={colors.text} />
               </TouchableOpacity>
@@ -267,8 +292,9 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
         <View style={styles.itemBottomRow}>
           <TouchableOpacity
             style={styles.messageButton}
-            onPress={() => onMessagePress(index)}
+            onPress={handleMessage}
             activeOpacity={0.7}
+            testID={`basket-item-${index}-message`}
           >
             <MessageSquare size={16} color={colors.primary} />
           </TouchableOpacity>
@@ -280,7 +306,9 @@ const SwipeableBasketItem: React.FC<SwipeableBasketItemProps> = ({
       </Animated.View>
     </View>
   );
-};
+});
+
+SwipeableBasketItem.displayName = 'SwipeableBasketItem';
 
 export default function BasketScreen() {
   const {
@@ -461,11 +489,11 @@ export default function BasketScreen() {
   }, []);
 
   const { subtotal, discount, vatBreakdown, total } = calculateTotals();
-  const paidAmount = splitPayments.reduce((sum, payment) => sum + payment.amount, 0);
-  const totalWithGratuity = total + gratuityAmount;
-  const remainingTotal = totalWithGratuity - paidAmount;
+  const paidAmount = useMemo(() => splitPayments.reduce((sum, payment) => sum + payment.amount, 0), [splitPayments]);
+  const totalWithGratuity = useMemo(() => total + gratuityAmount, [total, gratuityAmount]);
+  const remainingTotal = useMemo(() => totalWithGratuity - paidAmount, [totalWithGratuity, paidAmount]);
 
-  const openPaymentModal = () => {
+  const openPaymentModal = useCallback(() => {
     setPaymentModalVisible(true);
     Animated.spring(scaleAnim, {
       toValue: 1,
@@ -473,7 +501,7 @@ export default function BasketScreen() {
       tension: 50,
       friction: 7,
     }).start();
-  };
+  }, [scaleAnim]);
 
   const handleGratuitySelection = (percentage: number) => {
     const gratuityValue = (total * percentage) / 100;
@@ -610,15 +638,15 @@ export default function BasketScreen() {
     }
   };
 
-  const openMessageModal = (index: number) => {
+  const openMessageModal = useCallback((index: number) => {
     setCurrentMessageIndex(index);
     const item = basket[index];
-    const existingMessage = item.product.name.includes(' - ') 
-      ? item.product.name.split(' - ').slice(1).join(' - ') 
+    const existingMessage = item?.product.name.includes(' - ')
+      ? item.product.name.split(' - ').slice(1).join(' - ')
       : '';
     setMessageInput(existingMessage);
     setMessageModalVisible(true);
-  };
+  }, [basket]);
 
   const closeMessageModal = () => {
     setMessageModalVisible(false);
@@ -690,13 +718,13 @@ export default function BasketScreen() {
     }
   };
 
-  const handleRefundItem = (index: number) => {
+  const handleRefundItem = useCallback((index: number) => {
     refundBasketItem(index);
-  };
+  }, [refundBasketItem]);
 
-  const handleUndoRefund = (index: number) => {
+  const handleUndoRefund = useCallback((index: number) => {
     refundBasketItem(index);
-  };
+  }, [refundBasketItem]);
 
   const handleConfirmChange = async () => {
     if (!pendingTenderId) return;
@@ -799,6 +827,7 @@ export default function BasketScreen() {
             ]}
             onPress={clearBasket}
             activeOpacity={0.7}
+            testID="basket-clear"
           >
             {getButtonOverlayStyle(buttonSkin) && (
               <View style={getButtonOverlayStyle(buttonSkin) as any} />
@@ -809,22 +838,28 @@ export default function BasketScreen() {
         </View>
       </View>
 
-      <ScrollView
+      <FlatList
+        data={basket}
         style={styles.itemsList}
         contentContainerStyle={styles.itemsContainer}
+        keyExtractor={(item, index) => `${item.product.id}:${item.selectedPrice.key}:${index}`}
         showsVerticalScrollIndicator={false}
-      >
-        {basket.map((item, index) => {
+        removeClippedSubviews
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        updateCellsBatchingPeriod={50}
+        windowSize={8}
+        renderItem={({ item, index }) => {
           const isRefundItem = item.quantity < 0;
           const prefix = getPricePrefix(item.selectedPrice.label);
-          
-          const displayName = prefix !== '' && item.product.name.toUpperCase().startsWith(prefix.toUpperCase() + ' ') 
-            ? item.product.name.substring(prefix.length + 1)
-            : item.product.name;
-          
+
+          const displayName =
+            prefix !== '' && item.product.name.toUpperCase().startsWith(prefix.toUpperCase() + ' ')
+              ? item.product.name.substring(prefix.length + 1)
+              : item.product.name;
+
           return (
             <SwipeableBasketItem
-              key={index}
               item={item}
               index={index}
               isRefundItem={isRefundItem}
@@ -842,8 +877,8 @@ export default function BasketScreen() {
               getButtonOverlayStyle={getButtonOverlayStyle}
             />
           );
-        })}
-      </ScrollView>
+        }}
+      />
 
       <View style={[styles.summary, { backgroundColor: colors.cardBackground, borderTopColor: colors.border }]}>
         <View style={styles.summaryRow}>
@@ -973,6 +1008,7 @@ export default function BasketScreen() {
             ]}
             onPress={openPaymentModal}
             activeOpacity={0.8}
+            testID="basket-pay"
           >
             {getButtonOverlayStyle(buttonSkin) && (
               <View style={getButtonOverlayStyle(buttonSkin) as any} />
