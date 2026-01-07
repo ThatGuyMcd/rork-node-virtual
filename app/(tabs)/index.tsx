@@ -360,6 +360,7 @@ export default function ProductsScreen() {
       const areaTables: Table[] = [];
       const tableSet = new Map<string, { area: string; table: string; tableId: string }>();
       const tableDataMap = new Map<string, string>();
+      const lockedTables = new Set<string>();
 
       // Create table entries for ALL folders found in manifest (even without files)
       allTableFolders.forEach(folderPath => {
@@ -381,7 +382,7 @@ export default function ProductsScreen() {
         }
       });
 
-      // Now process downloaded files to find tabledata.csv
+      // Now process downloaded files to find tabledata.csv and opentable.ini
       for (const [path, content] of files.entries()) {
         const upper = path.toUpperCase();
         if (!upper.startsWith('TABDATA/')) continue;
@@ -392,10 +393,18 @@ export default function ProductsScreen() {
         const areaName = parts[0];
         const table = parts[1];
         const fileName = parts[2];
+        const key = `${areaName}/${table}`;
+        
+        if (fileName.toUpperCase() === 'OPENTABLE.INI') {
+          const tableInfo = tableSet.get(key);
+          if (tableInfo) {
+            lockedTables.add(tableInfo.tableId);
+            console.log(`[Products] Table ${table} is LOCKED (opentable.ini found)`);
+          }
+          continue;
+        }
         
         if (upper.endsWith('.INI')) continue;
-        
-        const key = `${areaName}/${table}`;
         
         if (fileName.toUpperCase() === 'TABLEDATA.CSV') {
           const tableInfo = tableSet.get(key);
@@ -520,7 +529,11 @@ export default function ProductsScreen() {
       setTableStatuses(prevStatuses => {
         const newStatuses = new Map(prevStatuses);
         statuses.forEach((status, tableId) => {
-          newStatuses.set(tableId, { ...status, isLocked: false });
+          const isLocked = lockedTables.has(tableId);
+          newStatuses.set(tableId, { ...status, isLocked });
+          if (isLocked) {
+            console.log(`[Products] Table ${areaTables.find(t => t.id === tableId)?.name} marked as LOCKED`);
+          }
         });
         return newStatuses;
       });
@@ -1688,7 +1701,7 @@ export default function ProductsScreen() {
                         const hasData = status?.hasData || false;
                         const isLocked = status?.isLocked || false;
                         const subtotal = status?.subtotal || 0;
-                        const statusColor = isLocked ? '#ea580c' : (hasData ? '#166534' : '#1e3a8a');
+                        const statusColor = isLocked ? '#6b7280' : (hasData ? '#166534' : '#1e3a8a');
 
                         return (
                           <TouchableOpacity
