@@ -87,6 +87,7 @@ export default function ProductsScreen() {
   const [currentMenuId, setCurrentMenuId] = useState<string | null>(null);
   const [menuStack, setMenuStack] = useState<string[]>([]);
   const [saveErrorModalVisible, setSaveErrorModalVisible] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   const router = useRouter();
 
   const getButtonSkinStyle = useCallback((skin: ButtonSkin, backgroundColor: string = '#000000') => {
@@ -289,6 +290,7 @@ export default function ProductsScreen() {
 
   const loadAreaData = async (area: string) => {
     setLoadingAreaData(true);
+    setDownloadProgress(0);
     try {
       console.log('[Products] Downloading fresh data for area:', area);
       const siteInfo = await dataSyncService.getSiteInfo();
@@ -306,6 +308,25 @@ export default function ProductsScreen() {
       });
 
       console.log(`[Products] Found ${areaFiles.length} files for area ${area}`);
+
+      // Extract all unique table folders from manifest
+      const allTableFolders = new Set<string>();
+      manifest.forEach(fileInfo => {
+        const upper = fileInfo.path.toUpperCase();
+        if (!upper.startsWith('TABDATA/')) return;
+        
+        const parts = fileInfo.path.slice('TABDATA/'.length).split('/');
+        if (parts.length < 2) return;
+        
+        const fileArea = parts[0];
+        const tableName = parts[1];
+        
+        if (fileArea.toUpperCase() === area.toUpperCase()) {
+          allTableFolders.add(`${fileArea}/${tableName}`);
+        }
+      });
+      
+      console.log(`[Products] Found ${allTableFolders.size} table folders for area ${area}`);
 
       // Download files in parallel with a batch size
       const BATCH_SIZE = 10;
@@ -329,7 +350,9 @@ export default function ProductsScreen() {
           }
         });
         
-        console.log(`[Products] Downloaded ${files.size}/${areaFiles.length} files...`);
+        const progress = Math.round((files.size / areaFiles.length) * 100);
+        setDownloadProgress(progress);
+        console.log(`[Products] Downloaded ${files.size}/${areaFiles.length} files... (${progress}%)`);
       }
 
       console.log(`[Products] Downloaded ${files.size} files for area ${area}`);
@@ -338,6 +361,27 @@ export default function ProductsScreen() {
       const tableSet = new Map<string, { area: string; table: string; tableId: string }>();
       const tableDataMap = new Map<string, string>();
 
+      // Create table entries for ALL folders found in manifest (even without files)
+      allTableFolders.forEach(folderPath => {
+        const parts = folderPath.split('/');
+        if (parts.length !== 2) return;
+        
+        const areaName = parts[0];
+        const tableName = parts[1];
+        const key = `${areaName}/${tableName}`;
+        
+        if (!tableSet.has(key)) {
+          let hash = 0;
+          const hashString = `${areaName}_${tableName}_${Date.now()}`;
+          for (let i = 0; i < hashString.length; i++) {
+            hash = (hash * 31 + hashString.charCodeAt(i)) >>> 0;
+          }
+          const tableId = `table_${hash}`;
+          tableSet.set(key, { area: areaName, table: tableName, tableId });
+        }
+      });
+
+      // Now process downloaded files to find tabledata.csv
       for (const [path, content] of files.entries()) {
         const upper = path.toUpperCase();
         if (!upper.startsWith('TABDATA/')) continue;
@@ -352,15 +396,6 @@ export default function ProductsScreen() {
         if (upper.endsWith('.INI')) continue;
         
         const key = `${areaName}/${table}`;
-        if (!tableSet.has(key)) {
-          let hash = 0;
-          const hashString = `${areaName}_${table}_${Date.now()}`;
-          for (let i = 0; i < hashString.length; i++) {
-            hash = (hash * 31 + hashString.charCodeAt(i)) >>> 0;
-          }
-          const tableId = `table_${hash}`;
-          tableSet.set(key, { area: areaName, table, tableId });
-        }
         
         if (fileName.toUpperCase() === 'TABLEDATA.CSV') {
           const tableInfo = tableSet.get(key);
@@ -1642,6 +1677,7 @@ export default function ProductsScreen() {
                     <View style={{ alignItems: 'center', paddingVertical: 40 }}>
                       <ActivityIndicator size="large" color={colors.primary} />
                       <Text style={[styles.loadingText, { color: colors.textSecondary, marginTop: 16 }]}>Loading tables...</Text>
+                      <Text style={[styles.loadingText, { color: colors.primary, marginTop: 8, fontSize: 18, fontWeight: '700' }]}>{downloadProgress}%</Text>
                     </View>
                   ) : (
                     <View style={styles.tableGrid}>
