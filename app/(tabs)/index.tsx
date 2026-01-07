@@ -528,13 +528,22 @@ export default function ProductsScreen() {
       const statuses = await tableDataService.getAllTableStatuses(areaTableIds);
       setTableStatuses(prevStatuses => {
         const newStatuses = new Map(prevStatuses);
-        statuses.forEach((status, tableId) => {
+        
+        // Process ALL tables in the area, not just those with data
+        areaTableIds.forEach(tableId => {
           const isLocked = lockedTables.has(tableId);
+          const existingStatus = statuses.get(tableId);
+          
+          // If table has data, use that status, otherwise create default status
+          const status = existingStatus || { hasData: false, subtotal: 0 };
+          
           newStatuses.set(tableId, { ...status, isLocked });
+          
           if (isLocked) {
             console.log(`[Products] Table ${areaTables.find(t => t.id === tableId)?.name} marked as LOCKED`);
           }
         });
+        
         return newStatuses;
       });
 
