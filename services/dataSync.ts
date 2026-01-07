@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
 import { apiClient } from './api';
 import { dataParser } from './dataParser';
 import type { Operator, Product, ProductGroup, Department, Tender, VATRate, Table, ProductDisplaySettings, MenuData } from '@/types/pos';
@@ -198,6 +200,8 @@ export class DataSyncService {
     
     onProgress?.({ phase: 'parsing', current: 0, total: 1, message: 'Processing data...' });
 
+    await this.saveTableDataFiles(files);
+
     if (isIncremental) {
       await this.parseAndMergeData(files);
     } else {
@@ -270,6 +274,50 @@ export class DataSyncService {
       // Within the same folder, sort alphabetically
       return a.path.localeCompare(b.path);
     });
+  }
+
+  private async saveTableDataFiles(files: Map<string, string>): Promise<void> {
+    if (Platform.OS === 'web' || !FileSystem.documentDirectory) {
+      console.log('[DataSync] Skipping table data file storage (web or no file system)');
+      return;
+    }
+
+    console.log('[DataSync] Saving TABDATA files to local file system...');
+    let savedCount = 0;
+
+    for (const [path, content] of files.entries()) {
+      const upper = path.toUpperCase();
+      if (!upper.startsWith('TABDATA/')) continue;
+      
+      if (upper.endsWith('.INI')) {
+        console.log(`[DataSync] Skipping .ini file: ${path}`);
+        continue;
+      }
+      
+      const parts = path.slice('TABDATA/'.length).split('/');
+      if (parts.length < 3) continue;
+
+      const area = parts[0];
+      const table = parts[1];
+      const fileName = parts[2];
+      
+      try {
+        const tableFolder = `${FileSystem.documentDirectory}tables/${area}/${table}/`;
+        const folderInfo = await FileSystem.getInfoAsync(tableFolder);
+        if (!folderInfo.exists) {
+          await FileSystem.makeDirectoryAsync(tableFolder, { intermediates: true });
+        }
+        
+        const filePath = `${tableFolder}${fileName}`;
+        await FileSystem.writeAsStringAsync(filePath, content);
+        savedCount++;
+        console.log(`[DataSync] Saved: ${area}/${table}/${fileName} (${content.length} bytes)`);
+      } catch (error) {
+        console.error(`[DataSync] Error saving table file ${path}:`, error);
+      }
+    }
+
+    console.log(`[DataSync] Saved ${savedCount} table data files to local file system`);
   }
 
   private async parseAndStoreData(files: Map<string, string>): Promise<void> {
