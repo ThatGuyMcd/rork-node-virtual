@@ -27,6 +27,7 @@ export interface TableDataRow {
 class TableDataService {
   private readonly fileName = 'tabledata.csv';
   private data: Map<string, TableDataRow[]> = new Map();
+  private tableFiles: Map<string, Map<string, string>> = new Map();
   
   private getFilePath(): string | null {
     if (Platform.OS === 'web') {
@@ -236,7 +237,14 @@ class TableDataService {
     const allFiles: Record<string, string> = {};
     
     if (!this.isFileSystemAvailable() || !FileSystem.documentDirectory) {
-      console.log('[TableDataService] File system not available');
+      console.log('[TableDataService] File system not available, checking memory storage');
+      const tableKey = `${table.area}/${table.name}`;
+      const memoryFiles = this.tableFiles.get(tableKey);
+      if (memoryFiles) {
+        console.log(`[TableDataService] Found ${memoryFiles.size} files in memory for ${tableKey}`);
+        return Object.fromEntries(memoryFiles);
+      }
+      console.log('[TableDataService] No files in memory storage');
       return allFiles;
     }
 
@@ -384,14 +392,21 @@ class TableDataService {
   async clearTableData(tableId: string, table?: Table): Promise<void> {
     await this.clearTableDataLocally(tableId);
     
-    if (table && this.isFileSystemAvailable() && FileSystem.documentDirectory) {
-      const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
-      const folderInfo = await FileSystem.getInfoAsync(tableFolder);
-      if (folderInfo.exists) {
-        await FileSystem.deleteAsync(tableFolder, { idempotent: true });
-        console.log('[TableDataService] Deleted table folder:', tableFolder);
+    if (table) {
+      if (this.isFileSystemAvailable() && FileSystem.documentDirectory) {
+        const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+        const folderInfo = await FileSystem.getInfoAsync(tableFolder);
+        if (folderInfo.exists) {
+          await FileSystem.deleteAsync(tableFolder, { idempotent: true });
+          console.log('[TableDataService] Deleted table folder:', tableFolder);
+        }
+        await this.syncToServer(table);
+      } else {
+        const tableKey = `${table.area}/${table.name}`;
+        this.tableFiles.delete(tableKey);
+        console.log('[TableDataService] Cleared table files from memory:', tableKey);
+        await this.syncToServer(table);
       }
-      await this.syncToServer(table);
     }
   }
 
@@ -440,6 +455,12 @@ class TableDataService {
       console.error('[TableDataService] Append error:', error);
       throw error;
     }
+  }
+
+  storeTableFilesInMemory(area: string, tableName: string, files: Map<string, string>): void {
+    const tableKey = `${area}/${tableName}`;
+    this.tableFiles.set(tableKey, new Map(files));
+    console.log(`[TableDataService] Stored ${files.size} files in memory for ${tableKey}`);
   }
 
   private determinePrinter(group: string): string {
@@ -568,6 +589,16 @@ class TableDataService {
     if (!this.isFileSystemAvailable()) {
       this.data.set(table.id, rows);
       console.log('[TableDataService] Stored table data in memory for web upload');
+      
+      const tableKey = `${table.area}/${table.name}`;
+      let files = this.tableFiles.get(tableKey);
+      if (!files) {
+        files = new Map();
+        this.tableFiles.set(tableKey, files);
+      }
+      const csvContent = this.rowsToCSV(rows);
+      files.set('tabledata.csv', csvContent);
+      console.log(`[TableDataService] Updated tabledata.csv in memory for ${tableKey}`);
     } else {
       await this.saveTableDataToTableFolder(table, rows);
     }
@@ -578,6 +609,8 @@ class TableDataService {
   async syncClearTableToServerSafe(table: Table): Promise<void> {
     if (!this.isFileSystemAvailable()) {
       this.data.delete(table.id);
+      const tableKey = `${table.area}/${table.name}`;
+      this.tableFiles.delete(tableKey);
       console.log('[TableDataService] Cleared table data from memory for web upload');
     } else if (FileSystem.documentDirectory) {
       const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;

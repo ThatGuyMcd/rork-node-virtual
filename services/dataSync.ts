@@ -277,8 +277,44 @@ export class DataSyncService {
   }
 
   private async saveTableDataFiles(files: Map<string, string>): Promise<void> {
-    if (Platform.OS === 'web' || !FileSystem.documentDirectory) {
-      console.log('[DataSync] Skipping table data file storage (web or no file system)');
+    const isWeb = Platform.OS === 'web' || !FileSystem.documentDirectory;
+    
+    if (isWeb) {
+      console.log('[DataSync] Saving TABDATA files to memory storage for web...');
+      const tableFilesMap = new Map<string, Map<string, string>>();
+      
+      for (const [path, content] of files.entries()) {
+        const upper = path.toUpperCase();
+        if (!upper.startsWith('TABDATA/')) continue;
+        
+        if (upper.endsWith('.INI')) {
+          console.log(`[DataSync] Skipping .ini file: ${path}`);
+          continue;
+        }
+        
+        const parts = path.slice('TABDATA/'.length).split('/');
+        if (parts.length < 3) continue;
+
+        const area = parts[0];
+        const table = parts[1];
+        const fileName = parts[2];
+        const tableKey = `${area}/${table}`;
+        
+        if (!tableFilesMap.has(tableKey)) {
+          tableFilesMap.set(tableKey, new Map());
+        }
+        
+        tableFilesMap.get(tableKey)!.set(fileName, content);
+        console.log(`[DataSync] Added to memory: ${area}/${table}/${fileName} (${content.length} bytes)`);
+      }
+      
+      const { tableDataService } = await import('./tableDataService');
+      for (const [tableKey, fileMap] of tableFilesMap.entries()) {
+        const [area, tableName] = tableKey.split('/');
+        tableDataService.storeTableFilesInMemory(area, tableName, fileMap);
+      }
+      
+      console.log(`[DataSync] Stored ${tableFilesMap.size} tables in memory with their files`);
       return;
     }
 
