@@ -234,11 +234,11 @@ export default function ProductsScreen() {
 
 
   useEffect(() => {
-    if (tableModalVisible && tables.length > 0) {
+    if (tableModalVisible && tables.length > 0 && !loadingAreaData) {
       loadTableStatuses();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableModalVisible, tables]);
+  }, [tableModalVisible, tables, loadingAreaData]);
 
   useEffect(() => {
     const interval = setInterval(() => {
