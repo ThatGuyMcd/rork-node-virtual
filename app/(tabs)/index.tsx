@@ -361,6 +361,7 @@ export default function ProductsScreen() {
       const tableSet = new Map<string, { area: string; table: string; tableId: string }>();
       const tableDataMap = new Map<string, string>();
       const lockedTables = new Set<string>();
+      const tableFilesMap = new Map<string, Map<string, string>>();
 
       // Create table entries for ALL folders found in manifest (even without files)
       allTableFolders.forEach(folderPath => {
@@ -379,6 +380,7 @@ export default function ProductsScreen() {
           }
           const tableId = `table_${hash}`;
           tableSet.set(key, { area: areaName, table: tableName, tableId });
+          tableFilesMap.set(key, new Map());
         }
       });
 
@@ -394,6 +396,13 @@ export default function ProductsScreen() {
         const table = parts[1];
         const fileName = parts[2];
         const key = `${areaName}/${table}`;
+        
+        // Store ALL files for this table (including tableopen.ini) for later re-upload
+        const tableFiles = tableFilesMap.get(key);
+        if (tableFiles) {
+          tableFiles.set(fileName, content);
+          console.log(`[Products] Stored file ${fileName} for table ${table}`);
+        }
         
         if (fileName.toUpperCase() === 'TABLEOPEN.INI') {
           const tableInfo = tableSet.get(key);
@@ -434,6 +443,17 @@ export default function ProductsScreen() {
 
       console.log(`[Products] Parsed ${areaTables.length} tables for area ${area}`);
       console.log(`[Products] Found ${tableDataMap.size} tables with data`);
+
+      // Store all table files for later re-upload
+      for (const [key, tableFiles] of tableFilesMap.entries()) {
+        const parts = key.split('/');
+        if (parts.length === 2) {
+          const areaName = parts[0];
+          const tableName = parts[1];
+          tableDataService.storeTableFilesInMemory(areaName, tableName, tableFiles);
+          console.log(`[Products] Stored ${tableFiles.size} files in memory for ${areaName}/${tableName}`);
+        }
+      }
 
       setTables(prevTables => {
         const otherAreaTables = prevTables.filter(t => t.area !== area);
