@@ -382,7 +382,7 @@ export default function ProductsScreen() {
         }
       });
 
-      // Now process downloaded files to find tabledata.csv and opentable.ini
+      // Now process downloaded files to find tabledata.csv and tableopen.ini
       for (const [path, content] of files.entries()) {
         const upper = path.toUpperCase();
         if (!upper.startsWith('TABDATA/')) continue;
@@ -395,11 +395,11 @@ export default function ProductsScreen() {
         const fileName = parts[2];
         const key = `${areaName}/${table}`;
         
-        if (fileName.toUpperCase() === 'OPENTABLE.INI') {
+        if (fileName.toUpperCase() === 'TABLEOPEN.INI') {
           const tableInfo = tableSet.get(key);
           if (tableInfo) {
             lockedTables.add(tableInfo.tableId);
-            console.log(`[Products] Table ${table} is LOCKED (opentable.ini found)`);
+            console.log(`[Products] Table ${table} is LOCKED (tableopen.ini found)`);
           }
           continue;
         }
