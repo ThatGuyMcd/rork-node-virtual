@@ -88,6 +88,7 @@ export default function ProductsScreen() {
   const [menuStack, setMenuStack] = useState<string[]>([]);
   const [saveErrorModalVisible, setSaveErrorModalVisible] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const justFinishedLoadingAreaRef = useRef(false);
   const router = useRouter();
 
   const getButtonSkinStyle = useCallback((skin: ButtonSkin, backgroundColor: string = '#000000') => {
@@ -235,6 +236,13 @@ export default function ProductsScreen() {
 
   useEffect(() => {
     if (tableModalVisible && tables.length > 0 && !loadingAreaData) {
+      // Skip loading table statuses if we just finished loading area data
+      // because loadAreaData already set the statuses with locked info
+      if (justFinishedLoadingAreaRef.current) {
+        console.log('[Products] Skipping loadTableStatuses - just finished loading area data');
+        justFinishedLoadingAreaRef.current = false;
+        return;
+      }
       loadTableStatuses();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -537,6 +545,8 @@ export default function ProductsScreen() {
       }
       
       // Stop loading spinner early so tables are visible
+      // Mark that we just finished loading so we don't overwrite statuses
+      justFinishedLoadingAreaRef.current = true;
       setLoadingAreaData(false);
 
       // Load table statuses in the background
