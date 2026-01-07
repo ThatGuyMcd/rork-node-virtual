@@ -184,7 +184,7 @@ export class PositronAPI {
     
     // Build file data with full paths (matching settings-profiles pattern)
     const fileData: Record<string, string> = {};
-    const folderPath = `DATA/TABDATA/${area}/${tableName}`;
+    const folderPath = `TABDATA/${area}/${tableName}`;
     
     // Add tabledata.csv
     fileData[`${folderPath}/tabledata.csv`] = csvContent;
