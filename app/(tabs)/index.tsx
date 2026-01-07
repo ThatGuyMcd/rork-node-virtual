@@ -1768,6 +1768,7 @@ export default function ProductsScreen() {
                     <View style={styles.tableGrid}>
                     {tables
                       .filter(table => table.area === selectedArea)
+                      .sort((a, b) => a.name.localeCompare(b.name))
                       .map((table) => {
                         const status = tableStatuses.get(table.id);
                         const hasData = status?.hasData || false;
