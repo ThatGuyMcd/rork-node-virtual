@@ -323,18 +323,20 @@ export default function ProductsScreen() {
         console.log(`[Products] Found tableplan.ini for ${area}`);
         
         // Parse tableplan.ini to extract table names
+        // Format: Table:ROOM 101=18,19,84,80
         const lines = tableplanContent.split(/[\r\n]+/);
         for (const line of lines) {
           const trimmed = line.trim();
-          // Look for lines that might be table names (skip comments and empty lines)
-          if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith(';') || trimmed.startsWith('[')) continue;
+          // Look for lines that start with "Table:"
+          if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith(';')) continue;
           
-          // If line contains '=' it might be a key-value, extract the key as potential table name
-          if (trimmed.includes('=')) {
-            const key = trimmed.split('=')[0].trim();
-            if (key && key !== 'AREA_NAME' && key !== 'AREA_COLOR') {
-              allTableFolders.add(`${area}/${key}`);
-              console.log(`[Products] Found table from tableplan.ini: ${key}`);
+          if (trimmed.toUpperCase().startsWith('TABLE:')) {
+            // Extract table name from "Table:ROOM 101=..."
+            const afterTable = trimmed.substring(6); // Skip "Table:"
+            const tableName = afterTable.split('=')[0].trim();
+            if (tableName) {
+              allTableFolders.add(`${area}/${tableName}`);
+              console.log(`[Products] Found table from tableplan.ini: ${tableName}`);
             }
           }
         }
