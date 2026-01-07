@@ -316,7 +316,7 @@ export default function ProductsScreen() {
         if (!upper.startsWith('TABDATA/')) return;
         
         const parts = fileInfo.path.slice('TABDATA/'.length).split('/');
-        if (parts.length < 2) return;
+        if (parts.length < 3) return;
         
         const fileArea = parts[0];
         const tableName = parts[1];
