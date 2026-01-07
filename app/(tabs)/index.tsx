@@ -313,22 +313,57 @@ export default function ProductsScreen() {
 
       console.log(`[Products] Found ${areaFiles.length} files for area ${area}`);
 
-      // Extract all unique table folders from manifest
+      // Try to get table list from tableplan.ini
       const allTableFolders = new Set<string>();
-      manifest.forEach(fileInfo => {
-        const upper = fileInfo.path.toUpperCase();
-        if (!upper.startsWith('TABDATA/')) return;
+      let tableplanContent: string | null = null;
+      
+      try {
+        const tableplanPath = `TABDATA/${area}/tableplan.ini`;
+        tableplanContent = await apiClient.getFile(siteInfo.siteId, tableplanPath);
+        console.log(`[Products] Found tableplan.ini for ${area}`);
         
-        const parts = fileInfo.path.slice('TABDATA/'.length).split('/');
-        if (parts.length < 3) return;
-        
-        const fileArea = parts[0];
-        const tableName = parts[1];
-        
-        if (fileArea.toUpperCase() === area.toUpperCase()) {
-          allTableFolders.add(`${fileArea}/${tableName}`);
+        // Parse tableplan.ini to extract table names
+        const lines = tableplanContent.split(/[\r\n]+/);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          // Look for lines that might be table names (skip comments and empty lines)
+          if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith(';') || trimmed.startsWith('[')) continue;
+          
+          // If line contains '=' it might be a key-value, extract the key as potential table name
+          if (trimmed.includes('=')) {
+            const key = trimmed.split('=')[0].trim();
+            if (key && key !== 'AREA_NAME' && key !== 'AREA_COLOR') {
+              allTableFolders.add(`${area}/${key}`);
+              console.log(`[Products] Found table from tableplan.ini: ${key}`);
+            }
+          }
         }
-      });
+      } catch {
+        console.log(`[Products] No tableplan.ini found for ${area}, using manifest folders`);
+      }
+      
+      // If no tableplan.ini or it's empty, extract folders from manifest
+      if (allTableFolders.size === 0) {
+        manifest.forEach(fileInfo => {
+          const upper = fileInfo.path.toUpperCase();
+          if (!upper.startsWith('TABDATA/')) return;
+          
+          const parts = fileInfo.path.slice('TABDATA/'.length).split('/');
+          if (parts.length < 3) return;
+          
+          const fileArea = parts[0];
+          const tableName = parts[1];
+          
+          // Skip area_settings.ini and tableplan.ini - these are not tables
+          if (tableName.toLowerCase() === 'area_settings.ini' || tableName.toLowerCase() === 'tableplan.ini') {
+            return;
+          }
+          
+          if (fileArea.toUpperCase() === area.toUpperCase()) {
+            allTableFolders.add(`${fileArea}/${tableName}`);
+          }
+        });
+      }
       
       console.log(`[Products] Found ${allTableFolders.size} table folders for area ${area}`);
 
