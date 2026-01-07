@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
+  FlatList,
   StyleSheet,
   Dimensions,
   Modal,
@@ -651,6 +652,26 @@ export default function ProductsScreen() {
     return filtered;
   })();
   
+  const productCountByDepartmentId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of products) {
+      const deptNameOrId = p.departmentId;
+      const matchingDept = departments.find((d) => d.name === deptNameOrId);
+      const deptId = matchingDept?.id;
+      if (!deptId) continue;
+      map.set(deptId, (map.get(deptId) ?? 0) + 1);
+    }
+    return map;
+  }, [products, departments]);
+
+  const departmentCountByGroupId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const d of visibleDepartments) {
+      map.set(d.groupId, (map.get(d.groupId) ?? 0) + 1);
+    }
+    return map;
+  }, [visibleDepartments]);
+
   const filteredDepartments = visibleDepartments.filter((d) => d.groupId === selectedGroup);
   
   const filteredProducts = products.filter((p) => {
@@ -1250,13 +1271,21 @@ export default function ProductsScreen() {
       {productViewMode === 'group-department' && !selectedGroup && (
         <View style={styles.content}>
           <Text style={[styles.heading, { color: colors.text }]}>Select a Category</Text>
-          <ScrollView
+          <FlatList
+            data={visibleGroups}
+            keyExtractor={(group) => group.id}
+            numColumns={productViewLayout === 'large' ? 1 : productViewLayout === 'compact' ? 3 : 2}
+            columnWrapperStyle={productViewLayout === 'large' ? undefined : styles.gridRow}
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
-          >
-            {visibleGroups.map((group) => (
+            initialNumToRender={18}
+            windowSize={8}
+            maxToRenderPerBatch={24}
+            updateCellsBatchingPeriod={50}
+            removeClippedSubviews
+            renderItem={({ item: group }) => (
               <TouchableOpacity
-                key={group.id}
+                testID={`group-card-${group.id}`}
                 style={[
                   styles.card,
                   {
@@ -1280,17 +1309,21 @@ export default function ProductsScreen() {
                 {getButtonOverlayStyle(buttonSkin) && (
                   <View style={getButtonOverlayStyle(buttonSkin) as any} />
                 )}
-                <Text style={[
-                  styles.cardTitle,
-                  productViewLayout === 'compact' && styles.cardTitleCompact,
-                  productViewLayout === 'large' && styles.cardTitleLarge,
-                ]}>{trimName(group.name)}</Text>
+                <Text
+                  style={[
+                    styles.cardTitle,
+                    productViewLayout === 'compact' && styles.cardTitleCompact,
+                    productViewLayout === 'large' && styles.cardTitleLarge,
+                  ]}
+                >
+                  {trimName(group.name)}
+                </Text>
                 <Text style={styles.cardCount}>
-                  {visibleDepartments.filter((d) => d.groupId === group.id).length} departments
+                  {departmentCountByGroupId.get(group.id) ?? 0} departments
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            )}
+          />
         </View>
       )}
 
@@ -1305,13 +1338,21 @@ export default function ProductsScreen() {
           </TouchableOpacity>
 
           <Text style={[styles.heading, { color: colors.text }]}>{group?.name ? trimName(group.name) : ''} Departments</Text>
-          <ScrollView
+          <FlatList
+            data={filteredDepartments}
+            keyExtractor={(dept) => dept.id}
+            numColumns={productViewLayout === 'large' ? 1 : productViewLayout === 'compact' ? 3 : 2}
+            columnWrapperStyle={productViewLayout === 'large' ? undefined : styles.gridRow}
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
-          >
-            {filteredDepartments.map((dept) => (
+            initialNumToRender={18}
+            windowSize={8}
+            maxToRenderPerBatch={24}
+            updateCellsBatchingPeriod={50}
+            removeClippedSubviews
+            renderItem={({ item: dept }) => (
               <TouchableOpacity
-                key={dept.id}
+                testID={`department-card-${dept.id}`}
                 style={[
                   styles.card,
                   {
@@ -1335,33 +1376,42 @@ export default function ProductsScreen() {
                 {getButtonOverlayStyle(buttonSkin) && (
                   <View style={getButtonOverlayStyle(buttonSkin) as any} />
                 )}
-                <Text style={[
-                  styles.cardTitle,
-                  productViewLayout === 'compact' && styles.cardTitleCompact,
-                  productViewLayout === 'large' && styles.cardTitleLarge,
-                ]}>{trimName(dept.name)}</Text>
+                <Text
+                  style={[
+                    styles.cardTitle,
+                    productViewLayout === 'compact' && styles.cardTitleCompact,
+                    productViewLayout === 'large' && styles.cardTitleLarge,
+                  ]}
+                >
+                  {trimName(dept.name)}
+                </Text>
                 <Text style={styles.cardCount}>
-                  {products.filter((p) => {
-                    const matchingDept = departments.find(d => d.name === p.departmentId);
-                    return matchingDept?.id === dept.id;
-                  }).length} items
+                  {productCountByDepartmentId.get(dept.id) ?? 0} items
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            )}
+          />
         </View>
       )}
 
       {productViewMode === 'all-departments' && !selectedDepartment && (
         <View style={styles.content}>
           <Text style={[styles.heading, { color: colors.text }]}>All Departments</Text>
-          <ScrollView
+          <FlatList
+            data={visibleDepartments}
+            keyExtractor={(dept) => dept.id}
+            numColumns={productViewLayout === 'large' ? 1 : productViewLayout === 'compact' ? 3 : 2}
+            columnWrapperStyle={productViewLayout === 'large' ? undefined : styles.gridRow}
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
-          >
-            {visibleDepartments.map((dept) => (
+            initialNumToRender={18}
+            windowSize={8}
+            maxToRenderPerBatch={24}
+            updateCellsBatchingPeriod={50}
+            removeClippedSubviews
+            renderItem={({ item: dept }) => (
               <TouchableOpacity
-                key={dept.id}
+                testID={`department-card-${dept.id}`}
                 style={[
                   styles.card,
                   {
@@ -1377,33 +1427,42 @@ export default function ProductsScreen() {
                 {getButtonOverlayStyle(buttonSkin) && (
                   <View style={getButtonOverlayStyle(buttonSkin) as any} />
                 )}
-                <Text style={[
-                  styles.cardTitle,
-                  productViewLayout === 'compact' && styles.cardTitleCompact,
-                  productViewLayout === 'large' && styles.cardTitleLarge,
-                ]}>{trimName(dept.name)}</Text>
+                <Text
+                  style={[
+                    styles.cardTitle,
+                    productViewLayout === 'compact' && styles.cardTitleCompact,
+                    productViewLayout === 'large' && styles.cardTitleLarge,
+                  ]}
+                >
+                  {trimName(dept.name)}
+                </Text>
                 <Text style={styles.cardCount}>
-                  {products.filter((p) => {
-                    const matchingDept = departments.find(d => d.name === p.departmentId);
-                    return matchingDept?.id === dept.id;
-                  }).length} items
+                  {productCountByDepartmentId.get(dept.id) ?? 0} items
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            )}
+          />
         </View>
       )}
 
       {productViewMode === 'all-items' && (
         <View style={styles.content}>
           <Text style={[styles.heading, { color: colors.text }]}>All Products</Text>
-          <ScrollView
+          <FlatList
+            data={sortProducts(allVisibleProducts, undefined)}
+            keyExtractor={(product) => product.id}
+            numColumns={productViewLayout === 'large' ? 1 : productViewLayout === 'compact' ? 3 : 2}
+            columnWrapperStyle={productViewLayout === 'large' ? undefined : styles.gridRow}
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
-          >
-            {sortProducts(allVisibleProducts, undefined).map((product) => (
+            initialNumToRender={24}
+            windowSize={7}
+            maxToRenderPerBatch={32}
+            updateCellsBatchingPeriod={50}
+            removeClippedSubviews
+            renderItem={({ item: product }) => (
               <TouchableOpacity
-                key={product.id}
+                testID={`product-card-${product.id}`}
                 style={[
                   styles.productCard,
                   {
@@ -1421,25 +1480,29 @@ export default function ProductsScreen() {
                 )}
                 <Text
                   style={[
-                    productViewLayout === 'compact' ? styles.productNameCompact : 
-                    productViewLayout === 'large' ? styles.productNameLarge : 
-                    styles.productName,
-                    { color: product.fontColor }
+                    productViewLayout === 'compact'
+                      ? styles.productNameCompact
+                      : productViewLayout === 'large'
+                        ? styles.productNameLarge
+                        : styles.productName,
+                    { color: product.fontColor },
                   ]}
                 >
                   {product.name}
                 </Text>
                 <Text
                   style={[
-                    productViewLayout === 'compact' ? styles.productPriceCompact : 
-                    productViewLayout === 'large' ? styles.productPriceLarge : 
-                    styles.productPrice,
-                    { color: product.fontColor }
+                    productViewLayout === 'compact'
+                      ? styles.productPriceCompact
+                      : productViewLayout === 'large'
+                        ? styles.productPriceLarge
+                        : styles.productPrice,
+                    { color: product.fontColor },
                   ]}
                 >
                   {(() => {
                     if (product.prices.length === 0) return 'No price';
-                    const validPrices = product.prices.filter(p => {
+                    const validPrices = product.prices.filter((p) => {
                       const label = p.label.toUpperCase();
                       return label !== 'OPEN' && label !== 'NOT SET';
                     });
@@ -1452,12 +1515,12 @@ export default function ProductsScreen() {
                     if (validPrices.length === 1) {
                       return `£${validPrices[0].price.toFixed(2)}`;
                     }
-                    return `from £${Math.min(...validPrices.map(p => p.price)).toFixed(2)}`;
+                    return `from £${Math.min(...validPrices.map((p) => p.price)).toFixed(2)}`;
                   })()}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            )}
+          />
         </View>
       )}
 
@@ -1479,13 +1542,21 @@ export default function ProductsScreen() {
             const dept = departments.find(d => d.id === selectedDepartment);
             return dept ? trimName(dept.name) : 'Products';
           })()}</Text>
-          <ScrollView
+          <FlatList
+            data={sortProducts(filteredProducts, selectedDepartment || undefined)}
+            keyExtractor={(product) => product.id}
+            numColumns={productViewLayout === 'large' ? 1 : productViewLayout === 'compact' ? 3 : 2}
+            columnWrapperStyle={productViewLayout === 'large' ? undefined : styles.gridRow}
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
-          >
-            {sortProducts(filteredProducts, selectedDepartment || undefined).map((product) => (
+            initialNumToRender={24}
+            windowSize={7}
+            maxToRenderPerBatch={32}
+            updateCellsBatchingPeriod={50}
+            removeClippedSubviews
+            renderItem={({ item: product }) => (
               <TouchableOpacity
-                key={product.id}
+                testID={`product-card-${product.id}`}
                 style={[
                   styles.productCard,
                   {
@@ -1503,25 +1574,29 @@ export default function ProductsScreen() {
                 )}
                 <Text
                   style={[
-                    productViewLayout === 'compact' ? styles.productNameCompact : 
-                    productViewLayout === 'large' ? styles.productNameLarge : 
-                    styles.productName,
-                    { color: product.fontColor }
+                    productViewLayout === 'compact'
+                      ? styles.productNameCompact
+                      : productViewLayout === 'large'
+                        ? styles.productNameLarge
+                        : styles.productName,
+                    { color: product.fontColor },
                   ]}
                 >
                   {product.name}
                 </Text>
                 <Text
                   style={[
-                    productViewLayout === 'compact' ? styles.productPriceCompact : 
-                    productViewLayout === 'large' ? styles.productPriceLarge : 
-                    styles.productPrice,
-                    { color: product.fontColor }
+                    productViewLayout === 'compact'
+                      ? styles.productPriceCompact
+                      : productViewLayout === 'large'
+                        ? styles.productPriceLarge
+                        : styles.productPrice,
+                    { color: product.fontColor },
                   ]}
                 >
                   {(() => {
                     if (product.prices.length === 0) return 'No price';
-                    const validPrices = product.prices.filter(p => {
+                    const validPrices = product.prices.filter((p) => {
                       const label = p.label.toUpperCase();
                       return label !== 'OPEN' && label !== 'NOT SET';
                     });
@@ -1534,12 +1609,12 @@ export default function ProductsScreen() {
                     if (validPrices.length === 1) {
                       return `£${validPrices[0].price.toFixed(2)}`;
                     }
-                    return `from £${Math.min(...validPrices.map(p => p.price)).toFixed(2)}`;
+                    return `from £${Math.min(...validPrices.map((p) => p.price)).toFixed(2)}`;
                   })()}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            )}
+          />
         </View>
       )}
 
@@ -2080,6 +2155,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 16,
     paddingBottom: 110,
+  },
+  gridRow: {
+    gap: 16,
   },
   card: {
     borderRadius: 16,
