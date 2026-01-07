@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   StatusBar,
   Modal,
   PanResponder,
+  FlatList,
 } from 'react-native';
 
 import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info, Server, Users, Menu, Loader, Edit2 } from 'lucide-react-native';
@@ -27,32 +28,30 @@ import { useTheme, type ThemeName, type ThemePreference, type ButtonSkin } from 
 import { Colors, type ThemeColors } from '@/constants/colors';
 import { hexToRgb, rgbToHex } from '@/utils/colorUtils';
 
-const CollapsibleSection = React.memo(({ 
+const CollapsibleSection = memo(({ 
   id, 
   icon: Icon, 
   title, 
   iconColor, 
   children,
-  expandedSections,
-  toggleSection,
+  isExpanded,
+  onToggle,
   colors,
   buttonSkin,
-  getButtonSkinStyle,
-  getButtonOverlayStyle
 }: { 
   id: string; 
   icon: any; 
   title: string; 
   iconColor: string; 
   children: React.ReactNode;
-  expandedSections: Record<string, boolean>;
-  toggleSection: (section: string) => void;
+  isExpanded: boolean;
+  onToggle: () => void;
   colors: any;
   buttonSkin: ButtonSkin;
-  getButtonSkinStyle: (skin: ButtonSkin, backgroundColor: string) => any;
-  getButtonOverlayStyle: (skin: ButtonSkin) => any;
 }) => {
-  const isExpanded = expandedSections[id];
+  const buttonSkinStyle = useMemo(() => getButtonSkinStyleStatic(buttonSkin, colors.cardBackground), [buttonSkin, colors.cardBackground]);
+  const overlayStyle = useMemo(() => getButtonOverlayStyleStatic(buttonSkin), [buttonSkin]);
+  const iconBgColor = useMemo(() => iconColor + '20', [iconColor]);
   
   return (
     <View style={[styles.section, styles.sectionFixedWidth, isExpanded && styles.sectionExpanded]}>
@@ -60,16 +59,16 @@ const CollapsibleSection = React.memo(({
         style={[
           styles.collapsibleHeader, 
           { borderColor: colors.border, backgroundColor: colors.cardBackground },
-          getButtonSkinStyle(buttonSkin, colors.cardBackground)
+          buttonSkinStyle
         ]}
-        onPress={() => toggleSection(id)}
+        onPress={onToggle}
         activeOpacity={0.7}
       >
-        {getButtonOverlayStyle(buttonSkin) && (
-          <View style={getButtonOverlayStyle(buttonSkin) as any} />
+        {overlayStyle && (
+          <View style={overlayStyle as any} />
         )}
         <View style={styles.sectionHeaderContent}>
-          <View style={[styles.iconCircle, { backgroundColor: iconColor + '20' }]}>
+          <View style={[styles.iconCircle, { backgroundColor: iconBgColor }]}>
             <Icon size={28} color={iconColor} />
           </View>
           <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={2}>{title}</Text>
@@ -85,6 +84,122 @@ const CollapsibleSection = React.memo(({
 });
 
 CollapsibleSection.displayName = 'CollapsibleSection';
+
+const getButtonSkinStyleStatic = (skin: ButtonSkin, backgroundColor: string = '#000000') => {
+  switch (skin) {
+    case 'rounded':
+      return {
+        borderRadius: 28,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        elevation: 10,
+      };
+    case 'sharp':
+      return {
+        borderRadius: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 2, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 0,
+        elevation: 4,
+      };
+    case 'soft':
+      return {
+        borderRadius: 20,
+        shadowColor: backgroundColor,
+        shadowOffset: { width: -4, height: -4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        elevation: 0,
+      };
+    case 'outlined':
+      return {
+        borderRadius: 16,
+        borderWidth: 3,
+        borderColor: backgroundColor,
+        shadowColor: backgroundColor,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 20,
+        elevation: 0,
+      };
+    case 'minimal':
+      return {
+        borderRadius: 8,
+        borderWidth: 0,
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
+      };
+    case 'default':
+    default:
+      return {
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        elevation: 6,
+      };
+  }
+};
+
+const getButtonOverlayStyleStatic = (skin: ButtonSkin) => {
+  switch (skin) {
+    case 'rounded':
+      return {
+        ...StyleSheet.absoluteFillObject,
+        borderRadius: 28,
+        borderTopWidth: 2,
+        borderLeftWidth: 2,
+        borderTopColor: 'rgba(255, 255, 255, 0.4)',
+        borderLeftColor: 'rgba(255, 255, 255, 0.3)',
+        borderBottomWidth: 3,
+        borderRightWidth: 3,
+        borderBottomColor: 'rgba(0, 0, 0, 0.5)',
+        borderRightColor: 'rgba(0, 0, 0, 0.4)',
+      };
+    case 'sharp':
+      return {
+        ...StyleSheet.absoluteFillObject,
+        borderRadius: 4,
+        borderTopWidth: 4,
+        borderLeftWidth: 4,
+        borderTopColor: 'rgba(255, 255, 255, 0.5)',
+        borderLeftColor: 'rgba(255, 255, 255, 0.4)',
+        borderBottomWidth: 4,
+        borderRightWidth: 4,
+        borderBottomColor: 'rgba(0, 0, 0, 0.6)',
+        borderRightColor: 'rgba(0, 0, 0, 0.5)',
+      };
+    case 'soft':
+      return {
+        ...StyleSheet.absoluteFillObject,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      };
+    case 'outlined':
+      return {
+        ...StyleSheet.absoluteFillObject,
+        borderRadius: 14,
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+      };
+    case 'minimal':
+      return {
+        ...StyleSheet.absoluteFillObject,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      };
+    default:
+      return null;
+  }
+};
 
 export default function SettingsScreen() {
   const [username, setUsername] = useState('');
@@ -165,121 +280,7 @@ export default function SettingsScreen() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   
-  const getButtonSkinStyle = useCallback((skin: ButtonSkin, backgroundColor: string = '#000000') => {
-    switch (skin) {
-      case 'rounded':
-        return {
-          borderRadius: 28,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.5,
-          shadowRadius: 12,
-          elevation: 10,
-        };
-      case 'sharp':
-        return {
-          borderRadius: 4,
-          shadowColor: '#000',
-          shadowOffset: { width: 2, height: 2 },
-          shadowOpacity: 0.3,
-          shadowRadius: 0,
-          elevation: 4,
-        };
-      case 'soft':
-        return {
-          borderRadius: 20,
-          shadowColor: backgroundColor,
-          shadowOffset: { width: -4, height: -4 },
-          shadowOpacity: 0.4,
-          shadowRadius: 8,
-          elevation: 0,
-        };
-      case 'outlined':
-        return {
-          borderRadius: 16,
-          borderWidth: 3,
-          borderColor: backgroundColor,
-          shadowColor: backgroundColor,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 1,
-          shadowRadius: 20,
-          elevation: 0,
-        };
-      case 'minimal':
-        return {
-          borderRadius: 8,
-          borderWidth: 0,
-          shadowColor: 'transparent',
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0,
-          shadowRadius: 0,
-          elevation: 0,
-        };
-      case 'default':
-      default:
-        return {
-          borderRadius: 12,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 6,
-          elevation: 6,
-        };
-    }
-  }, []);
 
-  const getButtonOverlayStyle = useCallback((skin: ButtonSkin) => {
-    switch (skin) {
-      case 'rounded':
-        return {
-          ...StyleSheet.absoluteFillObject,
-          borderRadius: 28,
-          borderTopWidth: 2,
-          borderLeftWidth: 2,
-          borderTopColor: 'rgba(255, 255, 255, 0.4)',
-          borderLeftColor: 'rgba(255, 255, 255, 0.3)',
-          borderBottomWidth: 3,
-          borderRightWidth: 3,
-          borderBottomColor: 'rgba(0, 0, 0, 0.5)',
-          borderRightColor: 'rgba(0, 0, 0, 0.4)',
-        };
-      case 'sharp':
-        return {
-          ...StyleSheet.absoluteFillObject,
-          borderRadius: 4,
-          borderTopWidth: 4,
-          borderLeftWidth: 4,
-          borderTopColor: 'rgba(255, 255, 255, 0.5)',
-          borderLeftColor: 'rgba(255, 255, 255, 0.4)',
-          borderBottomWidth: 4,
-          borderRightWidth: 4,
-          borderBottomColor: 'rgba(0, 0, 0, 0.6)',
-          borderRightColor: 'rgba(0, 0, 0, 0.5)',
-        };
-      case 'soft':
-        return {
-          ...StyleSheet.absoluteFillObject,
-          borderRadius: 20,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.2)',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        };
-      case 'outlined':
-        return {
-          ...StyleSheet.absoluteFillObject,
-          borderRadius: 14,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        };
-      case 'minimal':
-        return {
-          ...StyleSheet.absoluteFillObject,
-          borderRadius: 8,
-          backgroundColor: 'rgba(255, 255, 255, 0.06)',
-        };
-      default:
-        return null;
-    }
-  }, []);
   
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     account: true,
@@ -886,7 +887,7 @@ export default function SettingsScreen() {
     setCustomColorInput('');
   };
 
-  const toggleSection = (section: string) => {
+  const toggleSection = useCallback((section: string) => {
     setExpandedSections(prev => {
       const isCurrentlyExpanded = prev[section];
       if (isCurrentlyExpanded) {
@@ -906,11 +907,11 @@ export default function SettingsScreen() {
         };
       }
     });
-  };
+  }, []);
 
-  const expandedSection = useMemo(() => {
-    return Object.keys(expandedSections).find(key => expandedSections[key]) || null;
-  }, [expandedSections]);
+  const expandedSection = useMemo(() => 
+    Object.keys(expandedSections).find(key => expandedSections[key]) || null
+  , [expandedSections]);
 
   const applyCustomColor = () => {
     let colorValue = customColorInput.trim();
@@ -2800,7 +2801,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const sections = [
+  const sections = useMemo(() => [
     { id: 'account', icon: LogIn, title: 'Account Site Settings', color: '#3b82f6', order: siteInfo ? 1 : 1 },
     { id: 'dataSync', icon: Database, title: 'Server Sync Settings', color: '#10b981', order: siteInfo ? 2 : 999 },
     { id: 'reportsConsolidation', icon: FileText, title: 'Sales & Reports', color: '#f97316', order: siteInfo ? 3 : 2 },
@@ -2811,21 +2812,23 @@ export default function SettingsScreen() {
     { id: 'initialSetup', icon: SettingsIcon, title: 'Initial Setup', color: '#84cc16', order: 8 },
     { id: 'about', icon: Info, title: 'About this App', color: '#06b6d4', order: 9 },
     { id: 'danger', icon: Trash2, title: 'Danger Zone', color: '#ef4444', order: 10 },
-  ];
+  ], [siteInfo]);
 
-  const sortedSections = sections
-    .filter(section => {
-      if (section.id === 'dataSync' && !siteInfo) return false;
-      if (section.id === 'initialSetup' && isInitialSetupComplete) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      const aExpanded = expandedSections[a.id];
-      const bExpanded = expandedSections[b.id];
-      if (aExpanded && !bExpanded) return -1;
-      if (!aExpanded && bExpanded) return 1;
-      return a.order - b.order;
-    });
+  const sortedSections = useMemo(() => 
+    sections
+      .filter(section => {
+        if (section.id === 'dataSync' && !siteInfo) return false;
+        if (section.id === 'initialSetup' && isInitialSetupComplete) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const aExpanded = expandedSections[a.id];
+        const bExpanded = expandedSections[b.id];
+        if (aExpanded && !bExpanded) return -1;
+        if (!aExpanded && bExpanded) return 1;
+        return a.order - b.order;
+      })
+  , [sections, siteInfo, isInitialSetupComplete, expandedSections]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -2838,23 +2841,24 @@ export default function SettingsScreen() {
         scrollIndicatorInsets={{ top: 90 }}
       >
         <View style={styles.sectionsGrid}>
-          {sortedSections.map((section) => (
-            <CollapsibleSection
-              key={section.id}
-              id={section.id}
-              icon={section.icon}
-              title={section.title}
-              iconColor={section.color}
-              expandedSections={expandedSections}
-              toggleSection={toggleSection}
-              colors={colors}
-              buttonSkin={buttonSkin}
-              getButtonSkinStyle={getButtonSkinStyle}
-              getButtonOverlayStyle={getButtonOverlayStyle}
-            >
-              {renderSectionContent(section.id)}
-            </CollapsibleSection>
-          ))}
+          {sortedSections.map((section) => {
+            const isExpanded = expandedSections[section.id];
+            return (
+              <CollapsibleSection
+                key={section.id}
+                id={section.id}
+                icon={section.icon}
+                title={section.title}
+                iconColor={section.color}
+                isExpanded={isExpanded}
+                onToggle={() => toggleSection(section.id)}
+                colors={colors}
+                buttonSkin={buttonSkin}
+              >
+                {renderSectionContent(section.id)}
+              </CollapsibleSection>
+            );
+          })}
         </View>
       </ScrollView>
 
