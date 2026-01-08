@@ -380,9 +380,23 @@ export class DataSyncService {
     ]);
   }
 
+  private findFileByPattern(files: Map<string, string>, pattern: RegExp): string | undefined {
+    for (const [path, content] of files.entries()) {
+      if (pattern.test(path.toUpperCase())) {
+        return content;
+      }
+    }
+    return undefined;
+  }
+
   private async parseOperators(files: Map<string, string>): Promise<Operator[]> {
-    const content = files.get('OPERATORDATA/ACTIVE_OPERATORS.CSV') || files.get('operatordata/active_operators.csv');
-    if (!content) return [];
+    const content = this.findFileByPattern(files, /^OPERATORDATA\/ACTIVE_OPERATORS\.CSV$/i);
+    if (!content) {
+      console.log('[DataSync] No ACTIVE_OPERATORS.CSV found in files');
+      console.log('[DataSync] Available files:', Array.from(files.keys()).filter(k => k.toUpperCase().includes('OPERATOR')));
+      return [];
+    }
+    console.log('[DataSync] Found ACTIVE_OPERATORS.CSV, parsing...');
     
     const operators: Operator[] = [];
     const rows = dataParser.parseCSV(content);
