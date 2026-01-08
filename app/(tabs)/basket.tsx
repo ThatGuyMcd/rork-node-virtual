@@ -15,11 +15,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare, RotateCcw, Percent, Printer } from 'lucide-react-native';
+import { Trash2, Plus, Minus, CreditCard, X, Save, DollarSign, MessageSquare, RotateCcw, Percent, Printer, Split, Check } from 'lucide-react-native';
 import { usePOS } from '@/contexts/POSContext';
 import { useTheme, type ButtonSkin } from '@/contexts/ThemeContext';
 import { printerService } from '@/services/printerService';
 import { transactionService } from '@/services/transactionService';
+import { tableDataService, SplitBillData } from '@/services/tableDataService';
+import { dataSyncService } from '@/services/dataSync';
 import type { BasketItem, Transaction } from '@/types/pos';
 
 const getPricePrefix = (productName: string, label: string): string => {
@@ -489,6 +491,11 @@ export default function BasketScreen() {
   const [changeAmount, setChangeAmount] = useState(0);
   const [pendingTenderId, setPendingTenderId] = useState<string | null>(null);
   const [saveErrorModalVisible, setSaveErrorModalVisible] = useState(false);
+  const [splitBillModalVisible, setSplitBillModalVisible] = useState(false);
+  const [splitBills, setSplitBills] = useState<BasketItem[][]>([[], [], [], []]);
+  const [activeSplitBillIndex, setActiveSplitBillIndex] = useState(0);
+  const [selectedItemsForMove, setSelectedItemsForMove] = useState<Set<number>>(new Set());
+  const [splitBillSourceIndex, setSplitBillSourceIndex] = useState<number>(-1);
   const scaleAnim = useState(new Animated.Value(0))[0];
   const availableTenders = getAvailableTenders();
   const router = useRouter();
@@ -652,6 +659,144 @@ export default function BasketScreen() {
       setSaveErrorModalVisible(true);
     }
   };
+
+  const openSplitBillModal = useCallback(() => {
+    setSplitBills([[], [], [], []]);
+    setActiveSplitBillIndex(0);
+    setSelectedItemsForMove(new Set());
+    setSplitBillSourceIndex(-1);
+    setSplitBillModalVisible(true);
+    console.log('[Basket] Opened split bill modal');
+  }, []);
+
+  const closeSplitBillModal = useCallback(() => {
+    setSplitBillModalVisible(false);
+    setSelectedItemsForMove(new Set());
+    setSplitBillSourceIndex(-1);
+    console.log('[Basket] Closed split bill modal');
+  }, []);
+
+  const getMainBasketForSplit = useCallback(() => {
+    const movedItemIndices = new Set<number>();
+    splitBills.forEach(bill => {
+      bill.forEach(item => {
+        const originalIndex = basket.findIndex((b, idx) => 
+          !movedItemIndices.has(idx) &&
+          b.product.id === item.product.id && 
+          b.selectedPrice.key === item.selectedPrice.key
+        );
+        if (originalIndex >= 0) {
+          movedItemIndices.add(originalIndex);
+        }
+      });
+    });
+    return basket.filter((_, idx) => !movedItemIndices.has(idx));
+  }, [basket, splitBills]);
+
+  const toggleItemSelection = useCallback((itemIndex: number, sourceIndex: number) => {
+    if (splitBillSourceIndex !== -1 && splitBillSourceIndex !== sourceIndex) {
+      setSelectedItemsForMove(new Set([itemIndex]));
+      setSplitBillSourceIndex(sourceIndex);
+    } else {
+      const newSelected = new Set(selectedItemsForMove);
+      if (newSelected.has(itemIndex)) {
+        newSelected.delete(itemIndex);
+      } else {
+        newSelected.add(itemIndex);
+      }
+      setSelectedItemsForMove(newSelected);
+      setSplitBillSourceIndex(sourceIndex);
+    }
+  }, [selectedItemsForMove, splitBillSourceIndex]);
+
+  const moveSelectedItems = useCallback((targetBillIndex: number) => {
+    if (selectedItemsForMove.size === 0 || splitBillSourceIndex === targetBillIndex) return;
+    
+    const sourceItems = splitBillSourceIndex === -1 ? getMainBasketForSplit() : splitBills[splitBillSourceIndex];
+    const itemsToMove = Array.from(selectedItemsForMove).map(idx => sourceItems[idx]).filter(Boolean);
+    
+    if (itemsToMove.length === 0) return;
+    
+    const newSplitBills = [...splitBills];
+    
+    if (splitBillSourceIndex >= 0) {
+      newSplitBills[splitBillSourceIndex] = sourceItems.filter((_, idx) => !selectedItemsForMove.has(idx));
+    }
+    
+    if (targetBillIndex === -1) {
+      if (splitBillSourceIndex >= 0) {
+        newSplitBills[splitBillSourceIndex] = sourceItems.filter((_, idx) => !selectedItemsForMove.has(idx));
+      }
+    } else {
+      newSplitBills[targetBillIndex] = [...newSplitBills[targetBillIndex], ...itemsToMove];
+    }
+    
+    setSplitBills(newSplitBills);
+    setSelectedItemsForMove(new Set());
+    setSplitBillSourceIndex(-1);
+    console.log('[Basket] Moved items to bill', targetBillIndex === -1 ? 'Main' : targetBillIndex + 1);
+  }, [selectedItemsForMove, splitBillSourceIndex, splitBills, getMainBasketForSplit]);
+
+  const calculateBillTotal = useCallback((items: BasketItem[]) => {
+    return items.reduce((sum, item) => sum + item.lineTotal, 0);
+  }, []);
+
+  const handleSaveSplitBills = useCallback(async () => {
+    if (!currentTable || !currentOperator) {
+      Alert.alert('Error', 'No table selected');
+      return;
+    }
+    
+    const mainBasket = getMainBasketForSplit();
+    const splitBillData: SplitBillData = {
+      mainBasket,
+      splitBills: splitBills
+    };
+    
+    try {
+      const vatRatesData = await dataSyncService.getStoredVATRates();
+      await tableDataService.saveSplitBillsToTable(
+        currentTable,
+        splitBillData,
+        currentOperator,
+        vatRatesData
+      );
+      
+      Alert.alert('Success', 'Split bills saved to table');
+      closeSplitBillModal();
+      router.replace('/login');
+    } catch (error) {
+      console.error('[Basket] Failed to save split bills:', error);
+      Alert.alert('Error', 'Failed to save split bills');
+    }
+  }, [currentTable, currentOperator, splitBills, getMainBasketForSplit, closeSplitBillModal, router]);
+
+  const handlePaySplitBill = useCallback(async (billIndex: number) => {
+    const billItems = billIndex === -1 ? getMainBasketForSplit() : splitBills[billIndex];
+    if (billItems.length === 0) {
+      Alert.alert('Empty Bill', 'This bill has no items to pay');
+      return;
+    }
+    
+    Alert.alert(
+      'Pay Bill',
+      `Pay ${billIndex === -1 ? 'Main Bill' : `Bill ${billIndex + 1}`} (£${calculateBillTotal(billItems).toFixed(2)})?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Pay', 
+          onPress: () => {
+            if (billIndex >= 0) {
+              const newSplitBills = [...splitBills];
+              newSplitBills[billIndex] = [];
+              setSplitBills(newSplitBills);
+            }
+            console.log('[Basket] Bill paid:', billIndex === -1 ? 'Main' : billIndex + 1);
+          }
+        }
+      ]
+    );
+  }, [splitBills, getMainBasketForSplit, calculateBillTotal]);
 
   const openMessageModal = useCallback((index: number) => {
     setCurrentMessageIndex(index);
@@ -894,6 +1039,25 @@ export default function BasketScreen() {
           );
         }}
       />
+
+      {currentTable && basket.length > 0 && !splitBillModalVisible && (
+        <TouchableOpacity
+          style={[
+            styles.splitBillFloatingButton,
+            { backgroundColor: colors.accent },
+            getButtonSkinStyle(buttonSkin, colors.accent),
+          ]}
+          onPress={openSplitBillModal}
+          activeOpacity={0.8}
+          testID="split-bill-button"
+        >
+          {getButtonOverlayStyle(buttonSkin) && (
+            <View style={getButtonOverlayStyle(buttonSkin) as any} />
+          )}
+          <Split size={20} color="#fff" />
+          <Text style={styles.splitBillFloatingButtonText}>Split</Text>
+        </TouchableOpacity>
+      )}
 
       <View style={[styles.summary, { backgroundColor: colors.cardBackground, borderTopColor: colors.border }]}>
         <View style={styles.summaryRow}>
@@ -1609,6 +1773,181 @@ export default function BasketScreen() {
               activeOpacity={0.8}
             >
               <Text style={styles.confirmChangeButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        transparent
+        visible={splitBillModalVisible}
+        onRequestClose={closeSplitBillModal}
+        animationType="slide"
+      >
+        <View style={[styles.splitBillModalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.splitBillHeader, { backgroundColor: colors.cardBackground, borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={closeSplitBillModal} style={styles.splitBillCloseButton}>
+              <X size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.splitBillTitle, { color: colors.text }]}>Split Bill</Text>
+            <TouchableOpacity 
+              onPress={handleSaveSplitBills} 
+              style={[styles.splitBillSaveButton, { backgroundColor: colors.primary }]}
+            >
+              <Save size={18} color="#fff" />
+              <Text style={styles.splitBillSaveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.splitBillTabs, { backgroundColor: colors.cardBackground }]}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.splitBillTabsContent}>
+              <TouchableOpacity
+                style={[
+                  styles.splitBillTab,
+                  activeSplitBillIndex === -1 && { backgroundColor: colors.primary },
+                  { borderColor: colors.border }
+                ]}
+                onPress={() => setActiveSplitBillIndex(-1)}
+              >
+                <Text style={[
+                  styles.splitBillTabText,
+                  { color: activeSplitBillIndex === -1 ? '#fff' : colors.text }
+                ]}>Main</Text>
+                <Text style={[
+                  styles.splitBillTabAmount,
+                  { color: activeSplitBillIndex === -1 ? '#fff' : colors.textSecondary }
+                ]}>£{calculateBillTotal(getMainBasketForSplit()).toFixed(2)}</Text>
+              </TouchableOpacity>
+              {[0, 1, 2, 3].map((index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.splitBillTab,
+                    activeSplitBillIndex === index && { backgroundColor: colors.accent },
+                    { borderColor: colors.border }
+                  ]}
+                  onPress={() => setActiveSplitBillIndex(index)}
+                >
+                  <Text style={[
+                    styles.splitBillTabText,
+                    { color: activeSplitBillIndex === index ? '#fff' : colors.text }
+                  ]}>Bill {index + 1}</Text>
+                  <Text style={[
+                    styles.splitBillTabAmount,
+                    { color: activeSplitBillIndex === index ? '#fff' : colors.textSecondary }
+                  ]}>£{calculateBillTotal(splitBills[index]).toFixed(2)}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {selectedItemsForMove.size > 0 && (
+            <View style={[styles.splitBillMoveBar, { backgroundColor: colors.primary }]}>
+              <Text style={styles.splitBillMoveBarText}>
+                {selectedItemsForMove.size} item(s) selected
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {splitBillSourceIndex !== -1 && (
+                  <TouchableOpacity
+                    style={[styles.splitBillMoveButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+                    onPress={() => moveSelectedItems(-1)}
+                  >
+                    <Text style={styles.splitBillMoveButtonText}>→ Main</Text>
+                  </TouchableOpacity>
+                )}
+                {[0, 1, 2, 3].map((index) => (
+                  splitBillSourceIndex !== index && (
+                    <TouchableOpacity
+                      key={index}
+                      style={[styles.splitBillMoveButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+                      onPress={() => moveSelectedItems(index)}
+                    >
+                      <Text style={styles.splitBillMoveButtonText}>→ Bill {index + 1}</Text>
+                    </TouchableOpacity>
+                  )
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          <ScrollView style={styles.splitBillContent} contentContainerStyle={styles.splitBillContentContainer}>
+            {(() => {
+              const currentItems = activeSplitBillIndex === -1 ? getMainBasketForSplit() : splitBills[activeSplitBillIndex];
+              const sourceIndex = activeSplitBillIndex;
+              
+              if (currentItems.length === 0) {
+                return (
+                  <View style={styles.splitBillEmptyState}>
+                    <Text style={[styles.splitBillEmptyText, { color: colors.textTertiary }]}>
+                      {activeSplitBillIndex === -1 ? 'All items have been moved to split bills' : 'No items in this bill'}
+                    </Text>
+                    <Text style={[styles.splitBillEmptySubtext, { color: colors.textTertiary }]}>
+                      {activeSplitBillIndex === -1 ? 'Move items back from split bills or proceed with payment' : 'Select items from another bill and move them here'}
+                    </Text>
+                  </View>
+                );
+              }
+              
+              return currentItems.map((item, index) => {
+                const isSelected = splitBillSourceIndex === sourceIndex && selectedItemsForMove.has(index);
+                return (
+                  <TouchableOpacity
+                    key={`${item.product.id}-${item.selectedPrice.key}-${index}`}
+                    style={[
+                      styles.splitBillItem,
+                      { backgroundColor: colors.cardBackground, borderColor: isSelected ? colors.primary : colors.border },
+                      isSelected && { borderWidth: 2 }
+                    ]}
+                    onPress={() => toggleItemSelection(index, sourceIndex)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[
+                      styles.splitBillItemCheckbox,
+                      { borderColor: isSelected ? colors.primary : colors.border },
+                      isSelected && { backgroundColor: colors.primary }
+                    ]}>
+                      {isSelected && <Check size={14} color="#fff" />}
+                    </View>
+                    <View style={styles.splitBillItemInfo}>
+                      <Text style={[styles.splitBillItemName, { color: colors.text }]} numberOfLines={1}>
+                        {item.product.name}
+                      </Text>
+                      <Text style={[styles.splitBillItemDetails, { color: colors.textSecondary }]}>
+                        {item.quantity} × £{item.selectedPrice.price.toFixed(2)}
+                      </Text>
+                    </View>
+                    <Text style={[styles.splitBillItemTotal, { color: colors.primary }]}>
+                      £{item.lineTotal.toFixed(2)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              });
+            })()}
+          </ScrollView>
+
+          <View style={[styles.splitBillFooter, { backgroundColor: colors.cardBackground, borderTopColor: colors.border }]}>
+            <View style={styles.splitBillFooterInfo}>
+              <Text style={[styles.splitBillFooterLabel, { color: colors.textSecondary }]}>
+                {activeSplitBillIndex === -1 ? 'Main Bill' : `Bill ${activeSplitBillIndex + 1}`} Total
+              </Text>
+              <Text style={[styles.splitBillFooterTotal, { color: colors.primary }]}>
+                £{calculateBillTotal(activeSplitBillIndex === -1 ? getMainBasketForSplit() : splitBills[activeSplitBillIndex]).toFixed(2)}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.splitBillPayButton,
+                { backgroundColor: colors.success },
+                getButtonSkinStyle(buttonSkin, colors.success)
+              ]}
+              onPress={() => handlePaySplitBill(activeSplitBillIndex)}
+              activeOpacity={0.8}
+            >
+              {getButtonOverlayStyle(buttonSkin) && (
+                <View style={getButtonOverlayStyle(buttonSkin) as any} />
+              )}
+              <CreditCard size={18} color="#fff" />
+              <Text style={styles.splitBillPayButtonText}>Pay This Bill</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -2482,5 +2821,187 @@ const styles = StyleSheet.create({
   processingModalSubtitle: {
     fontSize: 16,
     textAlign: 'center',
+  },
+  splitBillFloatingButton: {
+    position: 'absolute' as const,
+    right: 16,
+    bottom: 280,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 24,
+    zIndex: 100,
+  },
+  splitBillFloatingButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700' as const,
+  },
+  splitBillModalContainer: {
+    flex: 1,
+  },
+  splitBillHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingTop: 60,
+    borderBottomWidth: 1,
+  },
+  splitBillCloseButton: {
+    padding: 8,
+  },
+  splitBillTitle: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+  },
+  splitBillSaveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  splitBillSaveButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
+  splitBillTabs: {
+    paddingVertical: 12,
+  },
+  splitBillTabsContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  splitBillTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    minWidth: 80,
+    alignItems: 'center' as const,
+  },
+  splitBillTabText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
+  splitBillTabAmount: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  splitBillMoveBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 12,
+  },
+  splitBillMoveBarText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
+  splitBillMoveButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  splitBillMoveButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600' as const,
+  },
+  splitBillContent: {
+    flex: 1,
+  },
+  splitBillContentContainer: {
+    padding: 16,
+    gap: 8,
+  },
+  splitBillEmptyState: {
+    flex: 1,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingVertical: 60,
+  },
+  splitBillEmptyText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    textAlign: 'center' as const,
+    marginBottom: 8,
+  },
+  splitBillEmptySubtext: {
+    fontSize: 14,
+    textAlign: 'center' as const,
+    paddingHorizontal: 40,
+  },
+  splitBillItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 12,
+  },
+  splitBillItemCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  splitBillItemInfo: {
+    flex: 1,
+  },
+  splitBillItemName: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+  },
+  splitBillItemDetails: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  splitBillItemTotal: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+  },
+  splitBillFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    paddingBottom: 40,
+    borderTopWidth: 1,
+    gap: 16,
+  },
+  splitBillFooterInfo: {
+    flex: 1,
+  },
+  splitBillFooterLabel: {
+    fontSize: 14,
+  },
+  splitBillFooterTotal: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+  },
+  splitBillPayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  splitBillPayButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700' as const,
   },
 });

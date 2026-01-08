@@ -24,6 +24,11 @@ export interface TableDataRow {
   tableId?: string;
 }
 
+export interface SplitBillData {
+  mainBasket: BasketItem[];
+  splitBills: BasketItem[][];
+}
+
 class TableDataService {
   private readonly fileName = 'tabledata.csv';
   private data: Map<string, TableDataRow[]> = new Map();
@@ -654,6 +659,123 @@ class TableDataService {
     }
     
     await this.syncToServer(table);
+  }
+
+  async saveSplitBillsToTable(
+    table: Table,
+    splitBillData: SplitBillData,
+    operator: Operator,
+    vatRates: { code: string; percentage: number }[]
+  ): Promise<void> {
+    const fileNames = ['tabledata.csv', 'tabledata2.csv', 'tabledata3.csv', 'tabledata4.csv', 'tabledata5.csv'];
+    const allBills = [splitBillData.mainBasket, ...splitBillData.splitBills];
+    
+    console.log('[TableDataService] Saving split bills to table:', table.name);
+    console.log('[TableDataService] Number of bills:', allBills.length);
+    
+    const tableKey = `${table.area}/${table.name}`;
+    let memoryFiles = this.tableFiles.get(tableKey);
+    if (!memoryFiles) {
+      memoryFiles = new Map();
+      this.tableFiles.set(tableKey, memoryFiles);
+    }
+    
+    for (let i = 0; i < 5; i++) {
+      const fileName = fileNames[i];
+      const billItems = allBills[i] || [];
+      
+      if (billItems.length > 0) {
+        const rows = await this.createRows(table, billItems, operator, vatRates);
+        const csvContent = this.rowsToCSV(rows);
+        
+        if (!this.isFileSystemAvailable()) {
+          memoryFiles.set(fileName, csvContent);
+          console.log(`[TableDataService] Saved ${fileName} to memory (${billItems.length} items)`);
+        } else if (FileSystem.documentDirectory) {
+          const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+          const folderInfo = await FileSystem.getInfoAsync(tableFolder);
+          if (!folderInfo.exists) {
+            await FileSystem.makeDirectoryAsync(tableFolder, { intermediates: true });
+          }
+          const filePath = `${tableFolder}${fileName}`;
+          await FileSystem.writeAsStringAsync(filePath, csvContent);
+          console.log(`[TableDataService] Saved ${fileName} to file system (${billItems.length} items)`);
+        }
+      } else {
+        const emptyCSV = 'X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?';
+        
+        if (!this.isFileSystemAvailable()) {
+          memoryFiles.set(fileName, emptyCSV);
+          console.log(`[TableDataService] Saved empty ${fileName} to memory`);
+        } else if (FileSystem.documentDirectory) {
+          const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+          const folderInfo = await FileSystem.getInfoAsync(tableFolder);
+          if (!folderInfo.exists) {
+            await FileSystem.makeDirectoryAsync(tableFolder, { intermediates: true });
+          }
+          const filePath = `${tableFolder}${fileName}`;
+          await FileSystem.writeAsStringAsync(filePath, emptyCSV);
+          console.log(`[TableDataService] Saved empty ${fileName} to file system`);
+        }
+      }
+    }
+    
+    if (splitBillData.mainBasket.length > 0) {
+      const mainRows = await this.createRows(table, splitBillData.mainBasket, operator, vatRates);
+      this.data.set(table.id, mainRows);
+    } else {
+      this.data.delete(table.id);
+    }
+    
+    await this.syncToServer(table);
+    console.log('[TableDataService] Split bills synced to server');
+  }
+
+  async loadSplitBillsFromTable(
+    table: Table
+  ): Promise<SplitBillData> {
+    const fileNames = ['tabledata.csv', 'tabledata2.csv', 'tabledata3.csv', 'tabledata4.csv', 'tabledata5.csv'];
+    const result: SplitBillData = {
+      mainBasket: [],
+      splitBills: [[], [], [], []]
+    };
+    
+    console.log('[TableDataService] Loading split bills from table:', table.name);
+    
+    const tableKey = `${table.area}/${table.name}`;
+    const memoryFiles = this.tableFiles.get(tableKey);
+    
+    for (let i = 0; i < 5; i++) {
+      const fileName = fileNames[i];
+      let csvContent = '';
+      
+      if (!this.isFileSystemAvailable()) {
+        csvContent = memoryFiles?.get(fileName) || '';
+      } else if (FileSystem.documentDirectory) {
+        const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+        const filePath = `${tableFolder}${fileName}`;
+        const fileInfo = await FileSystem.getInfoAsync(filePath);
+        if (fileInfo.exists) {
+          csvContent = await FileSystem.readAsStringAsync(filePath);
+        }
+      }
+      
+      if (csvContent) {
+        const rows = dataParser.parseCSV(csvContent);
+        if (rows.length > 1) {
+          const itemCount = rows.length - 1;
+          console.log(`[TableDataService] Found ${itemCount} items in ${fileName}`);
+          
+          if (i === 0) {
+            console.log(`[TableDataService] ${fileName} has ${itemCount} items for main basket`);
+          } else {
+            console.log(`[TableDataService] ${fileName} has ${itemCount} items for split bill ${i}`);
+          }
+        }
+      }
+    }
+    
+    return result;
   }
 
   async syncClearTableToServerSafe(table: Table): Promise<void> {
