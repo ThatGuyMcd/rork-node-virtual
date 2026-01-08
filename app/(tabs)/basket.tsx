@@ -22,8 +22,27 @@ import { printerService } from '@/services/printerService';
 import { transactionService } from '@/services/transactionService';
 import type { BasketItem, Transaction } from '@/types/pos';
 
-const getPricePrefix = (label: string): string => {
+const getPricePrefix = (productName: string, label: string): string => {
   const lowerLabel = label.toLowerCase();
+  
+  const customMatch = label.match(/^custom\s*(\d+)$/i);
+  if (customMatch) {
+    const words = productName.split(' ');
+    if (words.length >= 2) {
+      const firstWord = words[0];
+      const knownPrefixes = ['DBL', 'SML', 'LRG', 'HALF', '2/3PT', 'OPEN', '125ML', '175ML', '250ML'];
+      const firstWordUpper = firstWord.toUpperCase();
+      
+      if (!knownPrefixes.includes(firstWordUpper)) {
+        const potentialPrefix = words.slice(0, -1).join(' ');
+        if (potentialPrefix.length > 0 && potentialPrefix.length < productName.length) {
+          return potentialPrefix.toUpperCase();
+        }
+        return firstWord.toUpperCase();
+      }
+    }
+  }
+  
   if (lowerLabel === 'standard') return '';
   if (lowerLabel === 'double') return 'DBL';
   if (lowerLabel === 'small') return 'SML';
@@ -851,7 +870,7 @@ export default function BasketScreen() {
         windowSize={8}
         renderItem={({ item, index }) => {
           const isRefundItem = item.quantity < 0;
-          const prefix = getPricePrefix(item.selectedPrice.label);
+          const prefix = getPricePrefix(item.product.name, item.selectedPrice.label);
 
           const displayName =
             prefix !== '' && item.product.name.toUpperCase().startsWith(prefix.toUpperCase() + ' ')
@@ -1388,7 +1407,7 @@ export default function BasketScreen() {
 
                   <Text style={[styles.receiptSectionTitle, { color: colors.text }]}>Items</Text>
                   {lastTransaction.items.map((item, index) => {
-                    const prefix = getPricePrefix(item.selectedPrice.label);
+                    const prefix = getPricePrefix(item.product.name, item.selectedPrice.label);
                     const displayName = (prefix && !item.product.name.toUpperCase().startsWith(prefix.toUpperCase() + ' '))
                       ? `${prefix} ${item.product.name}` 
                       : item.product.name;
