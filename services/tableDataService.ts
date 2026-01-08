@@ -657,6 +657,12 @@ class TableDataService {
   }
 
   async syncClearTableToServerSafe(table: Table): Promise<void> {
+    const siteInfo = await dataSyncService.getSiteInfo();
+    if (!siteInfo) {
+      console.warn('[TableDataService] No site info, skipping clear sync');
+      return;
+    }
+
     if (!this.isFileSystemAvailable()) {
       this.data.delete(table.id);
       const tableKey = `${table.area}/${table.name}`;
@@ -670,7 +676,22 @@ class TableDataService {
         console.log('[TableDataService] Deleted table folder for clear sync:', tableFolder);
       }
     }
-    await this.syncToServer(table);
+
+    const emptyCSV = 'X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?';
+    
+    const result = await apiClient.saveSingleTableData(
+      siteInfo.siteId,
+      table.area,
+      table.name,
+      emptyCSV,
+      {}
+    );
+    
+    if (!result.success) {
+      throw new Error('Server clear sync failed');
+    }
+    
+    console.log('[TableDataService] Successfully synced cleared table to server');
   }
 
   async syncAllTableDataToServer(): Promise<void> {
