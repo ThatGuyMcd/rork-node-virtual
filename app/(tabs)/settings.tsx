@@ -430,33 +430,55 @@ export default function SettingsScreen() {
 
     setIsDownloadingProfiles(true);
     try {
-      console.log('[Settings] Downloading settings profiles from server...');
-      const result = await apiClient.downloadSettingsProfiles(siteInfo.siteId);
+      console.log('[Settings] Downloading settings profiles from server using sync methodology...');
       
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to download profiles');
-      }
-
-      console.log('[Settings] Downloaded', result.profiles.length, 'profiles from server');
+      const manifest = await apiClient.getManifest(siteInfo.siteId);
+      console.log('[Settings] Manifest loaded:', manifest.length, 'total files');
       
-      if (result.profiles.length === 0) {
+      const profileFiles = manifest.filter(file => {
+        const upper = file.path.toUpperCase();
+        return upper.startsWith('SETTINGS-PROFILES/') && upper.endsWith('.JSON');
+      });
+      
+      console.log('[Settings] Found', profileFiles.length, 'profile files in manifest');
+      
+      if (profileFiles.length === 0) {
         Alert.alert('No Profiles', 'No settings profiles found on the server');
         return;
       }
 
-      const downloadedProfiles = result.profiles.map((p: any) => ({
-        name: p.profileName,
-        timestamp: p.timestamp,
-      }));
-
-      for (const profile of result.profiles) {
-        await AsyncStorage.setItem(`pos_settings_profile_${profile.profileName}`, JSON.stringify(profile.profileData));
+      const downloadedProfiles = [];
+      
+      for (const fileInfo of profileFiles) {
+        try {
+          console.log('[Settings] Downloading profile:', fileInfo.path);
+          const content = await apiClient.getFile(siteInfo.siteId, fileInfo.path);
+          const profileData = JSON.parse(content);
+          
+          const profileName = profileData.profileName || fileInfo.path.split('/').pop()?.replace('.json', '') || 'Unknown';
+          const timestamp = profileData.timestamp || new Date().toISOString();
+          const data = profileData.profileData || profileData;
+          
+          await AsyncStorage.setItem(`pos_settings_profile_${profileName}`, JSON.stringify(data));
+          
+          downloadedProfiles.push({
+            name: profileName,
+            timestamp: timestamp,
+          });
+          
+          console.log('[Settings] Downloaded and saved profile:', profileName);
+        } catch (fileError) {
+          console.error('[Settings] Error downloading profile file:', fileInfo.path, fileError);
+        }
       }
 
-      await AsyncStorage.setItem('pos_settings_profiles', JSON.stringify(downloadedProfiles));
-      setSettingsProfiles(downloadedProfiles);
-      
-      Alert.alert('Success', `Downloaded ${result.profiles.length} settings profile(s) from server!`);
+      if (downloadedProfiles.length > 0) {
+        await AsyncStorage.setItem('pos_settings_profiles', JSON.stringify(downloadedProfiles));
+        setSettingsProfiles(downloadedProfiles);
+        Alert.alert('Success', `Downloaded ${downloadedProfiles.length} settings profile(s) from server!`);
+      } else {
+        Alert.alert('Error', 'Failed to download any profiles');
+      }
     } catch (error) {
       console.error('[Settings] Error downloading profiles:', error);
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to download profiles');
