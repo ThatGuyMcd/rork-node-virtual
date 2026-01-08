@@ -1282,6 +1282,7 @@ export default function ProductsScreen() {
         <View style={styles.content}>
           <Text style={[styles.heading, { color: colors.text }]}>Select a Category</Text>
           <FlatList
+            key={productViewLayout}
             data={visibleGroups}
             keyExtractor={(group) => group.id}
             numColumns={productViewLayout === 'large' ? 1 : productViewLayout === 'compact' ? 3 : 2}
@@ -1349,6 +1350,7 @@ export default function ProductsScreen() {
 
           <Text style={[styles.heading, { color: colors.text }]}>{group?.name ? trimName(group.name) : ''} Departments</Text>
           <FlatList
+            key={productViewLayout}
             data={filteredDepartments}
             keyExtractor={(dept) => dept.id}
             numColumns={productViewLayout === 'large' ? 1 : productViewLayout === 'compact' ? 3 : 2}
@@ -1408,6 +1410,7 @@ export default function ProductsScreen() {
         <View style={styles.content}>
           <Text style={[styles.heading, { color: colors.text }]}>All Departments</Text>
           <FlatList
+            key={productViewLayout}
             data={visibleDepartments}
             keyExtractor={(dept) => dept.id}
             numColumns={productViewLayout === 'large' ? 1 : productViewLayout === 'compact' ? 3 : 2}
@@ -1459,6 +1462,7 @@ export default function ProductsScreen() {
         <View style={styles.content}>
           <Text style={[styles.heading, { color: colors.text }]}>All Products</Text>
           <FlatList
+            key={productViewLayout}
             data={sortProducts(allVisibleProducts, undefined)}
             keyExtractor={(product) => product.id}
             numColumns={productViewLayout === 'large' ? 1 : productViewLayout === 'compact' ? 3 : 2}
@@ -1553,6 +1557,7 @@ export default function ProductsScreen() {
             return dept ? trimName(dept.name) : 'Products';
           })()}</Text>
           <FlatList
+            key={productViewLayout}
             data={sortProducts(filteredProducts, selectedDepartment || undefined)}
             keyExtractor={(product) => product.id}
             numColumns={productViewLayout === 'large' ? 1 : productViewLayout === 'compact' ? 3 : 2}
