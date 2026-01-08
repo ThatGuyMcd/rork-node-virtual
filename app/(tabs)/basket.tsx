@@ -34,10 +34,6 @@ const getPricePrefix = (productName: string, label: string): string => {
       const firstWordUpper = firstWord.toUpperCase();
       
       if (!knownPrefixes.includes(firstWordUpper)) {
-        const potentialPrefix = words.slice(0, -1).join(' ');
-        if (potentialPrefix.length > 0 && potentialPrefix.length < productName.length) {
-          return potentialPrefix.toUpperCase();
-        }
         return firstWord.toUpperCase();
       }
     }
