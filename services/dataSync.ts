@@ -150,17 +150,17 @@ export class DataSyncService {
       }
     };
 
-    const BATCH_SIZE = 15;
+    const BATCH_SIZE = 25;
     let downloadedCount = 0;
     let lastProgressFolder = '';
 
-    console.log(`[DataSync] Starting parallel download with batch size: ${BATCH_SIZE}`);
+
 
     for (let batchStart = 0; batchStart < filesToDownload.length; batchStart += BATCH_SIZE) {
       const batchEnd = Math.min(batchStart + BATCH_SIZE, filesToDownload.length);
       const batch = filesToDownload.slice(batchStart, batchEnd);
       
-      console.log(`[DataSync] Downloading batch ${Math.floor(batchStart / BATCH_SIZE) + 1}: files ${batchStart + 1}-${batchEnd} of ${filesToDownload.length}`);
+
       
       const batchPromises = batch.map(async (fileInfo) => {
         try {
@@ -183,7 +183,6 @@ export class DataSyncService {
         const folder = result.path.split('/')[0] || 'root';
         if (folder !== lastProgressFolder) {
           lastProgressFolder = folder;
-          console.log(`[DataSync] Now downloading: ${getFriendlyName(folder)}`);
         }
       }
       
@@ -196,7 +195,7 @@ export class DataSyncService {
       onProgress?.(progressUpdate);
     }
 
-    console.log(`[DataSync] Downloaded ${files.size} files successfully`);
+
     
     onProgress?.({ phase: 'parsing', current: 0, total: 1, message: 'Processing data...' });
 
@@ -357,74 +356,63 @@ export class DataSyncService {
   }
 
   private async parseAndStoreData(files: Map<string, string>): Promise<void> {
-    const operators = await this.parseOperators(files);
-    const { groups, departments } = await this.parseProductStructure(files);
-    const menuData = await this.parseMenuData(files);
+    const [operators, { groups, departments }, menuData, vatRates, tenders, tables] = await Promise.all([
+      this.parseOperators(files),
+      this.parseProductStructure(files),
+      this.parseMenuData(files),
+      this.parseVAT(files),
+      this.parseTenders(files),
+      this.parseTables(files),
+    ]);
+    
     const menuProductFilenames = this.extractMenuProductFilenames(menuData);
-    const vatRates = await this.parseVAT(files);
     const products = await this.parseProducts(files, menuProductFilenames, vatRates);
-    const tenders = await this.parseTenders(files);
-    const tables = await this.parseTables(files);
 
-    await AsyncStorage.setItem(STORAGE_KEYS.OPERATORS, JSON.stringify(operators));
-    await AsyncStorage.setItem(STORAGE_KEYS.GROUPS, JSON.stringify(groups));
-    await AsyncStorage.setItem(STORAGE_KEYS.DEPARTMENTS, JSON.stringify(departments));
-    await AsyncStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-    await AsyncStorage.setItem(STORAGE_KEYS.TENDERS, JSON.stringify(tenders));
-    await AsyncStorage.setItem(STORAGE_KEYS.VAT_RATES, JSON.stringify(vatRates));
-    await AsyncStorage.setItem(STORAGE_KEYS.TABLES, JSON.stringify(tables));
-    await AsyncStorage.setItem(STORAGE_KEYS.MENU_DATA, JSON.stringify(menuData));
-
-    console.log('[DataSync] Stored:', {
-      operators: operators.length,
-      groups: groups.length,
-      departments: departments.length,
-      products: products.length,
-      tenders: tenders.length,
-      vatRates: vatRates.length,
-      tables: tables.length,
-      menus: Object.keys(menuData).length,
-    });
+    await AsyncStorage.multiSet([
+      [STORAGE_KEYS.OPERATORS, JSON.stringify(operators)],
+      [STORAGE_KEYS.GROUPS, JSON.stringify(groups)],
+      [STORAGE_KEYS.DEPARTMENTS, JSON.stringify(departments)],
+      [STORAGE_KEYS.PRODUCTS, JSON.stringify(products)],
+      [STORAGE_KEYS.TENDERS, JSON.stringify(tenders)],
+      [STORAGE_KEYS.VAT_RATES, JSON.stringify(vatRates)],
+      [STORAGE_KEYS.TABLES, JSON.stringify(tables)],
+      [STORAGE_KEYS.MENU_DATA, JSON.stringify(menuData)],
+    ]);
   }
 
   private async parseOperators(files: Map<string, string>): Promise<Operator[]> {
-    const operators: Operator[] = [];
+    const content = files.get('OPERATORDATA/ACTIVE_OPERATORS.CSV') || files.get('operatordata/active_operators.csv');
+    if (!content) return [];
     
-    for (const [path, content] of files.entries()) {
-      if (path.toUpperCase() === 'OPERATORDATA/ACTIVE_OPERATORS.CSV') {
-        const rows = dataParser.parseCSV(content);
-        if (rows.length <= 1) continue;
+    const operators: Operator[] = [];
+    const rows = dataParser.parseCSV(content);
+    if (rows.length <= 1) return [];
 
-        const header = rows[0].map(h => h.trim().toLowerCase());
-        const nameIdx = header.findIndex(h => /operator.*name|name|user.*name/i.test(h));
-        const activeIdx = header.findIndex(h => /user.*active|active/i.test(h));
-        const pinIdx = header.findIndex(h => /passcode|pin|password/i.test(h));
-        const managerIdx = header.findIndex(h => /manager/i.test(h));
+    const header = rows[0].map(h => h.trim().toLowerCase());
+    const nameIdx = header.findIndex(h => /operator.*name|name|user.*name/i.test(h));
+    const activeIdx = header.findIndex(h => /user.*active|active/i.test(h));
+    const pinIdx = header.findIndex(h => /passcode|pin|password/i.test(h));
+    const managerIdx = header.findIndex(h => /manager/i.test(h));
+    const activeValues = new Set(['true', 'yes', '1', 'y', 'on', 'active']);
+    const managerValues = new Set(['true', 'yes', '1', 'y']);
 
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          const name = nameIdx >= 0 ? row[nameIdx]?.trim() : '';
-          if (!name) continue;
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const name = nameIdx >= 0 ? row[nameIdx]?.trim() : '';
+      if (!name) continue;
 
-          const activeRaw = activeIdx >= 0 ? row[activeIdx]?.trim().toLowerCase() : 'true';
-          const active = ['true', 'yes', '1', 'y', 'on', 'active'].includes(activeRaw);
+      const activeRaw = activeIdx >= 0 ? row[activeIdx]?.trim().toLowerCase() : 'true';
+      const active = activeValues.has(activeRaw);
+      if (!active) continue;
 
-          const pin = pinIdx >= 0 ? row[pinIdx]?.trim() : '';
-          const managerRaw = managerIdx >= 0 ? row[managerIdx]?.trim().toLowerCase() : 'false';
-          const isManager = ['true', 'yes', '1', 'y'].includes(managerRaw);
+      const pin = pinIdx >= 0 ? row[pinIdx]?.trim() : '';
+      const managerRaw = managerIdx >= 0 ? row[managerIdx]?.trim().toLowerCase() : 'false';
+      const isManager = managerValues.has(managerRaw);
 
-          operators.push({
-            id: `op_${i}`,
-            name,
-            pin,
-            active,
-            isManager,
-          });
-        }
-      }
+      operators.push({ id: `op_${i}`, name, pin, active, isManager });
     }
 
-    return operators.filter(op => op.active);
+    return operators;
   }
 
   private async parseProductStructure(files: Map<string, string>): Promise<{ groups: ProductGroup[]; departments: Department[] }> {
@@ -432,8 +420,6 @@ export class DataSyncService {
     const departments: Department[] = [];
     const groupSet = new Set<string>();
     const deptMap = new Map<string, { group: string; dept: string }>();
-
-    console.log('[DataSync] Parsing product structure...');
 
     for (const [path] of files.entries()) {
       const upper = path.toUpperCase();
@@ -456,7 +442,7 @@ export class DataSyncService {
       }
     }
 
-    console.log(`[DataSync] Found ${groupSet.size} groups and ${deptMap.size} departments`);
+
 
     const sortedGroups = Array.from(groupSet).sort();
     sortedGroups.forEach((group, index) => {
@@ -465,14 +451,13 @@ export class DataSyncService {
         name: group,
         color: '#10b981',
       });
-      console.log(`[DataSync] Group: ${group}`);
+
     });
 
     let deptIndex = 0;
     for (const { group, dept } of deptMap.values()) {
       const groupObj = groups.find(g => g.name === group);
       if (!groupObj) {
-        console.warn(`[DataSync] Warning: Department ${dept} has no matching group for ${group}`);
         continue;
       }
       
@@ -482,7 +467,7 @@ export class DataSyncService {
         name: dept,
         color: '#3b82f6',
       });
-      console.log(`[DataSync] Department: ${group}/${dept} (groupId: ${groupObj.id})`);
+
     }
 
     return { groups, departments };
@@ -497,15 +482,15 @@ export class DataSyncService {
         }
       }
     }
-    console.log(`[DataSync] Found ${filenames.size} unique products referenced in menus`);
+
     return filenames;
   }
 
   private async parseProducts(files: Map<string, string>, menuProductFilenames: Set<string>, vatRates: VATRate[] = []): Promise<Product[]> {
     const products: Product[] = [];
     let productIndex = 0;
-
-    console.log('[DataSync] Parsing products...');
+    const vatRateMap = new Map(vatRates.map(r => [r.code.toUpperCase(), r.percentage]));
+    const nonSellableValues = new Set(['no', 'false', '0', 'n', 'off']);
 
     for (const [path, content] of files.entries()) {
       const upper = path.toUpperCase();
@@ -530,28 +515,18 @@ export class DataSyncService {
       const isInMenu = menuProductFilenames.has(pluFilename.toUpperCase());
       
       const sellableRaw = String(kv['SELLABLE?'] || '').trim().toLowerCase();
-      const isSellable = !sellableRaw || !['no', 'false', '0', 'n', 'off'].includes(sellableRaw);
+      const isSellable = !sellableRaw || !nonSellableValues.has(sellableRaw);
       
-      if (!isSellable && !isInMenu) {
-        console.log(`[DataSync] Skipping non-sellable product: ${fileName} (not in any menu)`);
-        continue;
-      }
-      
-      if (!isSellable && isInMenu) {
-        console.log(`[DataSync] Including non-sellable product: ${fileName} (appears in menu)`);
-      }
+      if (!isSellable && !isInMenu) continue;
 
       const name = kv.PRODUCT_DESCRIPTION || fileName;
       let prices = dataParser.parsePriceOptions(kv);
       const vatCode = (kv.VAT_CODE || 'S').trim();
       
       let vatPercentage = parseFloat(kv.VAT_PERCENTAGE || kv.VAT_RATE || kv.VAT || '20') || 20;
-      const matchingVatRate = vatRates.find(rate => rate.code.toUpperCase() === vatCode.toUpperCase());
-      if (matchingVatRate) {
-        vatPercentage = matchingVatRate.percentage;
-        console.log(`[DataSync] Product ${fileName}: Using VAT from .VATCODE file: ${vatCode} = ${vatPercentage}%`);
-      } else {
-        console.log(`[DataSync] Product ${fileName}: Using VAT from .PLU file: ${vatCode} = ${vatPercentage}%`);
+      const matchingVatPercentage = vatRateMap.get(vatCode.toUpperCase());
+      if (matchingVatPercentage !== undefined) {
+        vatPercentage = matchingVatPercentage;
       }
       
       const buttonColor = dataParser.parseColor(kv.BUTTON_COLOUR) || '#1e293b';
@@ -587,7 +562,6 @@ export class DataSyncService {
       });
     }
 
-    console.log(`[DataSync] Parsed ${products.length} products`);
     return products;
   }
 
@@ -683,8 +657,6 @@ export class DataSyncService {
     const tables: Table[] = [];
     const tableSet = new Map<string, { area: string; table: string }>();
 
-    console.log('[DataSync] Parsing tables...');
-
     for (const [path] of files.entries()) {
       const upper = path.toUpperCase();
       if (!upper.startsWith('TABDATA/')) continue;
@@ -706,7 +678,7 @@ export class DataSyncService {
       }
     }
 
-    console.log(`[DataSync] Found ${tableSet.size} tables across multiple areas`);
+
 
     let tableIndex = 0;
     for (const { area, table } of tableSet.values()) {
@@ -725,10 +697,9 @@ export class DataSyncService {
         color: `hsl(${hue}, 65%, 50%)`,
       });
 
-      console.log(`[DataSync] Parsed table: ${area} / ${table}`);
+
     }
 
-    console.log(`[DataSync] Parsed ${tables.length} tables`);
     return tables;
   }
 
@@ -818,9 +789,9 @@ export class DataSyncService {
   private async parseMenuData(files: Map<string, string>): Promise<MenuData> {
     const menuData: MenuData = {};
     
-    console.log('[DataSync] Parsing menu data...');
-
     const pluFileNames = new Map<string, string>();
+    const pluPathMap = new Map<string, string>();
+    
     for (const [path] of files.entries()) {
       const upper = path.toUpperCase();
       if (!upper.startsWith('PLUDATA/')) continue;
@@ -829,11 +800,11 @@ export class DataSyncService {
       
       const fileName = path.split('/').pop();
       if (fileName) {
-        pluFileNames.set(fileName.toUpperCase(), fileName);
+        const upperFileName = fileName.toUpperCase();
+        pluFileNames.set(upperFileName, fileName);
+        pluPathMap.set(upperFileName, path);
       }
     }
-
-    console.log(`[DataSync] Found ${pluFileNames.size} .PLU files in PLUDATA`);
 
     for (const [path, content] of files.entries()) {
       const upper = path.toUpperCase();
@@ -841,142 +812,59 @@ export class DataSyncService {
       if (!upper.endsWith('.CSV')) continue;
 
       const fileName = path.split('/').pop()?.replace(/\.CSV$/i, '') || '';
-      console.log(`[DataSync] Found MENUDATA file: ${fileName}`);
-      
       const menuMatch = fileName.match(/^MENU\s*(\d+)$/i) || fileName.match(/^(\d+)$/);
-      if (!menuMatch) {
-        console.log(`[DataSync] Skipping non-menu file: ${fileName}`);
-        continue;
-      }
+      if (!menuMatch) continue;
 
       const menuNumber = menuMatch[1].padStart(2, '0');
       const menuId = `MENU${menuNumber}`;
-      console.log(`[DataSync] ========== Parsing menu: ${menuId} ==========`);
-      console.log(`[DataSync] Menu ${menuId} raw CSV content (first 500 chars): ${content.substring(0, 500)}`);
 
       const rows = dataParser.parseCSV(content);
-      console.log(`[DataSync] Menu ${menuId}: Parsed ${rows.length} CSV rows (including header)`);
-      
-      // Log first few rows for debugging
-      if (rows.length > 0) {
-        console.log(`[DataSync] Menu ${menuId}: Header row: ${JSON.stringify(rows[0])}`);
-        if (rows.length > 1) {
-          console.log(`[DataSync] Menu ${menuId}: First data row: ${JSON.stringify(rows[1])}`);
-        }
-        if (rows.length > 2) {
-          console.log(`[DataSync] Menu ${menuId}: Second data row: ${JSON.stringify(rows[2])}`);
-        }
-      }
-      
       const products: MenuData[string] = [];
       const seenProducts = new Set<string>();
       let hasBackButton = false;
-      let rowIndex = 0;
 
-      for (const row of rows) {
-        rowIndex++;
+      for (let rowIndex = 1; rowIndex < rows.length; rowIndex++) {
+        const row = rows[rowIndex];
+        if (row.length < 2) continue;
         
-        // Skip header row
-        if (rowIndex === 1) {
-          console.log(`[DataSync] Menu ${menuId}: Skipping header row`);
-          continue;
-        }
-        
-        if (row.length < 2) {
-          console.log(`[DataSync] Menu ${menuId}: Row ${rowIndex} has fewer than 2 columns, skipping`);
-          continue;
-        }
-        
-        // Extract PLU path from second column (index 1)
         const pluPath = row[1]?.trim();
-        if (!pluPath) {
-          console.log(`[DataSync] Menu ${menuId}: Row ${rowIndex} has empty PLU path in column 2, skipping`);
-          continue;
-        }
+        if (!pluPath) continue;
 
-        // Handle Windows paths with backslashes and forward slashes
-        // Example: C:\X-ORDERFORM\Local_Data\Products\Product_Groups\002 - DRINK\010 - Soft Drinks\002-010-10901.PLU
         const pathParts = pluPath.split(/[\\/]/);
         const pluFileName = pathParts[pathParts.length - 1];
         if (!pluFileName) continue;
 
-        console.log(`[DataSync] Menu ${menuId}: Processing row with PLU path: ${pluPath}`);
-        console.log(`[DataSync] Menu ${menuId}: Extracted filename: ${pluFileName}`);
-
-        // Check for BACK.PLU - this indicates the menu should have a close button
         if (pluFileName.toUpperCase() === 'BACK.PLU') {
-          console.log(`[DataSync] Menu ${menuId}: Found BACK.PLU - menu will have a close button`);
           hasBackButton = true;
           continue;
         }
 
-        // Only include products with xxx-xxx- filename format
-        // This filters out size modifiers like LARGE.PLU, 125ml.PLU, etc.
         const fileNameWithoutExt = pluFileName.replace(/\.PLU$/i, '');
-        if (!/^\d{3}-\d{3}-/.test(fileNameWithoutExt)) {
-          console.log(`[DataSync] Menu ${menuId}: Skipping non-product file (not xxx-xxx- format): ${pluFileName}`);
-          continue;
-        }
+        if (!/^\d{3}-\d{3}-/.test(fileNameWithoutExt)) continue;
 
-        // Find the matching PLU file (case-insensitive)
         const pluFileNameUpper = pluFileName.toUpperCase();
-        const actualFileName = pluFileNames.get(pluFileNameUpper);
-        if (!actualFileName) {
-          console.log(`[DataSync] Menu ${menuId}: .PLU file not found in PLUDATA: ${pluFileName}`);
-          continue;
-        }
-
-        // Find the full path in files
-        let matchingPluPath: string | undefined;
-        for (const [fullPath] of files.entries()) {
-          const upperPath = fullPath.toUpperCase();
-          if (upperPath.startsWith('PLUDATA/') && upperPath.endsWith('/' + pluFileNameUpper)) {
-            matchingPluPath = fullPath;
-            console.log(`[DataSync] Menu ${menuId}: Matched PLU file: ${fullPath}`);
-            break;
-          }
-        }
-
-        if (!matchingPluPath) {
-          console.log(`[DataSync] Menu ${menuId}: Could not locate full path for ${pluFileName}`);
-          continue;
-        }
+        const matchingPluPath = pluPathMap.get(pluFileNameUpper);
+        if (!matchingPluPath) continue;
 
         const pluContent = files.get(matchingPluPath);
-        if (!pluContent) {
-          console.log(`[DataSync] Menu ${menuId}: Could not read content for ${matchingPluPath}`);
-          continue;
-        }
+        if (!pluContent) continue;
 
         const kv = dataParser.parseKV(pluContent);
-        const productName = kv.PRODUCT_DESCRIPTION || pluFileName.replace(/\.PLU$/i, '');
-        const hotcode = kv.HOTCODE || undefined;
-        const buttonColor = dataParser.parseColor(kv.BUTTON_COLOUR) || undefined;
-        const fontColor = dataParser.parseColor(kv.FONT_COLOUR) || undefined;
-
-        // De-duplicate by product name (case-insensitive)
+        const productName = kv.PRODUCT_DESCRIPTION || fileNameWithoutExt;
+        
         const productKey = productName.toUpperCase();
-        if (seenProducts.has(productKey)) {
-          console.log(`[DataSync] Menu ${menuId}: Duplicate product: ${productName}, skipping`);
-          continue;
-        }
+        if (seenProducts.has(productKey)) continue;
         seenProducts.add(productKey);
 
         products.push({
           productName,
           filename: pluFileName,
-          hotcode,
-          buttonColor,
-          fontColor,
+          hotcode: kv.HOTCODE || undefined,
+          buttonColor: dataParser.parseColor(kv.BUTTON_COLOUR) || undefined,
+          fontColor: dataParser.parseColor(kv.FONT_COLOUR) || undefined,
         });
-
-        console.log(`[DataSync] Menu ${menuId}: Added product: ${productName}${hotcode ? ` (hotcode: ${hotcode})` : ''}`);
       }
 
-      console.log(`[DataSync] Menu ${menuId}: Final product count: ${products.length}`);
-      console.log(`[DataSync] Menu ${menuId}: Has back button: ${hasBackButton}`);
-      
-      // If BACK.PLU was found, add a special marker product
       if (hasBackButton && products.length > 0) {
         products.push({
           productName: 'BACK.PLU',
@@ -990,10 +878,6 @@ export class DataSyncService {
       menuData[menuId] = products;
     }
 
-    console.log(`[DataSync] Parsed ${Object.keys(menuData).length} menus`);
-    for (const [menuId, products] of Object.entries(menuData)) {
-      console.log(`[DataSync] Menu ${menuId}: ${products.length} products`);
-    }
     return menuData;
   }
 
@@ -1022,23 +906,32 @@ export class DataSyncService {
   }
 
   private async parseAndMergeData(files: Map<string, string>): Promise<void> {
-    const existingOperators = await this.getStoredOperators();
-    const existingGroups = await this.getStoredGroups();
-    const existingDepartments = await this.getStoredDepartments();
-    const existingProducts = await this.getStoredProducts();
-    const existingTenders = await this.getStoredTenders();
-    const existingVATRates = await this.getStoredVATRates();
-    const existingTables = await this.getStoredTables();
-    const existingMenuData = await this.getStoredMenuData();
+    const [existing, parsed] = await Promise.all([
+      Promise.all([
+        this.getStoredOperators(),
+        this.getStoredGroups(),
+        this.getStoredDepartments(),
+        this.getStoredProducts(),
+        this.getStoredTenders(),
+        this.getStoredVATRates(),
+        this.getStoredTables(),
+        this.getStoredMenuData(),
+      ]),
+      Promise.all([
+        this.parseOperators(files),
+        this.parseProductStructure(files),
+        this.parseMenuData(files),
+        this.parseVAT(files),
+        this.parseTenders(files),
+        this.parseTables(files),
+      ]),
+    ]);
 
-    const newOperators = await this.parseOperators(files);
-    const { groups: newGroups, departments: newDepartments } = await this.parseProductStructure(files);
-    const newMenuData = await this.parseMenuData(files);
+    const [existingOperators, existingGroups, existingDepartments, existingProducts, existingTenders, existingVATRates, existingTables, existingMenuData] = existing;
+    const [newOperators, { groups: newGroups, departments: newDepartments }, newMenuData, newVATRates, newTenders, newTables] = parsed;
+    
     const menuProductFilenames = this.extractMenuProductFilenames(newMenuData);
-    const newVATRates = await this.parseVAT(files);
     const newProducts = await this.parseProducts(files, menuProductFilenames, newVATRates);
-    const newTenders = await this.parseTenders(files);
-    const newTables = await this.parseTables(files);
 
     const mergedOperators = newOperators.length > 0 ? newOperators : existingOperators;
     const mergedGroups = newGroups.length > 0 ? newGroups : existingGroups;
@@ -1049,25 +942,16 @@ export class DataSyncService {
     const mergedTables = newTables.length > 0 ? newTables : existingTables;
     const mergedMenuData = Object.keys(newMenuData).length > 0 ? newMenuData : existingMenuData;
 
-    await AsyncStorage.setItem(STORAGE_KEYS.OPERATORS, JSON.stringify(mergedOperators));
-    await AsyncStorage.setItem(STORAGE_KEYS.GROUPS, JSON.stringify(mergedGroups));
-    await AsyncStorage.setItem(STORAGE_KEYS.DEPARTMENTS, JSON.stringify(mergedDepartments));
-    await AsyncStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(mergedProducts));
-    await AsyncStorage.setItem(STORAGE_KEYS.TENDERS, JSON.stringify(mergedTenders));
-    await AsyncStorage.setItem(STORAGE_KEYS.VAT_RATES, JSON.stringify(mergedVATRates));
-    await AsyncStorage.setItem(STORAGE_KEYS.TABLES, JSON.stringify(mergedTables));
-    await AsyncStorage.setItem(STORAGE_KEYS.MENU_DATA, JSON.stringify(mergedMenuData));
-
-    console.log('[DataSync] Merged:', {
-      operators: mergedOperators.length,
-      groups: mergedGroups.length,
-      departments: mergedDepartments.length,
-      products: mergedProducts.length,
-      tenders: mergedTenders.length,
-      vatRates: mergedVATRates.length,
-      tables: mergedTables.length,
-      menus: Object.keys(mergedMenuData).length,
-    });
+    await AsyncStorage.multiSet([
+      [STORAGE_KEYS.OPERATORS, JSON.stringify(mergedOperators)],
+      [STORAGE_KEYS.GROUPS, JSON.stringify(mergedGroups)],
+      [STORAGE_KEYS.DEPARTMENTS, JSON.stringify(mergedDepartments)],
+      [STORAGE_KEYS.PRODUCTS, JSON.stringify(mergedProducts)],
+      [STORAGE_KEYS.TENDERS, JSON.stringify(mergedTenders)],
+      [STORAGE_KEYS.VAT_RATES, JSON.stringify(mergedVATRates)],
+      [STORAGE_KEYS.TABLES, JSON.stringify(mergedTables)],
+      [STORAGE_KEYS.MENU_DATA, JSON.stringify(mergedMenuData)],
+    ]);
   }
 
   async startBackgroundSync(intervalMinutes: number = 15): Promise<void> {
