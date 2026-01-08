@@ -431,7 +431,9 @@ export default function SettingsScreen() {
     setIsDownloadingProfiles(true);
     try {
       console.log('[Settings] Downloading settings profiles from server...');
-      const result = await apiClient.downloadSettingsProfiles(siteInfo.siteId);
+      const result = await trpcClient.settingsprofile.download.query({
+        siteId: siteInfo.siteId,
+      });
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to download profiles');
