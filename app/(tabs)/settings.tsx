@@ -15,9 +15,10 @@ import {
   FlatList,
 } from 'react-native';
 
-import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info, Server, Users, Menu, Loader, Edit2 } from 'lucide-react-native';
+import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info, Server, Users, Menu, Loader, Edit2, Download } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
 import { apiClient } from '@/services/api';
+import { trpcClient } from '@/lib/trpc';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { printerService } from '@/services/printerService';
 import { transactionUploadService } from '@/services/transactionUploadService';
@@ -279,6 +280,7 @@ export default function SettingsScreen() {
   const [loadProfileModalVisible, setLoadProfileModalVisible] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isDownloadingProfiles, setIsDownloadingProfiles] = useState(false);
   
 
   
@@ -417,6 +419,49 @@ export default function SettingsScreen() {
     } catch (error) {
       console.error('[Settings] Error loading settings profiles:', error);
       console.error('[Settings] Error details:', error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const downloadSettingsProfiles = async () => {
+    if (!siteInfo) {
+      Alert.alert('Error', 'Please link your account first');
+      return;
+    }
+
+    setIsDownloadingProfiles(true);
+    try {
+      console.log('[Settings] Downloading settings profiles from server...');
+      const result = await trpcClient.settingsprofile.download.query({ siteId: siteInfo.siteId });
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to download profiles');
+      }
+
+      console.log('[Settings] Downloaded', result.profiles.length, 'profiles from server');
+      
+      if (result.profiles.length === 0) {
+        Alert.alert('No Profiles', 'No settings profiles found on the server');
+        return;
+      }
+
+      const downloadedProfiles = result.profiles.map((p: any) => ({
+        name: p.profileName,
+        timestamp: p.timestamp,
+      }));
+
+      for (const profile of result.profiles) {
+        await AsyncStorage.setItem(`pos_settings_profile_${profile.profileName}`, JSON.stringify(profile.profileData));
+      }
+
+      await AsyncStorage.setItem('pos_settings_profiles', JSON.stringify(downloadedProfiles));
+      setSettingsProfiles(downloadedProfiles);
+      
+      Alert.alert('Success', `Downloaded ${result.profiles.length} settings profile(s) from server!`);
+    } catch (error) {
+      console.error('[Settings] Error downloading profiles:', error);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to download profiles');
+    } finally {
+      setIsDownloadingProfiles(false);
     }
   };
 
@@ -1378,6 +1423,22 @@ export default function SettingsScreen() {
                 <Text style={styles.buttonText}>Save Current Settings</Text>
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: colors.accent, marginTop: 12, marginBottom: 0 }, isDownloadingProfiles && { opacity: 0.7 }]}
+              onPress={downloadSettingsProfiles}
+              disabled={isDownloadingProfiles}
+              activeOpacity={0.8}
+            >
+              {isDownloadingProfiles ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <>
+                  <Download size={20} color="#ffffff" />
+                  <Text style={styles.buttonText}>Download Profiles from Server</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       )}
