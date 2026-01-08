@@ -149,17 +149,24 @@ export class PositronAPI {
 
       if (!response.ok) {
         const text = await response.text();
-        console.error('[API] File error response:', text);
+        if (response.status === 404) {
+          console.log('[API] File not found:', path);
+        } else {
+          console.error('[API] File error response:', text);
+        }
         throw new Error(`HTTP ${response.status}: ${text}`);
       }
 
       return await response.text();
     } catch (error: any) {
-      console.error('[API] File error:', error);
-      console.error('[API] Error type:', error.constructor.name);
-      console.error('[API] Error message:', error.message);
       if (error.name === 'AbortError') {
+        console.error('[API] File download timeout:', path);
         throw new Error(`Timeout downloading: ${path}`);
+      }
+      if (!error.message?.includes('404')) {
+        console.error('[API] File error:', error);
+        console.error('[API] Error type:', error.constructor.name);
+        console.error('[API] Error message:', error.message);
       }
       throw error;
     }

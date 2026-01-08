@@ -468,7 +468,12 @@ export default function SettingsScreen() {
           
           console.log('[Settings] Downloaded and saved profile:', profileName);
         } catch (fileError) {
-          console.error('[Settings] Error downloading profile file:', fileInfo.path, fileError);
+          const errorMessage = fileError instanceof Error ? fileError.message : String(fileError);
+          if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+            console.log('[Settings] Profile file not found (skipping):', fileInfo.path);
+          } else {
+            console.error('[Settings] Error downloading profile file:', fileInfo.path, fileError);
+          }
         }
       }
 
