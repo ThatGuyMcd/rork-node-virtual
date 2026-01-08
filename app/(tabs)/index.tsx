@@ -306,9 +306,6 @@ export default function ProductsScreen() {
         return;
       }
 
-      // Fetch VAT rates once upfront
-      const vatRates = await dataSyncService.getStoredVATRates();
-
       const manifest = await apiClient.getManifest(siteInfo.siteId);
       const areaFiles = manifest.filter(fileInfo => {
         const upper = fileInfo.path.toUpperCase();
@@ -317,13 +314,11 @@ export default function ProductsScreen() {
 
       console.log(`[Products] Found ${areaFiles.length} files for area ${area}`);
 
-      // Try to get table list from tableplan.ini
       const allTableFolders = new Set<string>();
       
       try {
         const tableplanPath = `TABDATA/${area}/tableplan.ini`;
         const tableplanContent = await apiClient.getFile(siteInfo.siteId, tableplanPath);
-        console.log(`[Products] Found tableplan.ini for ${area}`);
         
         const lines = tableplanContent.split(/[\r\n]+/);
         for (const line of lines) {
@@ -339,10 +334,6 @@ export default function ProductsScreen() {
           }
         }
       } catch {
-        console.log(`[Products] No tableplan.ini found for ${area}, using manifest folders`);
-      }
-      
-      if (allTableFolders.size === 0) {
         manifest.forEach(fileInfo => {
           const upper = fileInfo.path.toUpperCase();
           if (!upper.startsWith('TABDATA/')) return;
@@ -362,11 +353,52 @@ export default function ProductsScreen() {
           }
         });
       }
-      
-      console.log(`[Products] Found ${allTableFolders.size} table folders for area ${area}`);
 
-      // Download files in parallel with larger batch size for speed
-      const BATCH_SIZE = 15;
+      // Build table objects immediately so UI can show them while downloading
+      const hashTimestamp = Date.now();
+      const tableSet = new Map<string, { area: string; table: string; tableId: string }>();
+      const areaTables: Table[] = [];
+      
+      for (const folderPath of allTableFolders) {
+        const parts = folderPath.split('/');
+        if (parts.length !== 2) continue;
+        
+        const areaName = parts[0];
+        const tableName = parts[1];
+        const key = `${areaName}/${tableName}`;
+        
+        let hash = 0;
+        const hashString = `${areaName}_${tableName}_${hashTimestamp}`;
+        for (let i = 0; i < hashString.length; i++) {
+          hash = (hash * 31 + hashString.charCodeAt(i)) >>> 0;
+        }
+        const tableId = `table_${hash}`;
+        tableSet.set(key, { area: areaName, table: tableName, tableId });
+        
+        let colorHash = 0;
+        const colorHashString = `${areaName}_${tableName}`;
+        for (let i = 0; i < colorHashString.length; i++) {
+          colorHash = (colorHash * 31 + colorHashString.charCodeAt(i)) >>> 0;
+        }
+        const hue = colorHash % 360;
+
+        areaTables.push({
+          id: tableId,
+          name: tableName,
+          tabCode: tableName,
+          area: areaName,
+          color: `hsl(${hue}, 65%, 50%)`,
+        });
+      }
+
+      // Update tables state early so skeleton appears
+      setTables(prevTables => {
+        const otherAreaTables = prevTables.filter(t => t.area !== area);
+        return [...otherAreaTables, ...areaTables];
+      });
+
+      // Download all files in parallel with larger batch size
+      const BATCH_SIZE = 30;
       const files: Map<string, string> = new Map();
       
       for (let i = 0; i < areaFiles.length; i += BATCH_SIZE) {
@@ -378,48 +410,26 @@ export default function ProductsScreen() {
         );
         
         const results = await Promise.all(batchPromises);
-        results.forEach(result => {
+        for (const result of results) {
           if (result) {
             files.set(result.path, result.content);
           }
-        });
+        }
         
-        const progress = Math.round((Math.min(i + BATCH_SIZE, areaFiles.length) / areaFiles.length) * 100);
-        setDownloadProgress(progress);
+        setDownloadProgress(Math.round((Math.min(i + BATCH_SIZE, areaFiles.length) / areaFiles.length) * 100));
       }
 
-      console.log(`[Products] Downloaded ${files.size} files for area ${area}`);
-
-      const areaTables: Table[] = [];
-      const tableSet = new Map<string, { area: string; table: string; tableId: string }>();
+      // Process files in single pass - build statuses and file maps together
       const tableDataMap = new Map<string, string>();
       const lockedTables = new Set<string>();
       const tableFilesMap = new Map<string, Map<string, string>>();
+      
+      // Initialize file maps
+      for (const key of tableSet.keys()) {
+        tableFilesMap.set(key, new Map());
+      }
 
-      // Create table entries for ALL folders found
-      const hashTimestamp = Date.now();
-      allTableFolders.forEach(folderPath => {
-        const parts = folderPath.split('/');
-        if (parts.length !== 2) return;
-        
-        const areaName = parts[0];
-        const tableName = parts[1];
-        const key = `${areaName}/${tableName}`;
-        
-        if (!tableSet.has(key)) {
-          let hash = 0;
-          const hashString = `${areaName}_${tableName}_${hashTimestamp}`;
-          for (let i = 0; i < hashString.length; i++) {
-            hash = (hash * 31 + hashString.charCodeAt(i)) >>> 0;
-          }
-          const tableId = `table_${hash}`;
-          tableSet.set(key, { area: areaName, table: tableName, tableId });
-          tableFilesMap.set(key, new Map());
-        }
-      });
-
-      // Process downloaded files
-      for (const [path, content] of files.entries()) {
+      for (const [path, content] of files) {
         const upper = path.toUpperCase();
         if (!upper.startsWith('TABDATA/')) continue;
         
@@ -430,69 +440,22 @@ export default function ProductsScreen() {
         const table = parts[1];
         const fileName = parts[2];
         const key = `${areaName}/${table}`;
+        const tableInfo = tableSet.get(key);
         
         const tableFiles = tableFilesMap.get(key);
         if (tableFiles) {
           tableFiles.set(fileName, content);
         }
         
-        if (fileName.toUpperCase() === 'TABLEOPEN.INI') {
-          const tableInfo = tableSet.get(key);
-          if (tableInfo) {
-            lockedTables.add(tableInfo.tableId);
-          }
-          continue;
-        }
-        
-        if (upper.endsWith('.INI')) continue;
-        
-        if (fileName.toUpperCase() === 'TABLEDATA.CSV') {
-          const tableInfo = tableSet.get(key);
-          if (tableInfo) {
-            tableDataMap.set(tableInfo.tableId, content);
-          }
+        const fileNameUpper = fileName.toUpperCase();
+        if (fileNameUpper === 'TABLEOPEN.INI' && tableInfo) {
+          lockedTables.add(tableInfo.tableId);
+        } else if (fileNameUpper === 'TABLEDATA.CSV' && tableInfo) {
+          tableDataMap.set(tableInfo.tableId, content);
         }
       }
 
-      // Build table objects
-      for (const { area: areaName, table, tableId } of tableSet.values()) {
-        let hash = 0;
-        const hashString = `${areaName}_${table}`;
-        for (let i = 0; i < hashString.length; i++) {
-          hash = (hash * 31 + hashString.charCodeAt(i)) >>> 0;
-        }
-        const hue = hash % 360;
-
-        areaTables.push({
-          id: tableId,
-          name: table,
-          tabCode: table,
-          area: areaName,
-          color: `hsl(${hue}, 65%, 50%)`,
-        });
-      }
-
-      console.log(`[Products] Parsed ${areaTables.length} tables for area ${area}`);
-
-      // Store table files in memory in parallel
-      const storePromises: Promise<void>[] = [];
-      for (const [key, tableFiles] of tableFilesMap.entries()) {
-        const parts = key.split('/');
-        if (parts.length === 2) {
-          storePromises.push(
-            Promise.resolve(tableDataService.storeTableFilesInMemory(parts[0], parts[1], tableFiles))
-          );
-        }
-      }
-      await Promise.all(storePromises);
-
-      // Update tables state immediately so UI shows tables
-      setTables(prevTables => {
-        const otherAreaTables = prevTables.filter(t => t.area !== area);
-        return [...otherAreaTables, ...areaTables];
-      });
-
-      // Build statuses from already-parsed data (no additional file reads needed)
+      // Build statuses and store files in memory simultaneously
       const quickStatuses = new Map<string, { hasData: boolean; subtotal: number; isLocked: boolean }>();
       
       for (const table of areaTables) {
@@ -513,112 +476,93 @@ export default function ProductsScreen() {
         }
       }
 
-      // Update statuses immediately
+      // Store all files in memory at once
+      for (const [key, tableFiles] of tableFilesMap) {
+        const parts = key.split('/');
+        if (parts.length === 2) {
+          tableDataService.storeTableFilesInMemory(parts[0], parts[1], tableFiles);
+        }
+      }
+
+      // Update statuses
       setTableStatuses(prevStatuses => {
         const newStatuses = new Map(prevStatuses);
-        quickStatuses.forEach((status, tableId) => {
+        for (const [tableId, status] of quickStatuses) {
           newStatuses.set(tableId, status);
-        });
+        }
         return newStatuses;
       });
 
-      // Mark loading complete so tables are shown
       justFinishedLoadingAreaRef.current = true;
       setLoadingAreaData(false);
       
-      // Parse and store table data in background (non-blocking)
-      const savePromises: Promise<void>[] = [];
-      
-      for (const [tableId, csvContent] of tableDataMap.entries()) {
-        const table = areaTables.find(t => t.id === tableId);
-        if (!table) continue;
-        
-        const rows = dataParser.parseCSV(csvContent);
-        if (rows.length <= 1) continue;
-        
-        const tableDataRows: {
-          quantity: number;
-          productName: string;
-          price: number;
-          pluFile: string;
-          group: string;
-          department: string;
-          vatCode: string;
-          vatPercentage: number;
-          vatAmount: number;
-          addedBy: string;
-          timeDate: string;
-          printer1: string;
-          printer2: string;
-          printer3: string;
-          itemPrinted: string;
-          tableId: string;
-        }[] = [];
-        
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          tableDataRows.push({
-            quantity: parseFloat(row[0] || '1'),
-            productName: row[1]?.trim() || '',
-            price: parseFloat(row[2] || '0'),
-            pluFile: row[3]?.trim() || '',
-            group: row[4]?.trim() || '',
-            department: row[5]?.trim() || '',
-            vatCode: row[6]?.trim() || '',
-            vatPercentage: parseFloat(row[7] || '0'),
-            vatAmount: parseFloat(row[8] || '0'),
-            addedBy: row[9]?.trim() || '',
-            timeDate: row[10]?.trim() || '',
-            printer1: row[11]?.trim() || 'NOT SET',
-            printer2: row[12]?.trim() || 'NOT SET',
-            printer3: row[13]?.trim() || 'NOT SET',
-            itemPrinted: row[14]?.trim() || 'NO',
-            tableId: tableId,
-          });
-        }
-        
-        if (tableDataRows.length > 0) {
-          const operator: Operator = {
-            id: 'system',
-            name: tableDataRows[0].addedBy || 'System',
-            pin: '',
-            active: true,
-            isManager: false,
-          };
+      // Background: save table data locally (fire and forget)
+      setTimeout(async () => {
+        try {
+          const vatRates = await dataSyncService.getStoredVATRates();
           
-          savePromises.push(
-            tableDataService.saveTableDataLocally(
-              table,
-              tableDataRows.map(dataRow => ({
-                product: {
-                  id: `prod_${dataRow.pluFile}`,
-                  name: dataRow.productName,
-                  departmentId: dataRow.department,
-                  groupId: dataRow.group,
-                  prices: [{ key: 'PRICE_STANDARD', label: 'standard', price: dataRow.price }],
-                  vatCode: dataRow.vatCode,
-                  vatPercentage: dataRow.vatPercentage,
-                  buttonColor: '#1e293b',
-                  fontColor: '#ffffff',
-                },
-                quantity: dataRow.quantity,
-                selectedPrice: { key: 'PRICE_STANDARD', label: 'standard', price: dataRow.price },
-                lineTotal: dataRow.quantity * dataRow.price,
-              })),
-              operator,
-              vatRates
-            ).catch(err => console.error(`[Products] Error saving table ${table.name}:`, err))
-          );
-        }
-      }
-      
-      // Save all tables in parallel in background
-      Promise.all(savePromises).then(() => {
-        console.log('[Products] Background table data save complete');
-      });
+          for (const [tableId, csvContent] of tableDataMap) {
+            const table = areaTables.find(t => t.id === tableId);
+            if (!table) continue;
+            
+            const rows = dataParser.parseCSV(csvContent);
+            if (rows.length <= 1) continue;
+            
+            const tableDataRows = rows.slice(1).map(row => ({
+              quantity: parseFloat(row[0] || '1'),
+              productName: row[1]?.trim() || '',
+              price: parseFloat(row[2] || '0'),
+              pluFile: row[3]?.trim() || '',
+              group: row[4]?.trim() || '',
+              department: row[5]?.trim() || '',
+              vatCode: row[6]?.trim() || '',
+              vatPercentage: parseFloat(row[7] || '0'),
+              vatAmount: parseFloat(row[8] || '0'),
+              addedBy: row[9]?.trim() || '',
+              timeDate: row[10]?.trim() || '',
+              printer1: row[11]?.trim() || 'NOT SET',
+              printer2: row[12]?.trim() || 'NOT SET',
+              printer3: row[13]?.trim() || 'NOT SET',
+              itemPrinted: row[14]?.trim() || 'NO',
+              tableId: tableId,
+            }));
+            
+            if (tableDataRows.length > 0) {
+              const operator: Operator = {
+                id: 'system',
+                name: tableDataRows[0].addedBy || 'System',
+                pin: '',
+                active: true,
+                isManager: false,
+              };
+              
+              await tableDataService.saveTableDataLocally(
+                table,
+                tableDataRows.map(dataRow => ({
+                  product: {
+                    id: `prod_${dataRow.pluFile}`,
+                    name: dataRow.productName,
+                    departmentId: dataRow.department,
+                    groupId: dataRow.group,
+                    prices: [{ key: 'PRICE_STANDARD', label: 'standard', price: dataRow.price }],
+                    vatCode: dataRow.vatCode,
+                    vatPercentage: dataRow.vatPercentage,
+                    buttonColor: '#1e293b',
+                    fontColor: '#ffffff',
+                  },
+                  quantity: dataRow.quantity,
+                  selectedPrice: { key: 'PRICE_STANDARD', label: 'standard', price: dataRow.price },
+                  lineTotal: dataRow.quantity * dataRow.price,
+                })),
+                operator,
+                vatRates
+              ).catch(() => {});
+            }
+          }
+        } catch {}
+      }, 100);
 
-      console.log('[Products] Successfully refreshed area data');
-      showNotification(`Refreshed ${area} area data`);
+      showNotification(`Loaded ${areaTables.length} tables`);
     } catch (error) {
       console.error('[Products] Failed to load area data:', error);
       showNotification('Failed to refresh area data', true);
