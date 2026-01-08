@@ -1800,7 +1800,7 @@ export default function BasketScreen() {
           </View>
 
           <View style={[styles.splitBillTabs, { backgroundColor: colors.cardBackground }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.splitBillTabsContent}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.splitBillTabsContent} style={styles.splitBillTabsScroll}>
               <TouchableOpacity
                 style={[
                   styles.splitBillTab,
@@ -1846,7 +1846,7 @@ export default function BasketScreen() {
               <Text style={styles.splitBillMoveBarText}>
                 {selectedItemsForMove.size} item(s) selected
               </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.splitBillMoveBarScroll} contentContainerStyle={styles.splitBillMoveBarContent}>
                 {splitBillSourceIndex !== -1 && (
                   <TouchableOpacity
                     style={[styles.splitBillMoveButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
@@ -2874,9 +2874,13 @@ const styles = StyleSheet.create({
   splitBillTabs: {
     paddingVertical: 12,
   },
+  splitBillTabsScroll: {
+    flexGrow: 0,
+  },
   splitBillTabsContent: {
     paddingHorizontal: 16,
     gap: 8,
+    flexDirection: 'row' as const,
   },
   splitBillTab: {
     paddingHorizontal: 16,
@@ -2900,6 +2904,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 12,
+  },
+  splitBillMoveBarScroll: {
+    flex: 1,
+  },
+  splitBillMoveBarContent: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingRight: 16,
   },
   splitBillMoveBarText: {
     color: '#fff',
