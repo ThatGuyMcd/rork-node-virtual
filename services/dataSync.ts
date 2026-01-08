@@ -903,8 +903,8 @@ export class DataSyncService {
     return data ? JSON.parse(data) : {};
   }
 
-  private async parseCustomPriceNames(files: Map<string, string>): Promise<Record<string, string>> {
-    const customPriceNames: Record<string, string> = {};
+  private async parseCustomPriceNames(files: Map<string, string>): Promise<Record<string, { name: string; prefix: string }>> {
+    const customPriceNames: Record<string, { name: string; prefix: string }> = {};
     
     for (const [path, content] of files.entries()) {
       const upper = path.toUpperCase();
@@ -918,17 +918,21 @@ export class DataSyncService {
       const priceNumber = match[1];
       const kv = dataParser.parseKV(content);
       const description = kv.PRODUCT_DESCRIPTION?.trim();
+      const prefix = kv.PREFIX?.trim();
       
       if (description) {
-        customPriceNames[priceNumber] = description;
-        console.log(`[DataSync] Custom price ${priceNumber}: ${description}`);
+        customPriceNames[priceNumber] = {
+          name: description,
+          prefix: prefix || description.toUpperCase(),
+        };
+        console.log(`[DataSync] Custom price ${priceNumber}: ${description} (prefix: ${prefix || description.toUpperCase()})`);
       }
     }
     
     return customPriceNames;
   }
 
-  async getStoredCustomPriceNames(): Promise<Record<string, string>> {
+  async getStoredCustomPriceNames(): Promise<Record<string, { name: string; prefix: string }>> {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.CUSTOM_PRICE_NAMES);
     return data ? JSON.parse(data) : {};
   }

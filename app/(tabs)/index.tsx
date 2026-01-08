@@ -89,7 +89,7 @@ export default function ProductsScreen() {
   const [menuStack, setMenuStack] = useState<string[]>([]);
   const [saveErrorModalVisible, setSaveErrorModalVisible] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
-  const [customPriceNames, setCustomPriceNames] = useState<Record<string, string>>({});
+  const [customPriceNames, setCustomPriceNames] = useState<Record<string, { name: string; prefix: string }>>({});
   const justFinishedLoadingAreaRef = useRef(false);
   const router = useRouter();
 
@@ -303,9 +303,9 @@ export default function ProductsScreen() {
     const customMatch = label.match(/^custom\s*(\d+)$/i);
     if (customMatch) {
       const priceNumber = customMatch[1];
-      const customName = customPriceNames[priceNumber];
-      if (customName) {
-        return customName.charAt(0).toUpperCase() + customName.slice(1).toLowerCase();
+      const customPriceData = customPriceNames[priceNumber];
+      if (customPriceData?.name) {
+        return customPriceData.name.charAt(0).toUpperCase() + customPriceData.name.slice(1).toLowerCase();
       }
     }
     
@@ -819,8 +819,23 @@ export default function ProductsScreen() {
         return;
       }
 
-      addToBasket(product, firstValidPrice, 1);
-      showNotification(`Added ${product.name} to basket`);
+      // Check if this is a custom price and apply prefix
+      let productToAdd = product;
+      const customMatch = firstValidPrice.label.match(/^custom\s*(\d+)$/i);
+      if (customMatch) {
+        const priceNumber = customMatch[1];
+        const customPriceData = customPriceNames[priceNumber];
+        if (customPriceData?.prefix && customPriceData.prefix.toUpperCase() !== 'NOT SET') {
+          productToAdd = {
+            ...product,
+            name: `${customPriceData.prefix} ${product.name}`
+          };
+          console.log('[Products] Applied custom price prefix (auto-select):', customPriceData.prefix);
+        }
+      }
+
+      addToBasket(productToAdd, firstValidPrice, 1);
+      showNotification(`Added ${productToAdd.name} to basket`);
 
       // Check for menu after a short delay to ensure basket state is updated
       setTimeout(() => {
@@ -872,8 +887,23 @@ export default function ProductsScreen() {
       return;
     }
     
-    addToBasket(selectedProduct, price, 1);
-    showNotification(`Added ${selectedProduct.name} to basket`);
+    // Check if this is a custom price and apply prefix
+    let productToAdd = selectedProduct;
+    const customMatch = price.label.match(/^custom\s*(\d+)$/i);
+    if (customMatch) {
+      const priceNumber = customMatch[1];
+      const customPriceData = customPriceNames[priceNumber];
+      if (customPriceData?.prefix && customPriceData.prefix.toUpperCase() !== 'NOT SET') {
+        productToAdd = {
+          ...selectedProduct,
+          name: `${customPriceData.prefix} ${selectedProduct.name}`
+        };
+        console.log('[Products] Applied custom price prefix:', customPriceData.prefix);
+      }
+    }
+    
+    addToBasket(productToAdd, price, 1);
+    showNotification(`Added ${productToAdd.name} to basket`);
     
     closePriceModal();
     

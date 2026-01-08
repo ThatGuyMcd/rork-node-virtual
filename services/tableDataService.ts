@@ -44,17 +44,19 @@ class TableDataService {
     return Platform.OS !== 'web' && !!FileSystem.documentDirectory;
   }
 
-  private createRows(
+  private async createRows(
     table: Table,
     basket: BasketItem[],
     operator: Operator,
     vatRates: { code: string; percentage: number }[]
-  ): TableDataRow[] {
+  ): Promise<TableDataRow[]> {
     const rows: TableDataRow[] = [];
     const now = new Date();
     const timeString = now.toLocaleTimeString('en-GB', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const dateString = now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const timeDate = `${timeString} - ${dateString}`;
+
+    const customPriceNames = await dataSyncService.getStoredCustomPriceNames();
 
     const labelToPrefixMap: Record<string, string> = {
       'half': 'HALF',
@@ -82,7 +84,18 @@ class TableDataService {
       const baseName = item.product.name.split(' - ')[0];
       const messagePrefix = item.product.name.includes(' - ') ? ' - ' + item.product.name.split(' - ').slice(1).join(' - ') : '';
       const priceLabelLower = item.selectedPrice.label.toLowerCase();
-      const prefix = labelToPrefixMap[priceLabelLower];
+      
+      let prefix = labelToPrefixMap[priceLabelLower];
+      
+      const customMatch = item.selectedPrice.label.match(/^custom\s*(\d+)$/i);
+      if (customMatch) {
+        const priceNumber = customMatch[1];
+        const customPriceData = customPriceNames[priceNumber];
+        if (customPriceData?.prefix) {
+          prefix = customPriceData.prefix;
+        }
+      }
+      
       const shouldAddPrefix = prefix !== undefined;
       const productName = shouldAddPrefix ? `${prefix} ${baseName}${messagePrefix}` : item.product.name;
 
@@ -115,7 +128,7 @@ class TableDataService {
     operator: Operator,
     vatRates: { code: string; percentage: number }[]
   ): Promise<void> {
-    const rows = this.createRows(table, basket, operator, vatRates);
+    const rows = await this.createRows(table, basket, operator, vatRates);
 
     if (!this.isFileSystemAvailable()) {
       this.data.set(table.id, rows);
@@ -131,7 +144,7 @@ class TableDataService {
     operator: Operator,
     vatRates: { code: string; percentage: number }[]
   ): Promise<void> {
-    const rows = this.createRows(table, basket, operator, vatRates);
+    const rows = await this.createRows(table, basket, operator, vatRates);
 
     if (!this.isFileSystemAvailable()) {
       this.data.set(table.id, rows);
@@ -621,7 +634,7 @@ class TableDataService {
     operator: Operator,
     vatRates: { code: string; percentage: number }[]
   ): Promise<void> {
-    const rows = this.createRows(table, basket, operator, vatRates);
+    const rows = await this.createRows(table, basket, operator, vatRates);
     
     if (!this.isFileSystemAvailable()) {
       this.data.set(table.id, rows);
