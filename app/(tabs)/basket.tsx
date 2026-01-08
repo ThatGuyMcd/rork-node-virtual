@@ -497,8 +497,30 @@ export default function BasketScreen() {
   const [selectedItemsForMove, setSelectedItemsForMove] = useState<Set<number>>(new Set());
   const [splitBillSourceIndex, setSplitBillSourceIndex] = useState<number>(-1);
   const scaleAnim = useState(new Animated.Value(0))[0];
+  const splitButtonPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const availableTenders = getAvailableTenders();
   const router = useRouter();
+
+  const splitButtonPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        splitButtonPosition.setOffset({
+          x: (splitButtonPosition.x as any)._value,
+          y: (splitButtonPosition.y as any)._value,
+        });
+        splitButtonPosition.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: splitButtonPosition.x, dy: splitButtonPosition.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        splitButtonPosition.flattenOffset();
+      },
+    })
+  ).current;
 
   useEffect(() => {
     const checkPrinterConnection = async () => {
@@ -1041,22 +1063,32 @@ export default function BasketScreen() {
       />
 
       {currentTable && basket.length > 0 && !splitBillModalVisible && (
-        <TouchableOpacity
+        <Animated.View
+          {...splitButtonPanResponder.panHandlers}
           style={[
             styles.splitBillFloatingButton,
             { backgroundColor: colors.accent },
             getButtonSkinStyle(buttonSkin, colors.accent),
+            {
+              transform: [
+                { translateX: splitButtonPosition.x },
+                { translateY: splitButtonPosition.y },
+              ],
+            },
           ]}
-          onPress={openSplitBillModal}
-          activeOpacity={0.8}
-          testID="split-bill-button"
         >
-          {getButtonOverlayStyle(buttonSkin) && (
-            <View style={getButtonOverlayStyle(buttonSkin) as any} />
-          )}
-          <Split size={20} color="#fff" />
-          <Text style={styles.splitBillFloatingButtonText}>Split</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.splitBillFloatingButtonInner}
+            onPress={openSplitBillModal}
+            activeOpacity={0.8}
+            testID="split-bill-button"
+          >
+            {getButtonOverlayStyle(buttonSkin) && (
+              <View style={[getButtonOverlayStyle(buttonSkin) as any, { borderRadius: 28 }]} />
+            )}
+            <Split size={24} color="#fff" />
+          </TouchableOpacity>
+        </Animated.View>
       )}
 
       <View style={[styles.summary, { backgroundColor: colors.cardBackground, borderTopColor: colors.border }]}>
@@ -2826,13 +2858,17 @@ const styles = StyleSheet.create({
     position: 'absolute' as const,
     right: 16,
     bottom: 280,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     zIndex: 100,
+  },
+  splitBillFloatingButtonInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   splitBillFloatingButtonText: {
     color: '#fff',
