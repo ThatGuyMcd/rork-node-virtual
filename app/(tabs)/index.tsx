@@ -89,6 +89,7 @@ export default function ProductsScreen() {
   const [menuStack, setMenuStack] = useState<string[]>([]);
   const [saveErrorModalVisible, setSaveErrorModalVisible] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [customPriceNames, setCustomPriceNames] = useState<Record<string, string>>({});
   const justFinishedLoadingAreaRef = useRef(false);
   const router = useRouter();
 
@@ -231,6 +232,7 @@ export default function ProductsScreen() {
   useEffect(() => {
     loadData();
     loadDisplaySettings();
+    loadCustomPriceNames();
   }, []);
 
 
@@ -284,6 +286,34 @@ export default function ProductsScreen() {
     setDisplaySettings(settings);
     console.log('[Products] Display settings updated:', settings);
   };
+
+  const loadCustomPriceNames = async () => {
+    const names = await dataSyncService.getStoredCustomPriceNames();
+    setCustomPriceNames(names);
+    console.log('[Products] Custom price names loaded:', names);
+  };
+
+  const formatPriceLabel = useCallback((label: string): string => {
+    const upperLabel = label.toUpperCase();
+    
+    if (upperLabel === 'NOT SET' || upperLabel === 'OPEN') {
+      return label;
+    }
+    
+    const customMatch = label.match(/^custom\s*(\d+)$/i);
+    if (customMatch) {
+      const priceNumber = customMatch[1];
+      const customName = customPriceNames[priceNumber];
+      if (customName) {
+        return customName.charAt(0).toUpperCase() + customName.slice(1).toLowerCase();
+      }
+    }
+    
+    return label
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }, [customPriceNames]);
 
   const loadTableStatuses = async () => {
     console.log('[Products] Loading table statuses...');
@@ -1615,7 +1645,7 @@ export default function ProductsScreen() {
                     onPress={() => handlePriceSelect(price)}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.priceLabel, { color: colors.text }]}>{price.label}</Text>
+                    <Text style={[styles.priceLabel, { color: colors.text }]}>{formatPriceLabel(price.label)}</Text>
                     <Text style={[
                       styles.priceAmount,
                       { color: colors.primary },

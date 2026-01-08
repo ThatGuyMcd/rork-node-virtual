@@ -30,6 +30,7 @@ const STORAGE_KEYS = {
   PRODUCT_DISPLAY_SETTINGS: 'pos_product_display_settings',
   MENU_DATA: 'pos_menu_data',
   BACKGROUND_SYNC_INTERVAL: 'pos_background_sync_interval',
+  CUSTOM_PRICE_NAMES: 'pos_custom_price_names',
 };
 
 export interface SyncProgress {
@@ -356,13 +357,14 @@ export class DataSyncService {
   }
 
   private async parseAndStoreData(files: Map<string, string>): Promise<void> {
-    const [operators, { groups, departments }, menuData, vatRates, tenders, tables] = await Promise.all([
+    const [operators, { groups, departments }, menuData, vatRates, tenders, tables, customPriceNames] = await Promise.all([
       this.parseOperators(files),
       this.parseProductStructure(files),
       this.parseMenuData(files),
       this.parseVAT(files),
       this.parseTenders(files),
       this.parseTables(files),
+      this.parseCustomPriceNames(files),
     ]);
     
     const menuProductFilenames = this.extractMenuProductFilenames(menuData);
@@ -377,6 +379,7 @@ export class DataSyncService {
       [STORAGE_KEYS.VAT_RATES, JSON.stringify(vatRates)],
       [STORAGE_KEYS.TABLES, JSON.stringify(tables)],
       [STORAGE_KEYS.MENU_DATA, JSON.stringify(menuData)],
+      [STORAGE_KEYS.CUSTOM_PRICE_NAMES, JSON.stringify(customPriceNames)],
     ]);
   }
 
@@ -900,6 +903,36 @@ export class DataSyncService {
     return data ? JSON.parse(data) : {};
   }
 
+  private async parseCustomPriceNames(files: Map<string, string>): Promise<Record<string, string>> {
+    const customPriceNames: Record<string, string> = {};
+    
+    for (const [path, content] of files.entries()) {
+      const upper = path.toUpperCase();
+      if (!upper.includes('FUNCTIONDATA/ALL FUNCTIONS/CUSTOM PRICING/')) continue;
+      if (!upper.endsWith('.PLU')) continue;
+      
+      const fileName = path.split('/').pop()?.toUpperCase() || '';
+      const match = fileName.match(/^CUSTOM_PRICE_(\d+)\.PLU$/i);
+      if (!match) continue;
+      
+      const priceNumber = match[1];
+      const kv = dataParser.parseKV(content);
+      const description = kv.PRODUCT_DESCRIPTION?.trim();
+      
+      if (description) {
+        customPriceNames[priceNumber] = description;
+        console.log(`[DataSync] Custom price ${priceNumber}: ${description}`);
+      }
+    }
+    
+    return customPriceNames;
+  }
+
+  async getStoredCustomPriceNames(): Promise<Record<string, string>> {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.CUSTOM_PRICE_NAMES);
+    return data ? JSON.parse(data) : {};
+  }
+
   async getLastSyncTime(): Promise<string | null> {
     return await AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC);
   }
@@ -930,6 +963,7 @@ export class DataSyncService {
         this.getStoredVATRates(),
         this.getStoredTables(),
         this.getStoredMenuData(),
+        this.getStoredCustomPriceNames(),
       ]),
       Promise.all([
         this.parseOperators(files),
@@ -938,11 +972,12 @@ export class DataSyncService {
         this.parseVAT(files),
         this.parseTenders(files),
         this.parseTables(files),
+        this.parseCustomPriceNames(files),
       ]),
     ]);
 
-    const [existingOperators, existingGroups, existingDepartments, existingProducts, existingTenders, existingVATRates, existingTables, existingMenuData] = existing;
-    const [newOperators, { groups: newGroups, departments: newDepartments }, newMenuData, newVATRates, newTenders, newTables] = parsed;
+    const [existingOperators, existingGroups, existingDepartments, existingProducts, existingTenders, existingVATRates, existingTables, existingMenuData, existingCustomPriceNames] = existing;
+    const [newOperators, { groups: newGroups, departments: newDepartments }, newMenuData, newVATRates, newTenders, newTables, newCustomPriceNames] = parsed;
     
     const menuProductFilenames = this.extractMenuProductFilenames(newMenuData);
     const newProducts = await this.parseProducts(files, menuProductFilenames, newVATRates);
@@ -955,6 +990,7 @@ export class DataSyncService {
     const mergedVATRates = newVATRates.length > 0 ? newVATRates : existingVATRates;
     const mergedTables = newTables.length > 0 ? newTables : existingTables;
     const mergedMenuData = Object.keys(newMenuData).length > 0 ? newMenuData : existingMenuData;
+    const mergedCustomPriceNames = Object.keys(newCustomPriceNames).length > 0 ? newCustomPriceNames : existingCustomPriceNames;
 
     await AsyncStorage.multiSet([
       [STORAGE_KEYS.OPERATORS, JSON.stringify(mergedOperators)],
@@ -965,6 +1001,7 @@ export class DataSyncService {
       [STORAGE_KEYS.VAT_RATES, JSON.stringify(mergedVATRates)],
       [STORAGE_KEYS.TABLES, JSON.stringify(mergedTables)],
       [STORAGE_KEYS.MENU_DATA, JSON.stringify(mergedMenuData)],
+      [STORAGE_KEYS.CUSTOM_PRICE_NAMES, JSON.stringify(mergedCustomPriceNames)],
     ]);
   }
 
