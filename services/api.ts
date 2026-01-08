@@ -501,6 +501,105 @@ export class PositronAPI {
     }
   }
 
+  async downloadSettingsProfiles(siteId: string): Promise<{ success: boolean; profiles: any[]; error?: string }> {
+    console.log('[API] ====== downloadSettingsProfiles CALLED ======');
+    console.log('[API] siteId:', siteId);
+    
+    const baseUrl = getApiUrl();
+    const listUrl = `${baseUrl}/webviewfiles?SITEID=${encodeURIComponent(siteId)}&DIRECTORY=${encodeURIComponent('DATA/settings-profiles')}`;
+    
+    console.log('[API] GET', listUrl);
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('[API] Settings download timeout after 30s');
+        controller.abort();
+      }, 30000);
+      
+      const listResponse = await fetch(listUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      console.log('[API] List response status:', listResponse.status);
+      
+      if (!listResponse.ok) {
+        if (listResponse.status === 404) {
+          console.log('[API] No profiles folder found on server');
+          return { success: true, profiles: [] };
+        }
+        const text = await listResponse.text();
+        console.error('[API] List error response:', text);
+        return { success: false, profiles: [], error: `Server error ${listResponse.status}: ${text}` };
+      }
+      
+      const fileList = await listResponse.json();
+      console.log('[API] File list response:', JSON.stringify(fileList));
+      
+      let files: string[] = [];
+      if (Array.isArray(fileList)) {
+        files = fileList;
+      } else if (fileList.files && Array.isArray(fileList.files)) {
+        files = fileList.files;
+      } else if (fileList.FILES && Array.isArray(fileList.FILES)) {
+        files = fileList.FILES;
+      }
+      
+      console.log('[API] Found', files.length, 'files');
+      
+      if (files.length === 0) {
+        return { success: true, profiles: [] };
+      }
+      
+      const profiles: any[] = [];
+      for (const fileName of files) {
+        if (!fileName.endsWith('.json')) continue;
+        
+        const fileUrl = `${baseUrl}/webviewfiles?SITEID=${encodeURIComponent(siteId)}&FILE=${encodeURIComponent('DATA/settings-profiles/' + fileName)}`;
+        console.log('[API] Downloading profile:', fileUrl);
+        
+        try {
+          const fileController = new AbortController();
+          const fileTimeoutId = setTimeout(() => fileController.abort(), 30000);
+          
+          const fileResponse = await fetch(fileUrl, {
+            method: 'GET',
+            signal: fileController.signal,
+          });
+          
+          clearTimeout(fileTimeoutId);
+          
+          if (fileResponse.ok) {
+            const profileData = await fileResponse.json();
+            profiles.push(profileData);
+            console.log('[API] Downloaded profile:', fileName);
+          } else {
+            console.warn('[API] Failed to download profile:', fileName, fileResponse.status);
+          }
+        } catch (fileError) {
+          console.error('[API] Error downloading profile file:', fileName, fileError);
+        }
+      }
+      
+      console.log('[API] Downloaded', profiles.length, 'profiles successfully');
+      return { success: true, profiles };
+    } catch (error: any) {
+      console.error('[API] ====== SETTINGS DOWNLOAD ERROR ======');
+      console.error('[API] Error name:', error.name);
+      console.error('[API] Error type:', error.constructor?.name);
+      console.error('[API] Error message:', error.message);
+      console.error('[API] Full error:', error);
+      if (error.name === 'AbortError') {
+        return { success: false, profiles: [], error: 'Download timeout after 30 seconds' };
+      }
+      return { success: false, profiles: [], error: error.message || 'Download failed' };
+    }
+  }
+
   private normalizePath(path: string): string {
     return String(path || '')
       .replace(/^[.\\/]+/, '')
