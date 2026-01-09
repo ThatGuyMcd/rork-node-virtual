@@ -3,7 +3,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as Updates from "expo-updates";
 import React, { useCallback, useEffect } from "react";
-import { Platform, Pressable, View } from "react-native";
+import { Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { POSProvider } from "@/contexts/POSContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -29,8 +29,13 @@ function RootLayoutNav() {
 function GlobalInactivityLayer() {
   const { registerActivity } = useInactivity();
 
-  const onAnyPress = useCallback(() => {
-    registerActivity('global-press');
+  const lastTouchAtRef = React.useRef<number>(0);
+
+  const register = useCallback((reason: string) => {
+    const now = Date.now();
+    if (now - lastTouchAtRef.current < 400) return;
+    lastTouchAtRef.current = now;
+    registerActivity(reason);
   }, [registerActivity]);
 
   useEffect(() => {
@@ -56,12 +61,17 @@ function GlobalInactivityLayer() {
   }, [registerActivity]);
 
   return (
-    <Pressable testID="global-activity-capture" style={{ flex: 1 }} onPress={onAnyPress}>
+    <View
+      testID="global-activity-capture"
+      style={{ flex: 1 }}
+      onTouchStart={() => register('global-touchstart')}
+      onTouchMove={() => register('global-touchmove')}
+    >
       <View style={{ flex: 1 }} pointerEvents="box-none">
         <RootLayoutNav />
         <ScreensaverOverlay />
       </View>
-    </Pressable>
+    </View>
   );
 }
 

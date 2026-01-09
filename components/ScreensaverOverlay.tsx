@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useInactivity } from '@/contexts/InactivityContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
