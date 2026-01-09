@@ -634,7 +634,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
               console.log(`[POS] Row ${rowIdx + 1}: No prefix, using standard price`);
             }
             
-            const productWithMessage = { ...product, name: productNameWithoutPrefix };
+            const productWithMessage = { ...product, name: row.productName };
             const basketItem: BasketItem = {
               product: productWithMessage,
               quantity: row.quantity,
