@@ -337,7 +337,6 @@ export default function BasketScreen() {
     refundBasketItem,
     removeFromBasket,
     clearBasket,
-    calculateTotals,
     completeSale,
     saveTableTab,
     getAvailableTenders,
@@ -496,6 +495,8 @@ export default function BasketScreen() {
   const [activeSplitBillIndex, setActiveSplitBillIndex] = useState(0);
   const [selectedItemsForMove, setSelectedItemsForMove] = useState<Set<number>>(new Set());
   const [splitBillSourceIndex, setSplitBillSourceIndex] = useState<number>(-1);
+  const [payingSplitBillIndex, setPayingSplitBillIndex] = useState<number | null>(null);
+  const [payingSplitBillItems, setPayingSplitBillItems] = useState<BasketItem[]>([]);
   const scaleAnim = useState(new Animated.Value(0))[0];
   const splitButtonPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const availableTenders = getAvailableTenders();
@@ -532,7 +533,40 @@ export default function BasketScreen() {
     checkPrinterConnection();
   }, []);
 
-  const { subtotal, discount, vatBreakdown, total } = calculateTotals();
+  const basketForCalculation = useMemo(() => {
+    if (payingSplitBillIndex !== null && payingSplitBillItems.length > 0) {
+      return payingSplitBillItems;
+    }
+    return basket;
+  }, [payingSplitBillIndex, payingSplitBillItems, basket]);
+
+  const { subtotal, discount, vatBreakdown, total } = useMemo(() => {
+    const items = basketForCalculation;
+    let subtotal = 0;
+    const vatBreakdown: Record<string, number> = {};
+    
+    items.forEach(item => {
+      subtotal += item.lineTotal;
+      const vatCode = item.product.vatCode || 'S';
+      const vatPercentage = item.product.vatPercentage || 0;
+      const vatAmount = (item.lineTotal * vatPercentage) / (100 + vatPercentage);
+      
+      if (!vatBreakdown[vatCode]) {
+        vatBreakdown[vatCode] = 0;
+      }
+      vatBreakdown[vatCode] += vatAmount;
+    });
+    
+    const discountAmount = (subtotal * basketDiscount) / 100;
+    const total = subtotal - discountAmount;
+    
+    return {
+      subtotal,
+      discount: discountAmount,
+      vatBreakdown,
+      total
+    };
+  }, [basketForCalculation, basketDiscount]);
   const paidAmount = useMemo(() => splitPayments.reduce((sum, payment) => sum + payment.amount, 0), [splitPayments]);
   const totalWithGratuity = useMemo(() => total + gratuityAmount, [total, gratuityAmount]);
   const remainingTotal = useMemo(() => totalWithGratuity - paidAmount, [totalWithGratuity, paidAmount]);
@@ -598,7 +632,30 @@ export default function BasketScreen() {
       
       if (Math.abs(newRemaining) < 0.01) {
         closePaymentModal(async () => {
-          await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0);
+          if (payingSplitBillIndex !== null) {
+            console.log('[Basket] Completing split bill payment (multi-tender) for bill:', payingSplitBillIndex === -1 ? 'Main' : payingSplitBillIndex + 1);
+            
+            const originalBasket = [...basket];
+            basket.length = 0;
+            basket.push(...payingSplitBillItems);
+            
+            await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0);
+            
+            basket.length = 0;
+            basket.push(...originalBasket);
+            
+            if (payingSplitBillIndex >= 0) {
+              const newSplitBills = [...splitBills];
+              newSplitBills[payingSplitBillIndex] = [];
+              setSplitBills(newSplitBills);
+            }
+            
+            setPayingSplitBillIndex(null);
+            setPayingSplitBillItems([]);
+          } else {
+            await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0);
+          }
+          
           setSplitPayments([]);
           setSplitPaymentAmount('');
           setGratuityAmount(0);
@@ -644,7 +701,30 @@ export default function BasketScreen() {
       }
     }
     closePaymentModal(async () => {
-      await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0);
+      if (payingSplitBillIndex !== null) {
+        console.log('[Basket] Completing split bill payment for bill:', payingSplitBillIndex === -1 ? 'Main' : payingSplitBillIndex + 1);
+        
+        const originalBasket = [...basket];
+        basket.length = 0;
+        basket.push(...payingSplitBillItems);
+        
+        await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0);
+        
+        basket.length = 0;
+        basket.push(...originalBasket);
+        
+        if (payingSplitBillIndex >= 0) {
+          const newSplitBills = [...splitBills];
+          newSplitBills[payingSplitBillIndex] = [];
+          setSplitBills(newSplitBills);
+        }
+        
+        setPayingSplitBillIndex(null);
+        setPayingSplitBillItems([]);
+      } else {
+        await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0);
+      }
+      
       setSplitPayments([]);
       setSplitPaymentAmount('');
       setGratuityAmount(0);
@@ -696,6 +776,16 @@ export default function BasketScreen() {
     setSelectedItemsForMove(new Set());
     setSplitBillSourceIndex(-1);
     console.log('[Basket] Closed split bill modal');
+  }, []);
+
+  const cancelSplitBillPayment = useCallback(() => {
+    setPayingSplitBillIndex(null);
+    setPayingSplitBillItems([]);
+    setSplitPayments([]);
+    setSplitPaymentAmount('');
+    setGratuityAmount(0);
+    setSplitBillModalVisible(true);
+    console.log('[Basket] Cancelled split bill payment');
   }, []);
 
   const getMainBasketForSplit = useCallback(() => {
@@ -793,32 +883,32 @@ export default function BasketScreen() {
     }
   }, [currentTable, currentOperator, splitBills, getMainBasketForSplit, closeSplitBillModal, router]);
 
-  const handlePaySplitBill = useCallback(async (billIndex: number) => {
+  const handlePaySplitBill = useCallback((billIndex: number) => {
     const billItems = billIndex === -1 ? getMainBasketForSplit() : splitBills[billIndex];
     if (billItems.length === 0) {
       Alert.alert('Empty Bill', 'This bill has no items to pay');
       return;
     }
     
-    Alert.alert(
-      'Pay Bill',
-      `Pay ${billIndex === -1 ? 'Main Bill' : `Bill ${billIndex + 1}`} (£${calculateBillTotal(billItems).toFixed(2)})?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Pay', 
-          onPress: () => {
-            if (billIndex >= 0) {
-              const newSplitBills = [...splitBills];
-              newSplitBills[billIndex] = [];
-              setSplitBills(newSplitBills);
-            }
-            console.log('[Basket] Bill paid:', billIndex === -1 ? 'Main' : billIndex + 1);
-          }
-        }
-      ]
-    );
-  }, [splitBills, getMainBasketForSplit, calculateBillTotal]);
+    console.log('[Basket] Starting payment for split bill:', billIndex === -1 ? 'Main' : billIndex + 1, 'with', billItems.length, 'items');
+    
+    setPayingSplitBillIndex(billIndex);
+    setPayingSplitBillItems(billItems);
+    
+    setSplitPayments([]);
+    setSplitPaymentAmount('');
+    setGratuityAmount(0);
+    
+    closeSplitBillModal();
+    
+    setTimeout(() => {
+      if (gratuitySettings.enabled && !isRefundMode) {
+        setGratuityModalVisible(true);
+      } else {
+        openPaymentModal();
+      }
+    }, 300);
+  }, [splitBills, getMainBasketForSplit, gratuitySettings.enabled, isRefundMode, openPaymentModal, closeSplitBillModal]);
 
   const openMessageModal = useCallback((index: number) => {
     setCurrentMessageIndex(index);
@@ -918,7 +1008,30 @@ export default function BasketScreen() {
       amount: remainingTotal,
     }];
     
-    await completeSale(pendingTenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, changeAmount);
+    if (payingSplitBillIndex !== null) {
+      console.log('[Basket] Completing split bill payment with change for bill:', payingSplitBillIndex === -1 ? 'Main' : payingSplitBillIndex + 1);
+      
+      const originalBasket = [...basket];
+      basket.length = 0;
+      basket.push(...payingSplitBillItems);
+      
+      await completeSale(pendingTenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, changeAmount);
+      
+      basket.length = 0;
+      basket.push(...originalBasket);
+      
+      if (payingSplitBillIndex >= 0) {
+        const newSplitBills = [...splitBills];
+        newSplitBills[payingSplitBillIndex] = [];
+        setSplitBills(newSplitBills);
+      }
+      
+      setPayingSplitBillIndex(null);
+      setPayingSplitBillItems([]);
+    } else {
+      await completeSale(pendingTenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, changeAmount);
+    }
+    
     setSplitPayments([]);
     setSplitPaymentAmount('');
     setGratuityAmount(0);
@@ -1247,8 +1360,21 @@ export default function BasketScreen() {
             ]}
           >
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Payment Method</Text>
-              <TouchableOpacity onPress={() => closePaymentModal()}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {payingSplitBillIndex !== null 
+                  ? `Pay ${payingSplitBillIndex === -1 ? 'Main Bill' : `Bill ${payingSplitBillIndex + 1}`}`
+                  : 'Select Payment Method'}
+              </Text>
+              <TouchableOpacity onPress={() => {
+                if (payingSplitBillIndex !== null) {
+                  closePaymentModal();
+                  setTimeout(() => {
+                    cancelSplitBillPayment();
+                  }, 300);
+                } else {
+                  closePaymentModal();
+                }
+              }}>
                 <X size={24} color={colors.textTertiary} />
               </TouchableOpacity>
             </View>
@@ -1434,8 +1560,17 @@ export default function BasketScreen() {
         <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
           <View style={[styles.discountModal, { backgroundColor: colors.cardBackground }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Add Gratuity?</Text>
-              <TouchableOpacity onPress={() => setGratuityModalVisible(false)}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {payingSplitBillIndex !== null 
+                  ? `Add Gratuity - ${payingSplitBillIndex === -1 ? 'Main Bill' : `Bill ${payingSplitBillIndex + 1}`}`
+                  : 'Add Gratuity?'}
+              </Text>
+              <TouchableOpacity onPress={() => {
+                setGratuityModalVisible(false);
+                if (payingSplitBillIndex !== null) {
+                  cancelSplitBillPayment();
+                }
+              }}>
                 <X size={24} color={colors.textTertiary} />
               </TouchableOpacity>
             </View>
