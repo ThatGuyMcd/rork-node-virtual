@@ -533,13 +533,14 @@ export default function ProductsScreen() {
             if (!table) continue;
             
             const rows = dataParser.parseCSV(csvContent);
-            if (rows.length <= 1) continue;
             
             let subtotal = 0;
-            for (let i = 1; i < rows.length; i++) {
-              const qty = parseFloat(rows[i][0] || '1');
-              const price = parseFloat(rows[i][2] || '0');
-              subtotal += qty * price;
+            if (rows.length > 1) {
+              for (let i = 1; i < rows.length; i++) {
+                const qty = parseFloat(rows[i][0] || '1');
+                const price = parseFloat(rows[i][2] || '0');
+                subtotal += qty * price;
+              }
             }
             subtotalUpdates.set(tableId, subtotal);
             
@@ -601,7 +602,8 @@ export default function ProductsScreen() {
               for (const [tableId, subtotal] of subtotalUpdates) {
                 const existing = next.get(tableId);
                 if (existing) {
-                  next.set(tableId, { ...existing, hasData: true, subtotal });
+                  const effectiveHasData = subtotal > 0.0001;
+                  next.set(tableId, { ...existing, hasData: effectiveHasData, subtotal });
                 }
               }
               return next;
