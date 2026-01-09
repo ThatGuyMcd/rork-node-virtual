@@ -571,7 +571,6 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           { prefix: '2/3PT', label: 'schooner' },
           { prefix: 'OPEN', label: 'open' },
           { prefix: 'NOT SET', label: 'not set' },
-          { prefix: 'EXTRA', label: 'extra' },
         ];
         
         const allPrefixes: { prefix: string; label: string }[] = [...builtInPrefixes];

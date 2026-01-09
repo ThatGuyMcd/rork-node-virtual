@@ -76,7 +76,7 @@ class TableDataService {
     };
 
     const allKnownPrefixes: string[] = [
-      'HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML', '2/3PT', 'OPEN', 'NOT SET', 'EXTRA'
+      'HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML', '2/3PT', 'OPEN', 'NOT SET'
     ];
     for (const [, customData] of Object.entries(customPriceNames)) {
       if (customData && typeof customData === 'object') {
