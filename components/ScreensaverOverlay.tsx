@@ -1,13 +1,17 @@
-import React, { memo, useEffect, useMemo, useRef } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useInactivity } from '@/contexts/InactivityContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
-const DEFAULT_LOGO_URI = 'https://images.unsplash.com/photo-1524666041070-9d87656c25bb?auto=format&fit=crop&w=800&q=80';
+const NODE_VIRTUAL_LOGO_URI =
+  'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/aks991iz9extc1dtz2zq4';
+const FALLBACK_LOGO_URI = 'https://images.unsplash.com/photo-1524666041070-9d87656c25bb?auto=format&fit=crop&w=800&q=80';
 
 export const ScreensaverOverlay = memo(function ScreensaverOverlay() {
   const { isScreensaverActive, dismissScreensaver } = useInactivity();
   const { colors } = useTheme();
+
+  const [logoLoadFailed, setLogoLoadFailed] = useState<boolean>(false);
 
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.98)).current;
@@ -29,6 +33,10 @@ export const ScreensaverOverlay = memo(function ScreensaverOverlay() {
     return base;
   }, [colors.background]);
 
+  const logoUri = useMemo(() => {
+    return logoLoadFailed ? FALLBACK_LOGO_URI : NODE_VIRTUAL_LOGO_URI;
+  }, [logoLoadFailed]);
+
   if (!isScreensaverActive) return null;
 
   return (
@@ -45,10 +53,20 @@ export const ScreensaverOverlay = memo(function ScreensaverOverlay() {
           <View style={[styles.logoCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
             <Image
               testID="screensaver-logo"
-              source={{ uri: DEFAULT_LOGO_URI }}
+              source={{ uri: logoUri }}
               resizeMode="contain"
               style={styles.logo}
               accessibilityLabel="NODE Virtual logo"
+              onError={(e) => {
+                console.log('[ScreensaverOverlay] Logo failed to load, falling back', {
+                  uri: logoUri,
+                  nativeEvent: e?.nativeEvent,
+                });
+                setLogoLoadFailed(true);
+              }}
+              onLoad={() => {
+                console.log('[ScreensaverOverlay] Logo loaded', { uri: logoUri });
+              }}
             />
           </View>
 
