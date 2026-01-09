@@ -3129,7 +3129,7 @@ const styles = StyleSheet.create({
   splitBillFloatingButton: {
     position: 'absolute' as const,
     right: 16,
-    bottom: 280,
+    bottom: 360,
     width: 56,
     height: 56,
     borderRadius: 28,
