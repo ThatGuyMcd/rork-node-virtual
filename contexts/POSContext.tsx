@@ -661,12 +661,32 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
               }
               
               if (foundProduct) {
-                product = foundProduct;
-                confirmedPrefixInfo = candidate.prefix;
-                strippedName = candidate.stripped;
-                productNameWithoutPrefix = strippedName;
-                console.log(`[POS] Row ${rowIdx + 1}: Found product "${foundProduct.name}" with prefix "${confirmedPrefixInfo.prefix}"`);
-                break;
+                let pluMatches = !row.pluFile;
+                
+                if (row.pluFile) {
+                  const groupIdNum = foundProduct.groupId.split('-')[0].trim();
+                  const deptIdNum = foundProduct.departmentId.split('-')[0].trim();
+                  const prodIdNum = foundProduct.id.replace('prod_', '').padStart(5, '0');
+                  const productPlu = `${groupIdNum}-${deptIdNum}-${prodIdNum}.PLU`;
+                  pluMatches = productPlu.toUpperCase() === row.pluFile.toUpperCase();
+                  
+                  if (!pluMatches && foundProduct.filename) {
+                    pluMatches = foundProduct.filename.toUpperCase() === row.pluFile.toUpperCase();
+                  }
+                  
+                  console.log(`[POS] Row ${rowIdx + 1}: PLU check - CSV: "${row.pluFile}", Product: "${productPlu}", Match: ${pluMatches}`);
+                }
+                
+                if (pluMatches) {
+                  product = foundProduct;
+                  confirmedPrefixInfo = candidate.prefix;
+                  strippedName = candidate.stripped;
+                  productNameWithoutPrefix = strippedName;
+                  console.log(`[POS] Row ${rowIdx + 1}: Found product "${foundProduct.name}" with prefix "${confirmedPrefixInfo.prefix}" (PLU confirmed)`);
+                  break;
+                } else {
+                  console.log(`[POS] Row ${rowIdx + 1}: Product "${foundProduct.name}" name matches but PLU doesn't - skipping this candidate`);
+                }
               }
             }
             
