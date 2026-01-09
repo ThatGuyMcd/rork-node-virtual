@@ -497,6 +497,7 @@ export default function BasketScreen() {
   const [splitBillSourceIndex, setSplitBillSourceIndex] = useState<number>(-1);
   const [payingSplitBillIndex, setPayingSplitBillIndex] = useState<number | null>(null);
   const [payingSplitBillItems, setPayingSplitBillItems] = useState<BasketItem[]>([]);
+  const [completedSplitBillPayment, setCompletedSplitBillPayment] = useState(false);
   const scaleAnim = useState(new Animated.Value(0))[0];
   const splitButtonPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const availableTenders = getAvailableTenders();
@@ -668,6 +669,7 @@ export default function BasketScreen() {
               setSplitBills(newSplitBills);
             }
             
+            setCompletedSplitBillPayment(true);
             setPayingSplitBillIndex(null);
             setPayingSplitBillItems([]);
           } else {
@@ -737,6 +739,7 @@ export default function BasketScreen() {
           setSplitBills(newSplitBills);
         }
         
+        setCompletedSplitBillPayment(true);
         setPayingSplitBillIndex(null);
         setPayingSplitBillItems([]);
       } else {
@@ -963,6 +966,19 @@ export default function BasketScreen() {
 
 
 
+  const handleReceiptDismiss = useCallback(() => {
+    if (completedSplitBillPayment) {
+      console.log('[Basket] Split bill payment completed, returning to split bill modal');
+      setCompletedSplitBillPayment(false);
+      setTimeout(() => {
+        setSplitBillModalVisible(true);
+      }, 100);
+    } else if (currentTable) {
+      selectTable(null);
+      console.log('[Basket] Table deselected after receipt');
+    }
+  }, [completedSplitBillPayment, currentTable, selectTable]);
+
   const handlePrintReceipt = async () => {
     if (!lastTransaction) {
       Alert.alert('Error', 'No transaction found to print');
@@ -974,10 +990,7 @@ export default function BasketScreen() {
       await printerService.printReceipt(lastTransaction);
       setReceiptPrintModalVisible(false);
       Alert.alert('Success', 'Receipt printed successfully');
-      if (currentTable) {
-        selectTable(null);
-        console.log('[Basket] Table deselected after printing receipt');
-      }
+      handleReceiptDismiss();
     } catch (error) {
       console.error('[Basket] Failed to print receipt:', error);
       setReceiptPrintModalVisible(false);
@@ -987,10 +1000,7 @@ export default function BasketScreen() {
 
   const handleSkipReceipt = () => {
     setReceiptPrintModalVisible(false);
-    if (currentTable) {
-      selectTable(null);
-      console.log('[Basket] Table deselected after skipping receipt');
-    }
+    handleReceiptDismiss();
   };
 
   const handlePrintToScreen = () => {
@@ -1002,10 +1012,7 @@ export default function BasketScreen() {
 
   const handleCloseScreenReceipt = () => {
     setScreenReceiptModalVisible(false);
-    if (currentTable) {
-      selectTable(null);
-      console.log('[Basket] Table deselected after closing screen receipt');
-    }
+    handleReceiptDismiss();
   };
 
   const handleRefundItem = useCallback((index: number) => {
@@ -1044,6 +1051,7 @@ export default function BasketScreen() {
         setSplitBills(newSplitBills);
       }
       
+      setCompletedSplitBillPayment(true);
       setPayingSplitBillIndex(null);
       setPayingSplitBillItems([]);
     } else {

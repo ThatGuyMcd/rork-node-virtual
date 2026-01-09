@@ -456,9 +456,11 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       console.log('[POS] Refund completed, exiting refund mode');
     }
     
+    const isSplitBillPayment = splitBillIndex !== undefined && splitBillIndex !== null;
+    
     if (currentTable) {
       try {
-        if (splitBillIndex !== undefined && splitBillIndex !== null) {
+        if (isSplitBillPayment) {
           console.log('[POS] Clearing split bill file for index:', splitBillIndex);
           await tableDataService.clearSplitBillFile(currentTable, splitBillIndex);
           console.log('[POS] Cleared split bill file locally for table:', currentTable.id);
@@ -479,9 +481,13 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       }
     }
     
-    setBasketDiscount(0);
-    clearBasket();
-    console.log('[POS] Payment completed, table still selected for receipt printing');
+    if (!isSplitBillPayment) {
+      setBasketDiscount(0);
+      clearBasket();
+      console.log('[POS] Payment completed, basket cleared');
+    } else {
+      console.log('[POS] Split bill payment completed, keeping basket for remaining bills');
+    }
     } finally {
       setProcessingTransaction(false);
     }
