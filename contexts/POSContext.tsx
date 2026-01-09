@@ -557,6 +557,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
       if (csvRows.length > 0) {
         console.log(`[POS] Loading basket from CSV... Found ${csvRows.length} rows`);
         const products = await dataSyncService.getStoredProducts();
+        const customPriceNames = await dataSyncService.getStoredCustomPriceNames();
         const loadedBasket: BasketItem[] = [];
 
         const knownPrefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML', '2/3PT', 'OPEN', 'NOT SET'];
@@ -572,6 +573,17 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           'OPEN': 'open',
           'NOT SET': 'not set',
         };
+        
+        for (const [priceNumber, customData] of Object.entries(customPriceNames)) {
+          if (customData?.prefix) {
+            const prefix = customData.prefix.toUpperCase();
+            if (!knownPrefixes.includes(prefix)) {
+              knownPrefixes.push(prefix);
+            }
+            prefixToLabelMap[prefix] = `custom${priceNumber}`;
+            console.log(`[POS] Added custom prefix: ${prefix} -> custom${priceNumber}`);
+          }
+        }
 
         for (let rowIdx = 0; rowIdx < csvRows.length; rowIdx++) {
           const row = csvRows[rowIdx];
