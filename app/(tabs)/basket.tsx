@@ -24,7 +24,7 @@ import { tableDataService, SplitBillData } from '@/services/tableDataService';
 import { dataSyncService } from '@/services/dataSync';
 import type { BasketItem, Transaction } from '@/types/pos';
 
-const getPricePrefix = (productName: string, label: string, customPriceNames: Record<string, { name: string; prefix: string } | null>): string => {
+const getPricePrefix = (productName: string, label: string, customPriceNames: Record<string, { name: string; prefix: string } | null>, allProducts?: { name: string }[]): string => {
   const builtInPrefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML', '2/3PT', 'OPEN', 'NOT SET'];
   const customPrefixes: string[] = [];
   for (const [, customData] of Object.entries(customPriceNames)) {
@@ -60,6 +60,18 @@ const getPricePrefix = (productName: string, label: string, customPriceNames: Re
   if (lowerLabel === 'open') return 'OPEN';
   if (lowerLabel === 'not set') return 'NOT SET';
   if (label === '125ml' || label === '175ml' || label === '250ml') return label;
+  
+  if (allProducts && allProducts.length > 0) {
+    const spaceIdx = productName.indexOf(' ');
+    if (spaceIdx > 0) {
+      const possiblePrefix = productName.substring(0, spaceIdx).toUpperCase();
+      const restOfName = productName.substring(spaceIdx + 1).split(' - ')[0].trim();
+      const matchingProduct = allProducts.find(p => p.name.toUpperCase() === restOfName.toUpperCase());
+      if (matchingProduct) {
+        return possiblePrefix;
+      }
+    }
+  }
   
   return '';
 };
@@ -514,6 +526,7 @@ export default function BasketScreen() {
   const availableTenders = getAvailableTenders();
   const router = useRouter();
   const [customPriceNames, setCustomPriceNames] = useState<Record<string, { name: string; prefix: string } | null>>({});
+  const [allProducts, setAllProducts] = useState<{ name: string }[]>([]);
 
   const splitButtonIsDragging = useRef(false);
   const splitButtonStartTime = useRef(0);
@@ -568,6 +581,13 @@ export default function BasketScreen() {
       console.log('[Basket] Loaded custom price names:', Object.keys(names).length);
     };
     loadCustomPriceNames();
+    
+    const loadProducts = async () => {
+      const products = await dataSyncService.getStoredProducts();
+      setAllProducts(products.map(p => ({ name: p.name })));
+      console.log('[Basket] Loaded products for prefix detection:', products.length);
+    };
+    loadProducts();
   }, []);
 
   const basketForCalculation = useMemo(() => {
@@ -1261,10 +1281,10 @@ export default function BasketScreen() {
         maxToRenderPerBatch={12}
         updateCellsBatchingPeriod={50}
         windowSize={8}
-        extraData={customPriceNames}
+        extraData={{ customPriceNames, allProducts }}
         renderItem={({ item, index }) => {
           const isRefundItem = item.quantity < 0;
-          const prefix = getPricePrefix(item.product.name, item.selectedPrice.label, customPriceNames);
+          const prefix = getPricePrefix(item.product.name, item.selectedPrice.label, customPriceNames, allProducts);
 
           const displayName =
             prefix !== '' && item.product.name.toUpperCase().startsWith(prefix.toUpperCase() + ' ')
@@ -1848,7 +1868,7 @@ export default function BasketScreen() {
 
                   <Text style={[styles.receiptSectionTitle, { color: colors.text }]}>Items</Text>
                   {lastTransaction.items.map((item, index) => {
-                    const prefix = getPricePrefix(item.product.name, item.selectedPrice.label, customPriceNames);
+                    const prefix = getPricePrefix(item.product.name, item.selectedPrice.label, customPriceNames, allProducts);
                     const displayName = (prefix && !item.product.name.toUpperCase().startsWith(prefix.toUpperCase() + ' '))
                       ? `${prefix} ${item.product.name}` 
                       : item.product.name;
