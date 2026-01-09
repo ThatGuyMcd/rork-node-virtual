@@ -655,32 +655,39 @@ export default function BasketScreen() {
             console.log('[Basket] Completing split bill payment (multi-tender) for bill:', payingSplitBillIndex === -1 ? 'Main' : payingSplitBillIndex + 1);
             
             const originalBasket = [...basket];
-            basket.length = 0;
-            basket.push(...payingSplitBillItems);
             
-            await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0, payingSplitBillIndex);
-            
-            // Remove paid items from the original basket
-            const paidItemIds = new Set(payingSplitBillItems.map(item => `${item.product.id}:${item.selectedPrice.key}`));
-            const remainingBasket = originalBasket.filter(item => {
+            // Calculate remaining items BEFORE completeSale to know if this is the last payment
+            const paidItemIdsCalc = new Set(payingSplitBillItems.map(item => `${item.product.id}:${item.selectedPrice.key}`));
+            const remainingBasketCalc = originalBasket.filter(item => {
               const itemKey = `${item.product.id}:${item.selectedPrice.key}`;
-              if (paidItemIds.has(itemKey)) {
-                paidItemIds.delete(itemKey); // Remove once to handle duplicates correctly
+              if (paidItemIdsCalc.has(itemKey)) {
+                paidItemIdsCalc.delete(itemKey);
                 return false;
               }
               return true;
             });
+            const isLastPayment = remainingBasketCalc.length === 0;
+            console.log('[Basket] Is last payment (multi-tender, all items paid):', isLastPayment);
             
             basket.length = 0;
-            basket.push(...remainingBasket);
+            basket.push(...payingSplitBillItems);
             
-            if (payingSplitBillIndex >= 0) {
-              const newSplitBills = [...splitBills];
-              newSplitBills[payingSplitBillIndex] = [];
-              setSplitBills(newSplitBills);
+            // If this is the last payment, pass null to completeSale so it fully closes the table
+            await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0, isLastPayment ? null : payingSplitBillIndex);
+            
+            // Update basket with remaining items
+            basket.length = 0;
+            basket.push(...remainingBasketCalc);
+            
+            if (!isLastPayment) {
+              if (payingSplitBillIndex >= 0) {
+                const newSplitBills = [...splitBills];
+                newSplitBills[payingSplitBillIndex] = [];
+                setSplitBills(newSplitBills);
+              }
+              setCompletedSplitBillPayment(true);
             }
             
-            setCompletedSplitBillPayment(true);
             setPayingSplitBillIndex(null);
             setPayingSplitBillItems([]);
           } else {
@@ -736,32 +743,39 @@ export default function BasketScreen() {
         console.log('[Basket] Completing split bill payment for bill:', payingSplitBillIndex === -1 ? 'Main' : payingSplitBillIndex + 1);
         
         const originalBasket = [...basket];
-        basket.length = 0;
-        basket.push(...payingSplitBillItems);
         
-        await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0, payingSplitBillIndex);
-        
-        // Remove paid items from the original basket
-        const paidItemIds = new Set(payingSplitBillItems.map(item => `${item.product.id}:${item.selectedPrice.key}`));
-        const remainingBasket = originalBasket.filter(item => {
+        // Calculate remaining items BEFORE completeSale to know if this is the last payment
+        const paidItemIdsCalc = new Set(payingSplitBillItems.map(item => `${item.product.id}:${item.selectedPrice.key}`));
+        const remainingBasketCalc = originalBasket.filter(item => {
           const itemKey = `${item.product.id}:${item.selectedPrice.key}`;
-          if (paidItemIds.has(itemKey)) {
-            paidItemIds.delete(itemKey); // Remove once to handle duplicates correctly
+          if (paidItemIdsCalc.has(itemKey)) {
+            paidItemIdsCalc.delete(itemKey);
             return false;
           }
           return true;
         });
+        const isLastPayment = remainingBasketCalc.length === 0;
+        console.log('[Basket] Is last payment (all items paid):', isLastPayment);
         
         basket.length = 0;
-        basket.push(...remainingBasket);
+        basket.push(...payingSplitBillItems);
         
-        if (payingSplitBillIndex >= 0) {
-          const newSplitBills = [...splitBills];
-          newSplitBills[payingSplitBillIndex] = [];
-          setSplitBills(newSplitBills);
+        // If this is the last payment, pass null to completeSale so it fully closes the table
+        await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0, isLastPayment ? null : payingSplitBillIndex);
+        
+        // Update basket with remaining items
+        basket.length = 0;
+        basket.push(...remainingBasketCalc);
+        
+        if (!isLastPayment) {
+          if (payingSplitBillIndex >= 0) {
+            const newSplitBills = [...splitBills];
+            newSplitBills[payingSplitBillIndex] = [];
+            setSplitBills(newSplitBills);
+          }
+          setCompletedSplitBillPayment(true);
         }
         
-        setCompletedSplitBillPayment(true);
         setPayingSplitBillIndex(null);
         setPayingSplitBillItems([]);
       } else {
@@ -1059,32 +1073,39 @@ export default function BasketScreen() {
       console.log('[Basket] Completing split bill payment with change for bill:', payingSplitBillIndex === -1 ? 'Main' : payingSplitBillIndex + 1);
       
       const originalBasket = [...basket];
-      basket.length = 0;
-      basket.push(...payingSplitBillItems);
       
-      await completeSale(pendingTenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, changeAmount, payingSplitBillIndex);
-      
-      // Remove paid items from the original basket
-      const paidItemIds = new Set(payingSplitBillItems.map(item => `${item.product.id}:${item.selectedPrice.key}`));
-      const remainingBasket = originalBasket.filter(item => {
+      // Calculate remaining items BEFORE completeSale to know if this is the last payment
+      const paidItemIdsCalc = new Set(payingSplitBillItems.map(item => `${item.product.id}:${item.selectedPrice.key}`));
+      const remainingBasketCalc = originalBasket.filter(item => {
         const itemKey = `${item.product.id}:${item.selectedPrice.key}`;
-        if (paidItemIds.has(itemKey)) {
-          paidItemIds.delete(itemKey); // Remove once to handle duplicates correctly
+        if (paidItemIdsCalc.has(itemKey)) {
+          paidItemIdsCalc.delete(itemKey);
           return false;
         }
         return true;
       });
+      const isLastPayment = remainingBasketCalc.length === 0;
+      console.log('[Basket] Is last payment with change (all items paid):', isLastPayment);
       
       basket.length = 0;
-      basket.push(...remainingBasket);
+      basket.push(...payingSplitBillItems);
       
-      if (payingSplitBillIndex >= 0) {
-        const newSplitBills = [...splitBills];
-        newSplitBills[payingSplitBillIndex] = [];
-        setSplitBills(newSplitBills);
+      // If this is the last payment, pass null to completeSale so it fully closes the table
+      await completeSale(pendingTenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, changeAmount, isLastPayment ? null : payingSplitBillIndex);
+      
+      // Update basket with remaining items
+      basket.length = 0;
+      basket.push(...remainingBasketCalc);
+      
+      if (!isLastPayment) {
+        if (payingSplitBillIndex >= 0) {
+          const newSplitBills = [...splitBills];
+          newSplitBills[payingSplitBillIndex] = [];
+          setSplitBills(newSplitBills);
+        }
+        setCompletedSplitBillPayment(true);
       }
       
-      setCompletedSplitBillPayment(true);
       setPayingSplitBillIndex(null);
       setPayingSplitBillItems([]);
     } else {
