@@ -605,7 +605,6 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           
           let detectedPrefixInfo: { prefix: string; label: string } | null = null;
           let strippedName = originalProductName;
-          let detectedPrefixString = '';
           
           let foundPrefix = true;
           while (foundPrefix) {
@@ -616,7 +615,6 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
               if (upperName.startsWith(prefixWithSpace)) {
                 if (!detectedPrefixInfo) {
                   detectedPrefixInfo = prefixInfo;
-                  detectedPrefixString = strippedName.substring(0, prefixInfo.prefix.length);
                 }
                 strippedName = strippedName.substring(prefixInfo.prefix.length + 1);
                 foundPrefix = true;
@@ -626,10 +624,9 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
             }
           }
           
-          const productNameWithoutPrefix = strippedName;
-          if (detectedPrefixInfo) {
-            console.log(`[POS] Row ${rowIdx + 1}: Final detected prefix "${detectedPrefixInfo.prefix}" -> label "${detectedPrefixInfo.label}", stripped name: "${productNameWithoutPrefix}"`);
-          } else {
+          let productNameWithoutPrefix = strippedName;
+          
+          if (!detectedPrefixInfo) {
             const spaceIdx = originalProductName.indexOf(' ');
             if (spaceIdx > 0) {
               const possiblePrefix = originalProductName.substring(0, spaceIdx).toUpperCase();
@@ -638,10 +635,14 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
               if (matchingProduct) {
                 console.log(`[POS] Row ${rowIdx + 1}: Detected unregistered prefix "${possiblePrefix}" by product match`);
                 strippedName = restOfName;
-                detectedPrefixString = originalProductName.substring(0, spaceIdx);
+                productNameWithoutPrefix = restOfName;
                 detectedPrefixInfo = { prefix: possiblePrefix, label: 'unknown' };
               }
             }
+          }
+          
+          if (detectedPrefixInfo) {
+            console.log(`[POS] Row ${rowIdx + 1}: Final detected prefix "${detectedPrefixInfo.prefix}" -> label "${detectedPrefixInfo.label}", stripped name: "${productNameWithoutPrefix}"`);
           }
           
           const baseName = strippedName.split(' - ')[0].trim();
@@ -719,15 +720,9 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
               console.log(`[POS] Row ${rowIdx + 1}: No prefix detected, using standard price`);
             }
             
-            let finalProductName = originalProductName;
-            if (detectedPrefixInfo && detectedPrefixString) {
-              const messageMatch = originalProductName.match(/ - (.+)$/);
-              const message = messageMatch ? ` - ${messageMatch[1]}` : '';
-              finalProductName = `${detectedPrefixString} ${productNameWithoutPrefix.split(' - ')[0]}${message}`;
-              console.log(`[POS] Row ${rowIdx + 1}: Reconstructed name with prefix: "${finalProductName}"`);
-            }
+            const finalProductName = originalProductName;
+            console.log(`[POS] Row ${rowIdx + 1}: Using original CSV name: "${finalProductName}"`);
             
-            console.log(`[POS] Row ${rowIdx + 1}: Setting basket item name to: "${finalProductName}" (original CSV: "${originalProductName}")`);
             const productWithMessage = { ...product, name: finalProductName };
             
             const finalSelectedPrice = preservedPrefixLabel 
