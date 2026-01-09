@@ -108,7 +108,7 @@ class TableDataService {
       
       let prefix = labelToPrefixMap[priceLabelLower];
       
-      const customMatch = item.selectedPrice.label.match(/^custom\s*(\d+)$/i);
+      const customMatch = item.selectedPrice.label.match(/^custom[_\s]*(\d+)$/i);
       if (customMatch) {
         const priceNumber = customMatch[1];
         const customPriceData = customPriceNames[priceNumber];

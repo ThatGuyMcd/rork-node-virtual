@@ -759,8 +759,10 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
                   const pLabel = p.label.toLowerCase();
                   return pLabel === `custom ${customNum}` || 
                          pLabel === `custom_${customNum}` || 
-                         pLabel === `custom${customNum}`;
+                         pLabel === `custom${customNum}` ||
+                         pLabel === `custom ${customNum}`;
                 });
+                console.log(`[POS] Row ${rowIdx + 1}: Searched for custom price label "${targetLabel}", found: ${matchingPrice ? matchingPrice.label : 'none'}`);
               }
               
               if (!matchingPrice && targetLabel === 'unknown') {
@@ -774,8 +776,11 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
                 selectedPrice = matchingPrice;
                 console.log(`[POS] Row ${rowIdx + 1}: Found matching price: ${matchingPrice.label} = £${matchingPrice.price}`);
               } else {
+                console.warn(`[POS] Row ${rowIdx + 1}: No price found for "${targetLabel}", will use CSV price. Available prices: ${product.prices.map(p => p.label).join(', ')}`);
+                
+                selectedPrice = product.prices.find(p => Math.abs(p.price - row.price) < 0.01) || product.prices[0];
                 preservedPrefixLabel = targetLabel;
-                console.warn(`[POS] Row ${rowIdx + 1}: No price found for "${targetLabel}", preserving prefix label. Available prices: ${product.prices.map(p => p.label).join(', ')}`);
+                console.log(`[POS] Row ${rowIdx + 1}: Using price ${selectedPrice.label} and preserving custom prefix label "${targetLabel}"`);
               }
             } else {
               console.log(`[POS] Row ${rowIdx + 1}: No prefix detected, using standard price`);
