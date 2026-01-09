@@ -75,6 +75,22 @@ class TableDataService {
       'open': 'OPEN',
     };
 
+    const allKnownPrefixes: string[] = [
+      'HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML', '2/3PT', 'OPEN', 'NOT SET', 'EXTRA'
+    ];
+    for (const [, customData] of Object.entries(customPriceNames)) {
+      if (customData && typeof customData === 'object') {
+        const prefixValue = customData.prefix || customData.name || '';
+        if (prefixValue) {
+          const upperPrefix = String(prefixValue).toUpperCase().trim();
+          if (!allKnownPrefixes.includes(upperPrefix)) {
+            allKnownPrefixes.push(upperPrefix);
+          }
+        }
+      }
+    }
+    allKnownPrefixes.sort((a, b) => b.length - a.length);
+
     for (const item of basket) {
       const vatRate = vatRates.find(v => v.code === item.product.vatCode);
       const vatPercentage = vatRate?.percentage || 0;
@@ -86,7 +102,22 @@ class TableDataService {
       const prodIdNum = item.product.id.replace('prod_', '').padStart(5, '0');
       const pluFile = `${groupIdNum}-${deptIdNum}-${prodIdNum}.PLU`;
 
-      const baseName = item.product.name.split(' - ')[0];
+      let rawBaseName = item.product.name.split(' - ')[0];
+      let strippedName = rawBaseName;
+      let foundPrefix = true;
+      while (foundPrefix) {
+        foundPrefix = false;
+        const upperName = strippedName.toUpperCase();
+        for (const knownPrefix of allKnownPrefixes) {
+          if (upperName.startsWith(knownPrefix + ' ')) {
+            strippedName = strippedName.substring(knownPrefix.length + 1);
+            foundPrefix = true;
+            break;
+          }
+        }
+      }
+      const baseName = strippedName.trim();
+      
       const messagePrefix = item.product.name.includes(' - ') ? ' - ' + item.product.name.split(' - ').slice(1).join(' - ') : '';
       const priceLabelLower = item.selectedPrice.label.toLowerCase();
       
@@ -102,7 +133,7 @@ class TableDataService {
       }
       
       const shouldAddPrefix = prefix !== undefined;
-      const productName = shouldAddPrefix ? `${prefix} ${baseName}${messagePrefix}` : item.product.name;
+      const productName = shouldAddPrefix ? `${prefix} ${baseName}${messagePrefix}` : `${baseName}${messagePrefix}`;
 
       rows.push({
         quantity: item.quantity,

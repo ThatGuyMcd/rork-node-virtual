@@ -571,6 +571,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           { prefix: '2/3PT', label: 'schooner' },
           { prefix: 'OPEN', label: 'open' },
           { prefix: 'NOT SET', label: 'not set' },
+          { prefix: 'EXTRA', label: 'extra' },
         ];
         
         const allPrefixes: { prefix: string; label: string }[] = [...builtInPrefixes];
@@ -603,17 +604,29 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           console.log(`[POS] Processing row ${rowIdx + 1}/${csvRows.length}: "${row.productName}"`);
           
           let detectedPrefixInfo: { prefix: string; label: string } | null = null;
-          let productNameWithoutPrefix = row.productName;
-          const upperProductName = row.productName.toUpperCase();
+          let strippedName = row.productName;
           
-          for (const prefixInfo of allPrefixes) {
-            const prefixWithSpace = prefixInfo.prefix + ' ';
-            if (upperProductName.startsWith(prefixWithSpace)) {
-              detectedPrefixInfo = prefixInfo;
-              productNameWithoutPrefix = row.productName.substring(prefixInfo.prefix.length + 1);
-              console.log(`[POS] Row ${rowIdx + 1}: Detected prefix "${prefixInfo.prefix}" -> label "${prefixInfo.label}", stripped name: "${productNameWithoutPrefix}"`);
-              break;
+          let foundPrefix = true;
+          while (foundPrefix) {
+            foundPrefix = false;
+            const upperName = strippedName.toUpperCase();
+            for (const prefixInfo of allPrefixes) {
+              const prefixWithSpace = prefixInfo.prefix + ' ';
+              if (upperName.startsWith(prefixWithSpace)) {
+                if (!detectedPrefixInfo) {
+                  detectedPrefixInfo = prefixInfo;
+                }
+                strippedName = strippedName.substring(prefixInfo.prefix.length + 1);
+                foundPrefix = true;
+                console.log(`[POS] Row ${rowIdx + 1}: Stripped prefix "${prefixInfo.prefix}", remaining: "${strippedName}"`);
+                break;
+              }
             }
+          }
+          
+          const productNameWithoutPrefix = strippedName;
+          if (detectedPrefixInfo) {
+            console.log(`[POS] Row ${rowIdx + 1}: Final detected prefix "${detectedPrefixInfo.prefix}" -> label "${detectedPrefixInfo.label}", stripped name: "${productNameWithoutPrefix}"`);
           }
           
           const baseName = productNameWithoutPrefix.split(' - ')[0].trim();
