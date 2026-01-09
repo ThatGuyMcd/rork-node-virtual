@@ -20,7 +20,6 @@ import { usePOS } from '@/contexts/POSContext';
 import { useTheme, type ButtonSkin } from '@/contexts/ThemeContext';
 import { printerService } from '@/services/printerService';
 import { transactionService } from '@/services/transactionService';
-import { tableDataService, SplitBillData } from '@/services/tableDataService';
 import { dataSyncService } from '@/services/dataSync';
 import type { BasketItem, Transaction } from '@/types/pos';
 
@@ -960,35 +959,6 @@ export default function BasketScreen() {
     return items.reduce((sum, item) => sum + item.lineTotal, 0);
   }, []);
 
-  const handleSaveSplitBills = useCallback(async () => {
-    if (!currentTable || !currentOperator) {
-      Alert.alert('Error', 'No table selected');
-      return;
-    }
-    
-    const mainBasket = getMainBasketForSplit();
-    const splitBillData: SplitBillData = {
-      mainBasket,
-      splitBills: splitBills
-    };
-    
-    try {
-      const vatRatesData = await dataSyncService.getStoredVATRates();
-      await tableDataService.saveSplitBillsToTable(
-        currentTable,
-        splitBillData,
-        currentOperator,
-        vatRatesData
-      );
-      
-      Alert.alert('Success', 'Split bills saved to table');
-      closeSplitBillModal();
-      router.replace('/login');
-    } catch (error) {
-      console.error('[Basket] Failed to save split bills:', error);
-      Alert.alert('Error', 'Failed to save split bills');
-    }
-  }, [currentTable, currentOperator, splitBills, getMainBasketForSplit, closeSplitBillModal, router]);
 
   const handlePaySplitBill = useCallback((billIndex: number) => {
     const billItems = billIndex === -1 ? getMainBasketForSplit() : splitBills[billIndex];
@@ -2090,17 +2060,11 @@ export default function BasketScreen() {
       >
         <View style={[styles.splitBillModalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.splitBillHeader, { backgroundColor: colors.cardBackground, borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={closeSplitBillModal} style={styles.splitBillCloseButton}>
+            <TouchableOpacity onPress={closeSplitBillModal} style={styles.splitBillCloseButton} testID="split-bill-close">
               <X size={24} color={colors.text} />
             </TouchableOpacity>
             <Text style={[styles.splitBillTitle, { color: colors.text }]}>Split Bill</Text>
-            <TouchableOpacity 
-              onPress={handleSaveSplitBills} 
-              style={[styles.splitBillSaveButton, { backgroundColor: colors.primary }]}
-            >
-              <Save size={18} color="#fff" />
-              <Text style={styles.splitBillSaveButtonText}>Save</Text>
-            </TouchableOpacity>
+            <View style={styles.splitBillHeaderRightSpacer} />
           </View>
 
           <View style={[styles.splitBillTabs, { backgroundColor: colors.cardBackground }]}>
@@ -3165,18 +3129,9 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700' as const,
   },
-  splitBillSaveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  splitBillSaveButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600' as const,
+  splitBillHeaderRightSpacer: {
+    width: 40,
+    height: 40,
   },
   splitBillTabs: {
     paddingVertical: 12,
