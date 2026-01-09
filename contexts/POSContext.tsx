@@ -603,82 +603,98 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           const originalProductName = row.productName;
           console.log(`[POS] Processing row ${rowIdx + 1}/${csvRows.length}: "${originalProductName}"`);
           
+          let product = null;
           let detectedPrefixInfo: { prefix: string; label: string } | null = null;
-          let strippedName = originalProductName;
-          let candidateStrippedNames: { stripped: string; prefix: { prefix: string; label: string } }[] = [];
+          let productNameWithoutPrefix = originalProductName;
           
-          let tempName = originalProductName;
-          let foundPrefix = true;
-          while (foundPrefix) {
-            foundPrefix = false;
-            const upperName = tempName.toUpperCase();
-            for (const prefixInfo of allPrefixes) {
-              const prefixWithSpace = prefixInfo.prefix + ' ';
-              if (upperName.startsWith(prefixWithSpace)) {
-                const stripped = tempName.substring(prefixInfo.prefix.length + 1);
-                candidateStrippedNames.push({ 
-                  stripped, 
-                  prefix: detectedPrefixInfo || prefixInfo 
-                });
-                if (!detectedPrefixInfo) {
-                  detectedPrefixInfo = prefixInfo;
+          const originalBaseName = originalProductName.split(' - ')[0].trim();
+          console.log(`[POS] Row ${rowIdx + 1}: First trying exact match for "${originalBaseName}"`);
+          
+          product = products.find(p => p.name === originalBaseName);
+          if (!product) {
+            const originalBaseNameLower = originalBaseName.toLowerCase();
+            product = products.find(p => p.name.toLowerCase() === originalBaseNameLower);
+          }
+          
+          if (product) {
+            console.log(`[POS] Row ${rowIdx + 1}: Found exact product match: "${product.name}" - no prefix detection needed`);
+          } else {
+            console.log(`[POS] Row ${rowIdx + 1}: No exact match found, trying prefix detection`);
+            
+            let strippedName = originalProductName;
+            let candidateStrippedNames: { stripped: string; prefix: { prefix: string; label: string } }[] = [];
+            
+            let tempName = originalProductName;
+            let foundPrefix = true;
+            while (foundPrefix) {
+              foundPrefix = false;
+              const upperName = tempName.toUpperCase();
+              for (const prefixInfo of allPrefixes) {
+                const prefixWithSpace = prefixInfo.prefix + ' ';
+                if (upperName.startsWith(prefixWithSpace)) {
+                  const stripped = tempName.substring(prefixInfo.prefix.length + 1);
+                  candidateStrippedNames.push({ 
+                    stripped, 
+                    prefix: detectedPrefixInfo || prefixInfo 
+                  });
+                  if (!detectedPrefixInfo) {
+                    detectedPrefixInfo = prefixInfo;
+                  }
+                  tempName = stripped;
+                  foundPrefix = true;
+                  console.log(`[POS] Row ${rowIdx + 1}: Found potential prefix "${prefixInfo.prefix}", remaining: "${stripped}"`);
+                  break;
                 }
-                tempName = stripped;
-                foundPrefix = true;
-                console.log(`[POS] Row ${rowIdx + 1}: Found potential prefix "${prefixInfo.prefix}", remaining: "${stripped}"`);
+              }
+            }
+            
+            let confirmedPrefixInfo: { prefix: string; label: string } | null = null;
+            
+            for (const candidate of candidateStrippedNames) {
+              const baseName = candidate.stripped.split(' - ')[0].trim();
+              console.log(`[POS] Row ${rowIdx + 1}: Trying to find product with baseName "${baseName}"`);
+              
+              let foundProduct = products.find(p => p.name === baseName);
+              if (!foundProduct) {
+                const baseNameLower = baseName.toLowerCase();
+                foundProduct = products.find(p => p.name.toLowerCase() === baseNameLower);
+              }
+              
+              if (foundProduct) {
+                product = foundProduct;
+                confirmedPrefixInfo = candidate.prefix;
+                strippedName = candidate.stripped;
+                productNameWithoutPrefix = strippedName;
+                console.log(`[POS] Row ${rowIdx + 1}: Found product "${foundProduct.name}" with prefix "${confirmedPrefixInfo.prefix}"`);
                 break;
               }
             }
-          }
-          
-          let product = null;
-          let productNameWithoutPrefix = originalProductName;
-          let confirmedPrefixInfo: { prefix: string; label: string } | null = null;
-          
-          for (const candidate of candidateStrippedNames) {
-            const baseName = candidate.stripped.split(' - ')[0].trim();
-            console.log(`[POS] Row ${rowIdx + 1}: Trying to find product with baseName "${baseName}"`);
-            
-            let foundProduct = products.find(p => p.name === baseName);
-            if (!foundProduct) {
-              const baseNameLower = baseName.toLowerCase();
-              foundProduct = products.find(p => p.name.toLowerCase() === baseNameLower);
-            }
-            
-            if (foundProduct) {
-              product = foundProduct;
-              confirmedPrefixInfo = candidate.prefix;
-              strippedName = candidate.stripped;
-              productNameWithoutPrefix = strippedName;
-              console.log(`[POS] Row ${rowIdx + 1}: Found product "${foundProduct.name}" with prefix "${confirmedPrefixInfo.prefix}"`);
-              break;
-            }
-          }
-          
-          if (!product) {
-            console.log(`[POS] Row ${rowIdx + 1}: No product found with stripped names, trying original name`);
-            confirmedPrefixInfo = null;
-            strippedName = originalProductName;
-            productNameWithoutPrefix = originalProductName;
-          }
-          
-          detectedPrefixInfo = confirmedPrefixInfo;
-          
-          if (detectedPrefixInfo) {
-            console.log(`[POS] Row ${rowIdx + 1}: Final detected prefix "${detectedPrefixInfo.prefix}" -> label "${detectedPrefixInfo.label}", stripped name: "${productNameWithoutPrefix}"`);
-          }
-          
-          const baseName = strippedName.split(' - ')[0].trim();
-          console.log(`[POS] Row ${rowIdx + 1}: Searching for product with baseName "${baseName}"`);
-          
-          if (!product) {
-            product = products.find(p => p.name === baseName);
             
             if (!product) {
-              const baseNameLower = baseName.toLowerCase();
-              product = products.find(p => p.name.toLowerCase() === baseNameLower);
-              if (product) {
-                console.log(`[POS] Row ${rowIdx + 1}: Found product by case-insensitive match: "${product.name}"`);
+              console.log(`[POS] Row ${rowIdx + 1}: No product found with stripped names, trying original name again`);
+              confirmedPrefixInfo = null;
+              strippedName = originalProductName;
+              productNameWithoutPrefix = originalProductName;
+            }
+            
+            detectedPrefixInfo = confirmedPrefixInfo;
+            
+            if (detectedPrefixInfo) {
+              console.log(`[POS] Row ${rowIdx + 1}: Final detected prefix "${detectedPrefixInfo.prefix}" -> label "${detectedPrefixInfo.label}", stripped name: "${productNameWithoutPrefix}"`);
+            }
+            
+            const baseName = strippedName.split(' - ')[0].trim();
+            console.log(`[POS] Row ${rowIdx + 1}: Searching for product with baseName "${baseName}"`);
+            
+            if (!product) {
+              product = products.find(p => p.name === baseName);
+              
+              if (!product) {
+                const baseNameLower = baseName.toLowerCase();
+                product = products.find(p => p.name.toLowerCase() === baseNameLower);
+                if (product) {
+                  console.log(`[POS] Row ${rowIdx + 1}: Found product by case-insensitive match: "${product.name}"`);
+                }
               }
             }
           }
@@ -765,7 +781,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
             loadedBasket.push(basketItem);
             console.log(`[POS] Row ${rowIdx + 1}: Added to basket - Product: "${basketItem.product.name}", Qty: ${basketItem.quantity}, Price label: "${selectedPrice.label}", Price: £${row.price}`);
           } else {
-            console.warn(`[POS] Row ${rowIdx + 1}: Could not find product for "${baseName}" (from "${originalProductName}"). Tried name match, PLU file match, and filename match.`);
+            console.warn(`[POS] Row ${rowIdx + 1}: Could not find product for "${originalProductName}". Tried name match, PLU file match, and filename match.`);
           }
         }
 
