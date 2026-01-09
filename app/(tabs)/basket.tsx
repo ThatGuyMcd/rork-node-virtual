@@ -24,20 +24,15 @@ import { tableDataService, SplitBillData } from '@/services/tableDataService';
 import { dataSyncService } from '@/services/dataSync';
 import type { BasketItem, Transaction } from '@/types/pos';
 
-const getPricePrefix = (productName: string, label: string): string => {
+const getPricePrefix = (productName: string, label: string, customPriceNames: Record<string, { name: string; prefix: string } | null>): string => {
   const lowerLabel = label.toLowerCase();
   
   const customMatch = label.match(/^custom\s*(\d+)$/i);
   if (customMatch) {
-    const words = productName.split(' ');
-    if (words.length >= 2) {
-      const firstWord = words[0];
-      const knownPrefixes = ['DBL', 'SML', 'LRG', 'HALF', '2/3PT', 'OPEN', '125ML', '175ML', '250ML'];
-      const firstWordUpper = firstWord.toUpperCase();
-      
-      if (!knownPrefixes.includes(firstWordUpper)) {
-        return firstWord.toUpperCase();
-      }
+    const priceNumber = customMatch[1];
+    const customPriceData = customPriceNames[priceNumber];
+    if (customPriceData?.prefix) {
+      return customPriceData.prefix.toUpperCase();
     }
   }
   
@@ -502,6 +497,7 @@ export default function BasketScreen() {
   const splitButtonPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const availableTenders = getAvailableTenders();
   const router = useRouter();
+  const [customPriceNames, setCustomPriceNames] = useState<Record<string, { name: string; prefix: string } | null>>({});
 
   const splitButtonPanResponder = useRef(
     PanResponder.create({
@@ -532,6 +528,13 @@ export default function BasketScreen() {
       console.log('[Basket] Printer connected:', connected);
     };
     checkPrinterConnection();
+    
+    const loadCustomPriceNames = async () => {
+      const names = await dataSyncService.getStoredCustomPriceNames();
+      setCustomPriceNames(names);
+      console.log('[Basket] Loaded custom price names:', Object.keys(names).length);
+    };
+    loadCustomPriceNames();
   }, []);
 
   const basketForCalculation = useMemo(() => {
@@ -1227,7 +1230,7 @@ export default function BasketScreen() {
         windowSize={8}
         renderItem={({ item, index }) => {
           const isRefundItem = item.quantity < 0;
-          const prefix = getPricePrefix(item.product.name, item.selectedPrice.label);
+          const prefix = getPricePrefix(item.product.name, item.selectedPrice.label, customPriceNames);
 
           const displayName =
             prefix !== '' && item.product.name.toUpperCase().startsWith(prefix.toUpperCase() + ' ')
@@ -1815,7 +1818,7 @@ export default function BasketScreen() {
 
                   <Text style={[styles.receiptSectionTitle, { color: colors.text }]}>Items</Text>
                   {lastTransaction.items.map((item, index) => {
-                    const prefix = getPricePrefix(item.product.name, item.selectedPrice.label);
+                    const prefix = getPricePrefix(item.product.name, item.selectedPrice.label, customPriceNames);
                     const displayName = (prefix && !item.product.name.toUpperCase().startsWith(prefix.toUpperCase() + ' '))
                       ? `${prefix} ${item.product.name}` 
                       : item.product.name;
