@@ -633,6 +633,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           
           let product = null;
           let productNameWithoutPrefix = originalProductName;
+          let confirmedPrefixInfo: { prefix: string; label: string } | null = null;
           
           for (const candidate of candidateStrippedNames) {
             const baseName = candidate.stripped.split(' - ')[0].trim();
@@ -646,20 +647,22 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
             
             if (foundProduct) {
               product = foundProduct;
-              detectedPrefixInfo = candidate.prefix;
+              confirmedPrefixInfo = candidate.prefix;
               strippedName = candidate.stripped;
               productNameWithoutPrefix = strippedName;
-              console.log(`[POS] Row ${rowIdx + 1}: Found product "${foundProduct.name}" with prefix "${detectedPrefixInfo.prefix}"`);
+              console.log(`[POS] Row ${rowIdx + 1}: Found product "${foundProduct.name}" with prefix "${confirmedPrefixInfo.prefix}"`);
               break;
             }
           }
           
           if (!product) {
             console.log(`[POS] Row ${rowIdx + 1}: No product found with stripped names, trying original name`);
-            detectedPrefixInfo = null;
+            confirmedPrefixInfo = null;
             strippedName = originalProductName;
             productNameWithoutPrefix = originalProductName;
           }
+          
+          detectedPrefixInfo = confirmedPrefixInfo;
           
           if (detectedPrefixInfo) {
             console.log(`[POS] Row ${rowIdx + 1}: Final detected prefix "${detectedPrefixInfo.prefix}" -> label "${detectedPrefixInfo.label}", stripped name: "${productNameWithoutPrefix}"`);

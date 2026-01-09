@@ -103,25 +103,6 @@ class TableDataService {
       const pluFile = `${groupIdNum}-${deptIdNum}-${prodIdNum}.PLU`;
 
       let rawBaseName = item.product.name.split(' - ')[0];
-      let strippedName = rawBaseName;
-      let existingPrefixFromName = '';
-      let foundPrefix = true;
-      while (foundPrefix) {
-        foundPrefix = false;
-        const upperName = strippedName.toUpperCase();
-        for (const knownPrefix of allKnownPrefixes) {
-          if (upperName.startsWith(knownPrefix + ' ')) {
-            if (!existingPrefixFromName) {
-              existingPrefixFromName = strippedName.substring(0, knownPrefix.length);
-            }
-            strippedName = strippedName.substring(knownPrefix.length + 1);
-            foundPrefix = true;
-            break;
-          }
-        }
-      }
-      const baseName = strippedName.trim();
-      
       const messagePrefix = item.product.name.includes(' - ') ? ' - ' + item.product.name.split(' - ').slice(1).join(' - ') : '';
       const priceLabelLower = item.selectedPrice.label.toLowerCase();
       
@@ -136,9 +117,15 @@ class TableDataService {
         }
       }
       
-      if (!prefix && existingPrefixFromName) {
-        prefix = existingPrefixFromName;
-        console.log(`[TableDataService] Using prefix from product name: "${prefix}" for "${item.product.name}"`);
+      let baseName = rawBaseName;
+      
+      if (prefix) {
+        const upperBaseName = rawBaseName.toUpperCase();
+        const upperPrefix = prefix.toUpperCase();
+        if (upperBaseName.startsWith(upperPrefix + ' ')) {
+          baseName = rawBaseName.substring(prefix.length + 1).trim();
+          console.log(`[TableDataService] Stripped matching prefix "${prefix}" from "${rawBaseName}" -> "${baseName}"`);
+        }
       }
       
       const shouldAddPrefix = prefix !== undefined && prefix !== '';
