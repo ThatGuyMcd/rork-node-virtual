@@ -600,10 +600,11 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
 
         for (let rowIdx = 0; rowIdx < csvRows.length; rowIdx++) {
           const row = csvRows[rowIdx];
-          console.log(`[POS] Processing row ${rowIdx + 1}/${csvRows.length}: "${row.productName}"`);
+          const originalProductName = row.productName;
+          console.log(`[POS] Processing row ${rowIdx + 1}/${csvRows.length}: "${originalProductName}"`);
           
           let detectedPrefixInfo: { prefix: string; label: string } | null = null;
-          let strippedName = row.productName;
+          let strippedName = originalProductName;
           
           let foundPrefix = true;
           while (foundPrefix) {
@@ -626,9 +627,20 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           const productNameWithoutPrefix = strippedName;
           if (detectedPrefixInfo) {
             console.log(`[POS] Row ${rowIdx + 1}: Final detected prefix "${detectedPrefixInfo.prefix}" -> label "${detectedPrefixInfo.label}", stripped name: "${productNameWithoutPrefix}"`);
+          } else {
+            const spaceIdx = originalProductName.indexOf(' ');
+            if (spaceIdx > 0) {
+              const possiblePrefix = originalProductName.substring(0, spaceIdx).toUpperCase();
+              const restOfName = originalProductName.substring(spaceIdx + 1);
+              const matchingProduct = products.find(p => p.name.toUpperCase() === restOfName.split(' - ')[0].trim().toUpperCase());
+              if (matchingProduct) {
+                console.log(`[POS] Row ${rowIdx + 1}: Detected unregistered prefix "${possiblePrefix}" by product match`);
+                strippedName = restOfName;
+              }
+            }
           }
           
-          const baseName = productNameWithoutPrefix.split(' - ')[0].trim();
+          const baseName = strippedName.split(' - ')[0].trim();
           console.log(`[POS] Row ${rowIdx + 1}: Searching for product with baseName "${baseName}"`);
           
           let product = products.find(p => p.name === baseName);
@@ -694,7 +706,8 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
               console.log(`[POS] Row ${rowIdx + 1}: No prefix detected, using standard price`);
             }
             
-            const productWithMessage = { ...product, name: row.productName };
+            console.log(`[POS] Row ${rowIdx + 1}: Setting basket item name to original CSV name: "${originalProductName}"`);
+            const productWithMessage = { ...product, name: originalProductName };
             const basketItem: BasketItem = {
               product: productWithMessage,
               quantity: row.quantity,
@@ -704,7 +717,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
             loadedBasket.push(basketItem);
             console.log(`[POS] Row ${rowIdx + 1}: Added to basket - Product: "${basketItem.product.name}", Qty: ${basketItem.quantity}, Price label: "${selectedPrice.label}", Price: £${row.price}`);
           } else {
-            console.warn(`[POS] Row ${rowIdx + 1}: Could not find product for "${baseName}" (from "${row.productName}"). Tried name match, PLU file match, and filename match.`);
+            console.warn(`[POS] Row ${rowIdx + 1}: Could not find product for "${baseName}" (from "${originalProductName}"). Tried name match, PLU file match, and filename match.`);
           }
         }
 
