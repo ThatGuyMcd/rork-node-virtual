@@ -104,12 +104,16 @@ class TableDataService {
 
       let rawBaseName = item.product.name.split(' - ')[0];
       let strippedName = rawBaseName;
+      let existingPrefixFromName = '';
       let foundPrefix = true;
       while (foundPrefix) {
         foundPrefix = false;
         const upperName = strippedName.toUpperCase();
         for (const knownPrefix of allKnownPrefixes) {
           if (upperName.startsWith(knownPrefix + ' ')) {
+            if (!existingPrefixFromName) {
+              existingPrefixFromName = strippedName.substring(0, knownPrefix.length);
+            }
             strippedName = strippedName.substring(knownPrefix.length + 1);
             foundPrefix = true;
             break;
@@ -132,7 +136,12 @@ class TableDataService {
         }
       }
       
-      const shouldAddPrefix = prefix !== undefined;
+      if (!prefix && existingPrefixFromName) {
+        prefix = existingPrefixFromName;
+        console.log(`[TableDataService] Using prefix from product name: "${prefix}" for "${item.product.name}"`);
+      }
+      
+      const shouldAddPrefix = prefix !== undefined && prefix !== '';
       const productName = shouldAddPrefix ? `${prefix} ${baseName}${messagePrefix}` : `${baseName}${messagePrefix}`;
 
       rows.push({

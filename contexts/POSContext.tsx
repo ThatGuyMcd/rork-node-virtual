@@ -683,6 +683,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
             console.log(`[POS] Row ${rowIdx + 1}: Found product "${product.name}"`);
             
             let selectedPrice = product.prices.find(p => p.label.toLowerCase() === 'standard') || product.prices[0];
+            let preservedPrefixLabel: string | null = null;
             
             if (detectedPrefixInfo) {
               const targetLabel = detectedPrefixInfo.label.toLowerCase();
@@ -711,7 +712,8 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
                 selectedPrice = matchingPrice;
                 console.log(`[POS] Row ${rowIdx + 1}: Found matching price: ${matchingPrice.label} = £${matchingPrice.price}`);
               } else {
-                console.warn(`[POS] Row ${rowIdx + 1}: No price found for "${targetLabel}", using standard. Available prices: ${product.prices.map(p => p.label).join(', ')}`);
+                preservedPrefixLabel = targetLabel;
+                console.warn(`[POS] Row ${rowIdx + 1}: No price found for "${targetLabel}", preserving prefix label. Available prices: ${product.prices.map(p => p.label).join(', ')}`);
               }
             } else {
               console.log(`[POS] Row ${rowIdx + 1}: No prefix detected, using standard price`);
@@ -727,10 +729,17 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
             
             console.log(`[POS] Row ${rowIdx + 1}: Setting basket item name to: "${finalProductName}" (original CSV: "${originalProductName}")`);
             const productWithMessage = { ...product, name: finalProductName };
+            
+            const finalSelectedPrice = preservedPrefixLabel 
+              ? { ...selectedPrice, price: row.price, label: preservedPrefixLabel }
+              : { ...selectedPrice, price: row.price };
+            
+            console.log(`[POS] Row ${rowIdx + 1}: Final selectedPrice label: "${finalSelectedPrice.label}"`);
+            
             const basketItem: BasketItem = {
               product: productWithMessage,
               quantity: row.quantity,
-              selectedPrice: { ...selectedPrice, price: row.price },
+              selectedPrice: finalSelectedPrice,
               lineTotal: row.quantity * row.price,
             };
             loadedBasket.push(basketItem);
