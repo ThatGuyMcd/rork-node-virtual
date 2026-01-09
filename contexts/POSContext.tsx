@@ -560,58 +560,95 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         const customPriceNames = await dataSyncService.getStoredCustomPriceNames();
         const loadedBasket: BasketItem[] = [];
 
-        const knownPrefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML', '2/3PT', 'OPEN', 'NOT SET'];
-        const prefixToLabelMap: Record<string, string> = {
-          'HALF': 'half',
-          'DBL': 'double',
-          'SML': 'small',
-          'LRG': 'large',
-          '125ML': '125ml',
-          '175ML': '175ml',
-          '250ML': '250ml',
-          '2/3PT': 'schooner',
-          'OPEN': 'open',
-          'NOT SET': 'not set',
-        };
+        const builtInPrefixes: { prefix: string; label: string }[] = [
+          { prefix: 'HALF', label: 'half' },
+          { prefix: 'DBL', label: 'double' },
+          { prefix: 'SML', label: 'small' },
+          { prefix: 'LRG', label: 'large' },
+          { prefix: '125ML', label: '125ml' },
+          { prefix: '175ML', label: '175ml' },
+          { prefix: '250ML', label: '250ml' },
+          { prefix: '2/3PT', label: 'schooner' },
+          { prefix: 'OPEN', label: 'open' },
+          { prefix: 'NOT SET', label: 'not set' },
+        ];
+        
+        const allPrefixes: { prefix: string; label: string }[] = [...builtInPrefixes];
+        
+        console.log(`[POS] Custom price names loaded:`, JSON.stringify(customPriceNames));
         
         for (const [priceNumber, customData] of Object.entries(customPriceNames)) {
-          if (customData?.prefix) {
-            const prefix = customData.prefix.toUpperCase();
-            if (!knownPrefixes.includes(prefix)) {
-              knownPrefixes.push(prefix);
+          if (customData && typeof customData === 'object') {
+            const prefixValue = customData.prefix || customData.name || '';
+            if (prefixValue) {
+              const prefix = String(prefixValue).toUpperCase().trim();
+              const label = `custom ${priceNumber}`;
+              const existingIdx = allPrefixes.findIndex(p => p.prefix === prefix);
+              if (existingIdx === -1) {
+                allPrefixes.push({ prefix, label });
+                console.log(`[POS] Added custom prefix: "${prefix}" -> "${label}"`);
+              } else {
+                console.log(`[POS] Custom prefix "${prefix}" already exists as built-in, mapping to "${label}"`);
+                allPrefixes.push({ prefix, label });
+              }
             }
-            prefixToLabelMap[prefix] = `custom ${priceNumber}`;
-            console.log(`[POS] Added custom prefix: ${prefix} -> custom ${priceNumber}`);
           }
         }
+        
+        allPrefixes.sort((a, b) => b.prefix.length - a.prefix.length);
+        console.log(`[POS] All prefixes (${allPrefixes.length}):`, allPrefixes.map(p => p.prefix).join(', '));
 
         for (let rowIdx = 0; rowIdx < csvRows.length; rowIdx++) {
           const row = csvRows[rowIdx];
-          console.log(`[POS] Processing row ${rowIdx + 1}/${csvRows.length}: ${row.productName}`);
+          console.log(`[POS] Processing row ${rowIdx + 1}/${csvRows.length}: "${row.productName}"`);
           
-          let detectedPrefix: string | null = null;
+          let detectedPrefixInfo: { prefix: string; label: string } | null = null;
           let productNameWithoutPrefix = row.productName;
+          const upperProductName = row.productName.toUpperCase();
           
-          for (const prefix of knownPrefixes) {
-            if (row.productName.toUpperCase().startsWith(prefix + ' ')) {
-              detectedPrefix = prefix;
-              productNameWithoutPrefix = row.productName.substring(prefix.length + 1);
-              console.log(`[POS] Row ${rowIdx + 1}: Detected prefix "${detectedPrefix}", stripped name: "${productNameWithoutPrefix}"`);
+          for (const prefixInfo of allPrefixes) {
+            const prefixWithSpace = prefixInfo.prefix + ' ';
+            if (upperProductName.startsWith(prefixWithSpace)) {
+              detectedPrefixInfo = prefixInfo;
+              productNameWithoutPrefix = row.productName.substring(prefixInfo.prefix.length + 1);
+              console.log(`[POS] Row ${rowIdx + 1}: Detected prefix "${prefixInfo.prefix}" -> label "${prefixInfo.label}", stripped name: "${productNameWithoutPrefix}"`);
               break;
             }
           }
           
-          const baseName = productNameWithoutPrefix.split(' - ')[0];
+          const baseName = productNameWithoutPrefix.split(' - ')[0].trim();
           console.log(`[POS] Row ${rowIdx + 1}: Searching for product with baseName "${baseName}"`);
           
           let product = products.find(p => p.name === baseName);
           
+          if (!product) {
+            const baseNameLower = baseName.toLowerCase();
+            product = products.find(p => p.name.toLowerCase() === baseNameLower);
+            if (product) {
+              console.log(`[POS] Row ${rowIdx + 1}: Found product by case-insensitive match: "${product.name}"`);
+            }
+          }
+          
           if (!product && row.pluFile) {
             console.log(`[POS] Row ${rowIdx + 1}: Product not found by name, trying PLU file: ${row.pluFile}`);
             product = products.find(p => {
-              const productPlu = `${p.groupId}-${p.departmentId}-${p.id.replace('prod_', '').padStart(5, '0')}.PLU`;
-              return productPlu === row.pluFile;
+              const groupIdNum = p.groupId.split('-')[0].trim();
+              const deptIdNum = p.departmentId.split('-')[0].trim();
+              const prodIdNum = p.id.replace('prod_', '').padStart(5, '0');
+              const productPlu = `${groupIdNum}-${deptIdNum}-${prodIdNum}.PLU`;
+              return productPlu.toUpperCase() === row.pluFile.toUpperCase();
             });
+            if (product) {
+              console.log(`[POS] Row ${rowIdx + 1}: Found product by PLU file: "${product.name}"`);
+            }
+          }
+          
+          if (!product && row.pluFile) {
+            const pluFileName = row.pluFile.toUpperCase();
+            product = products.find(p => p.filename?.toUpperCase() === pluFileName);
+            if (product) {
+              console.log(`[POS] Row ${rowIdx + 1}: Found product by filename match: "${product.name}"`);
+            }
           }
           
           if (product) {
@@ -619,11 +656,22 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
             
             let selectedPrice = product.prices.find(p => p.label.toLowerCase() === 'standard') || product.prices[0];
             
-            if (detectedPrefix) {
-              const targetLabel = prefixToLabelMap[detectedPrefix];
-              console.log(`[POS] Row ${rowIdx + 1}: Looking for price with label "${targetLabel}" (from prefix "${detectedPrefix}")`);
+            if (detectedPrefixInfo) {
+              const targetLabel = detectedPrefixInfo.label.toLowerCase();
+              console.log(`[POS] Row ${rowIdx + 1}: Looking for price with label "${targetLabel}" (from prefix "${detectedPrefixInfo.prefix}")`);
               
-              const matchingPrice = product.prices.find(p => p.label.toLowerCase() === targetLabel.toLowerCase());
+              let matchingPrice = product.prices.find(p => p.label.toLowerCase() === targetLabel);
+              
+              if (!matchingPrice && targetLabel.startsWith('custom ')) {
+                const customNum = targetLabel.replace('custom ', '').trim();
+                matchingPrice = product.prices.find(p => {
+                  const pLabel = p.label.toLowerCase();
+                  return pLabel === `custom ${customNum}` || 
+                         pLabel === `custom_${customNum}` || 
+                         pLabel === `custom${customNum}`;
+                });
+              }
+              
               if (matchingPrice) {
                 selectedPrice = matchingPrice;
                 console.log(`[POS] Row ${rowIdx + 1}: Found matching price: ${matchingPrice.label} = £${matchingPrice.price}`);
@@ -631,7 +679,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
                 console.warn(`[POS] Row ${rowIdx + 1}: No price found for "${targetLabel}", using standard. Available prices: ${product.prices.map(p => p.label).join(', ')}`);
               }
             } else {
-              console.log(`[POS] Row ${rowIdx + 1}: No prefix, using standard price`);
+              console.log(`[POS] Row ${rowIdx + 1}: No prefix detected, using standard price`);
             }
             
             const productWithMessage = { ...product, name: row.productName };
@@ -644,7 +692,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
             loadedBasket.push(basketItem);
             console.log(`[POS] Row ${rowIdx + 1}: Added to basket - Product: "${basketItem.product.name}", Qty: ${basketItem.quantity}, Price label: "${selectedPrice.label}", Price: £${row.price}`);
           } else {
-            console.warn(`[POS] Row ${rowIdx + 1}: Could not find product for "${baseName}" (from "${row.productName}")`);
+            console.warn(`[POS] Row ${rowIdx + 1}: Could not find product for "${baseName}" (from "${row.productName}"). Tried name match, PLU file match, and filename match.`);
           }
         }
 
