@@ -657,7 +657,7 @@ export default function BasketScreen() {
             basket.length = 0;
             basket.push(...payingSplitBillItems);
             
-            await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0);
+            await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0, payingSplitBillIndex);
             
             basket.length = 0;
             basket.push(...originalBasket);
@@ -671,7 +671,7 @@ export default function BasketScreen() {
             setPayingSplitBillIndex(null);
             setPayingSplitBillItems([]);
           } else {
-            await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0);
+            await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0, payingSplitBillIndex);
           }
           
           setSplitPayments([]);
@@ -726,7 +726,7 @@ export default function BasketScreen() {
         basket.length = 0;
         basket.push(...payingSplitBillItems);
         
-        await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0);
+        await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0, payingSplitBillIndex);
         
         basket.length = 0;
         basket.push(...originalBasket);
@@ -740,7 +740,7 @@ export default function BasketScreen() {
         setPayingSplitBillIndex(null);
         setPayingSplitBillItems([]);
       } else {
-        await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0);
+        await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0, payingSplitBillIndex);
       }
       
       setSplitPayments([]);
@@ -1033,7 +1033,7 @@ export default function BasketScreen() {
       basket.length = 0;
       basket.push(...payingSplitBillItems);
       
-      await completeSale(pendingTenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, changeAmount);
+      await completeSale(pendingTenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, changeAmount, payingSplitBillIndex);
       
       basket.length = 0;
       basket.push(...originalBasket);
@@ -1047,7 +1047,7 @@ export default function BasketScreen() {
       setPayingSplitBillIndex(null);
       setPayingSplitBillItems([]);
     } else {
-      await completeSale(pendingTenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, changeAmount);
+      await completeSale(pendingTenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, changeAmount, payingSplitBillIndex);
     }
     
     setSplitPayments([]);

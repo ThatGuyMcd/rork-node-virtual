@@ -816,6 +816,120 @@ class TableDataService {
     console.log('[TableDataService] Successfully synced cleared table to server');
   }
 
+  async clearSplitBillFile(
+    table: Table,
+    splitBillIndex: number
+  ): Promise<void> {
+    const fileNames = ['tabledata.csv', 'tabledata2.csv', 'tabledata3.csv', 'tabledata4.csv', 'tabledata5.csv'];
+    const fileIndex = splitBillIndex === -1 ? 0 : splitBillIndex + 1;
+    const fileName = fileNames[fileIndex];
+    
+    console.log(`[TableDataService] Clearing split bill file: ${fileName} for table: ${table.name}`);
+    
+    const emptyCSV = 'X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?';
+    const tableKey = `${table.area}/${table.name}`;
+    
+    if (!this.isFileSystemAvailable()) {
+      let memoryFiles = this.tableFiles.get(tableKey);
+      if (memoryFiles) {
+        memoryFiles.set(fileName, emptyCSV);
+        console.log(`[TableDataService] Cleared ${fileName} in memory`);
+      }
+      
+      if (splitBillIndex === -1) {
+        this.data.delete(table.id);
+      }
+    } else if (FileSystem.documentDirectory) {
+      const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+      const filePath = `${tableFolder}${fileName}`;
+      const fileInfo = await FileSystem.getInfoAsync(filePath);
+      
+      if (fileInfo.exists) {
+        await FileSystem.writeAsStringAsync(filePath, emptyCSV);
+        console.log(`[TableDataService] Cleared ${fileName} in file system`);
+      }
+      
+      if (splitBillIndex === -1) {
+        this.data.delete(table.id);
+      }
+    }
+  }
+
+  async syncClearSplitBillToServer(
+    table: Table,
+    splitBillIndex: number
+  ): Promise<void> {
+    const siteInfo = await dataSyncService.getSiteInfo();
+    if (!siteInfo) {
+      console.warn('[TableDataService] No site info, skipping split bill clear sync');
+      return;
+    }
+
+    const fileNames = ['tabledata.csv', 'tabledata2.csv', 'tabledata3.csv', 'tabledata4.csv', 'tabledata5.csv'];
+    const fileIndex = splitBillIndex === -1 ? 0 : splitBillIndex + 1;
+    const fileName = fileNames[fileIndex];
+    
+    console.log(`[TableDataService] Syncing cleared split bill file to server: ${fileName}`);
+    
+    await this.clearSplitBillFile(table, splitBillIndex);
+    
+    const allFiles = await this.getAllTableFiles(table);
+    
+    const emptyCSV = 'X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?';
+    allFiles[fileName] = emptyCSV;
+    
+    const mainCSV = allFiles['tabledata.csv'] || emptyCSV;
+    const otherFiles = Object.fromEntries(
+      Object.entries(allFiles).filter(([key]) => key !== 'tabledata.csv')
+    );
+    
+    const result = await apiClient.saveSingleTableData(
+      siteInfo.siteId,
+      table.area,
+      table.name,
+      mainCSV,
+      otherFiles
+    );
+    
+    if (!result.success) {
+      throw new Error('Server split bill clear sync failed');
+    }
+    
+    console.log(`[TableDataService] Successfully synced cleared ${fileName} to server`);
+  }
+
+  async hasRemainingBillsOnTable(table: Table): Promise<boolean> {
+    const fileNames = ['tabledata.csv', 'tabledata2.csv', 'tabledata3.csv', 'tabledata4.csv', 'tabledata5.csv'];
+    const tableKey = `${table.area}/${table.name}`;
+    
+    for (const fileName of fileNames) {
+      let csvContent = '';
+      
+      if (!this.isFileSystemAvailable()) {
+        const memoryFiles = this.tableFiles.get(tableKey);
+        csvContent = memoryFiles?.get(fileName) || '';
+      } else if (FileSystem.documentDirectory) {
+        const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+        const filePath = `${tableFolder}${fileName}`;
+        const fileInfo = await FileSystem.getInfoAsync(filePath);
+        if (fileInfo.exists) {
+          csvContent = await FileSystem.readAsStringAsync(filePath);
+        }
+      }
+      
+      if (csvContent) {
+        const rows = dataParser.parseCSV(csvContent);
+        if (rows.length > 1) {
+          console.log(`[TableDataService] Found remaining items in ${fileName}`);
+          return true;
+        }
+      }
+    }
+    
+    console.log('[TableDataService] No remaining items on any bills');
+    return false;
+  }
+
   async syncAllTableDataToServer(): Promise<void> {
     const siteInfo = await dataSyncService.getSiteInfo();
     if (!siteInfo) {

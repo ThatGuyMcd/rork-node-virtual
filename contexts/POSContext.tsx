@@ -45,7 +45,7 @@ interface POSContextType {
   refundBasketItem: (index: number) => void;
   removeFromBasket: (index: number) => void;
   clearBasket: () => void;
-  completeSale: (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[], gratuity?: number, cashback?: number) => Promise<void>;
+  completeSale: (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[], gratuity?: number, cashback?: number, splitBillIndex?: number | null) => Promise<void>;
   calculateTotals: () => { subtotal: number; vatBreakdown: Record<string, number>; total: number; discount: number };
   selectTable: (table: Table | null) => void;
   saveTableOrder: () => void;
@@ -312,7 +312,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     return { subtotal, discount, vatBreakdown, total: subtotalAfterDiscount };
   }, [basket, basketDiscount, isRefundMode]);
 
-  const completeSale = useCallback(async (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[], gratuity?: number, cashback?: number) => {
+  const completeSale = useCallback(async (tenderId: string, splitPayments?: { tenderId: string; tenderName: string; amount: number }[], gratuity?: number, cashback?: number, splitBillIndex?: number | null) => {
     setProcessingTransaction(true);
     try {
       if (!currentOperator) {
@@ -458,12 +458,22 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     
     if (currentTable) {
       try {
-        await tableDataService.clearTableDataLocally(currentTable.id);
-        console.log('[POS] Cleared table data locally for table:', currentTable.id);
-        
-        tableDataService.syncClearTableToServerSafe(currentTable)
-          .then(() => console.log('[POS] Table clear synced to server for table:', currentTable.id))
-          .catch((err) => console.warn('[POS] Failed to sync table clear to server:', err));
+        if (splitBillIndex !== undefined && splitBillIndex !== null) {
+          console.log('[POS] Clearing split bill file for index:', splitBillIndex);
+          await tableDataService.clearSplitBillFile(currentTable, splitBillIndex);
+          console.log('[POS] Cleared split bill file locally for table:', currentTable.id);
+          
+          tableDataService.syncClearSplitBillToServer(currentTable, splitBillIndex)
+            .then(() => console.log('[POS] Split bill clear synced to server for table:', currentTable.id))
+            .catch((err) => console.warn('[POS] Failed to sync split bill clear to server:', err));
+        } else {
+          await tableDataService.clearTableDataLocally(currentTable.id);
+          console.log('[POS] Cleared table data locally for table:', currentTable.id);
+          
+          tableDataService.syncClearTableToServerSafe(currentTable)
+            .then(() => console.log('[POS] Table clear synced to server for table:', currentTable.id))
+            .catch((err) => console.warn('[POS] Failed to sync table clear to server:', err));
+        }
       } catch (error) {
         console.error('[POS] Failed to clear table data:', error);
       }
