@@ -2824,7 +2824,7 @@ export default function SettingsScreen() {
 
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
         <Text style={[styles.label, { color: colors.textSecondary }]}>Version</Text>
-        <Text style={[styles.value, { color: colors.text }]}>1.0.1</Text>
+        <Text style={[styles.value, { color: colors.text }]}>1.0.3 Beta</Text>
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -2835,7 +2835,7 @@ export default function SettingsScreen() {
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
         <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 8 }]}>Description</Text>
         <Text style={[styles.infoText, { color: colors.text }]}>
-          A table ordering platform designed for smooth service and modern payments. Supports integration with multiple card machine providers to deliver a diverse, feature-rich card payment experience, while also allowing payments to be recorded directly on any Android device. Built to connect to your main till system through the cloud for streamlined deployment and dependable synchronization.
+          A table ordering platform designed from the ground up to create the easiest way to place orders in a hospitality environment.. Supports integration with multiple card machine providers to deliver a diverse, feature-rich card payment experience, while also allowing payments to be recorded directly on any Android device. Built to connect to your main till system through the cloud for streamlined deployment and dependable synchronization.
         </Text>
       </View>
 

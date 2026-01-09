@@ -2,10 +2,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as Updates from "expo-updates";
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
+import { Platform, Pressable, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { POSProvider } from "@/contexts/POSContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { InactivityProvider, useInactivity } from "@/contexts/InactivityContext";
+import { ScreensaverOverlay } from "@/components/ScreensaverOverlay";
 import { trpc, trpcClient } from "@/lib/trpc";
 import { dataSyncService } from "@/services/dataSync";
 
@@ -20,6 +23,45 @@ function RootLayoutNav() {
       <Stack.Screen name="login" />
       <Stack.Screen name="+not-found" />
     </Stack>
+  );
+}
+
+function GlobalInactivityLayer() {
+  const { registerActivity } = useInactivity();
+
+  const onAnyPress = useCallback(() => {
+    registerActivity('global-press');
+  }, [registerActivity]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    const handler = () => {
+      registerActivity('web-window-activity');
+    };
+
+    window.addEventListener('mousemove', handler);
+    window.addEventListener('mousedown', handler);
+    window.addEventListener('keydown', handler);
+    window.addEventListener('touchstart', handler);
+    window.addEventListener('wheel', handler);
+
+    return () => {
+      window.removeEventListener('mousemove', handler);
+      window.removeEventListener('mousedown', handler);
+      window.removeEventListener('keydown', handler);
+      window.removeEventListener('touchstart', handler);
+      window.removeEventListener('wheel', handler);
+    };
+  }, [registerActivity]);
+
+  return (
+    <Pressable testID="global-activity-capture" style={{ flex: 1 }} onPress={onAnyPress}>
+      <View style={{ flex: 1 }} pointerEvents="box-none">
+        <RootLayoutNav />
+        <ScreensaverOverlay />
+      </View>
+    </Pressable>
   );
 }
 
@@ -104,11 +146,13 @@ export default function RootLayout() {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <POSProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <RootLayoutNav />
-            </GestureHandlerRootView>
-          </POSProvider>
+          <InactivityProvider>
+            <POSProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <GlobalInactivityLayer />
+              </GestureHandlerRootView>
+            </POSProvider>
+          </InactivityProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </trpc.Provider>
