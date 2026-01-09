@@ -1011,9 +1011,10 @@ export default function BasketScreen() {
       }, 100);
     } else if (currentTable) {
       selectTable(null);
-      console.log('[Basket] Table deselected after receipt');
+      console.log('[Basket] Table deselected after receipt, navigating to products');
+      router.replace('/');
     }
-  }, [completedSplitBillPayment, currentTable, selectTable]);
+  }, [completedSplitBillPayment, currentTable, selectTable, router]);
 
   const handlePrintReceipt = async () => {
     if (!lastTransaction) {
