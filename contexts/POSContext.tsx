@@ -580,8 +580,8 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
             if (!knownPrefixes.includes(prefix)) {
               knownPrefixes.push(prefix);
             }
-            prefixToLabelMap[prefix] = `custom${priceNumber}`;
-            console.log(`[POS] Added custom prefix: ${prefix} -> custom${priceNumber}`);
+            prefixToLabelMap[prefix] = `custom ${priceNumber}`;
+            console.log(`[POS] Added custom prefix: ${prefix} -> custom ${priceNumber}`);
           }
         }
 
