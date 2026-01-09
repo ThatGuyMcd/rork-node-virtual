@@ -97,10 +97,17 @@ class TableDataService {
       const priceExVat = item.selectedPrice.price / (1 + vatPercentage / 100);
       const vatAmount = item.selectedPrice.price - priceExVat;
 
-      const groupIdNum = item.product.groupId.split('-')[0].trim();
-      const deptIdNum = item.product.departmentId.split('-')[0].trim();
-      const prodIdNum = item.product.id.replace('prod_', '').padStart(5, '0');
-      const pluFile = `${groupIdNum}-${deptIdNum}-${prodIdNum}.PLU`;
+      let pluFile = '';
+      if (item.product.filename) {
+        pluFile = item.product.filename.replace(/\.PLU$/i, '') + '.PLU';
+        console.log(`[TableDataService] Using product filename for PLU: ${pluFile}`);
+      } else {
+        const groupIdNum = item.product.groupId.split('-')[0].trim();
+        const deptIdNum = item.product.departmentId.split('-')[0].trim();
+        const prodIdNum = item.product.id.replace('prod_', '').padStart(5, '0');
+        pluFile = `${groupIdNum}-${deptIdNum}-${prodIdNum}.PLU`;
+        console.log(`[TableDataService] Constructed PLU from IDs: ${pluFile}`);
+      }
 
       let rawBaseName = item.product.name.split(' - ')[0];
       const messagePrefix = item.product.name.includes(' - ') ? ' - ' + item.product.name.split(' - ').slice(1).join(' - ') : '';

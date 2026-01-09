@@ -668,10 +668,18 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
                   const deptIdNum = foundProduct.departmentId.split('-')[0].trim();
                   const prodIdNum = foundProduct.id.replace('prod_', '').padStart(5, '0');
                   const productPlu = `${groupIdNum}-${deptIdNum}-${prodIdNum}.PLU`;
-                  pluMatches = productPlu.toUpperCase() === row.pluFile.toUpperCase();
+                  const csvPluUpper = row.pluFile.toUpperCase();
+                  const productPluUpper = productPlu.toUpperCase();
+                  
+                  pluMatches = csvPluUpper === productPluUpper;
                   
                   if (!pluMatches && foundProduct.filename) {
-                    pluMatches = foundProduct.filename.toUpperCase() === row.pluFile.toUpperCase();
+                    const filenameUpper = foundProduct.filename.toUpperCase().replace(/\.PLU$/i, '') + '.PLU';
+                    pluMatches = csvPluUpper === filenameUpper;
+                  }
+                  
+                  if (!pluMatches) {
+                    pluMatches = csvPluUpper.endsWith(productPluUpper) || csvPluUpper.includes(prodIdNum + '.PLU');
                   }
                   
                   console.log(`[POS] Row ${rowIdx + 1}: PLU check - CSV: "${row.pluFile}", Product: "${productPlu}", Match: ${pluMatches}`);
