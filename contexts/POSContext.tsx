@@ -605,28 +605,61 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           
           let detectedPrefixInfo: { prefix: string; label: string } | null = null;
           let strippedName = originalProductName;
+          let candidateStrippedNames: { stripped: string; prefix: { prefix: string; label: string } }[] = [];
           
+          let tempName = originalProductName;
           let foundPrefix = true;
           while (foundPrefix) {
             foundPrefix = false;
-            const upperName = strippedName.toUpperCase();
+            const upperName = tempName.toUpperCase();
             for (const prefixInfo of allPrefixes) {
               const prefixWithSpace = prefixInfo.prefix + ' ';
               if (upperName.startsWith(prefixWithSpace)) {
+                const stripped = tempName.substring(prefixInfo.prefix.length + 1);
+                candidateStrippedNames.push({ 
+                  stripped, 
+                  prefix: detectedPrefixInfo || prefixInfo 
+                });
                 if (!detectedPrefixInfo) {
                   detectedPrefixInfo = prefixInfo;
                 }
-                strippedName = strippedName.substring(prefixInfo.prefix.length + 1);
+                tempName = stripped;
                 foundPrefix = true;
-                console.log(`[POS] Row ${rowIdx + 1}: Stripped prefix "${prefixInfo.prefix}", remaining: "${strippedName}"`);
+                console.log(`[POS] Row ${rowIdx + 1}: Found potential prefix "${prefixInfo.prefix}", remaining: "${stripped}"`);
                 break;
               }
             }
           }
           
-          let productNameWithoutPrefix = strippedName;
+          let product = null;
+          let productNameWithoutPrefix = originalProductName;
           
-
+          for (const candidate of candidateStrippedNames) {
+            const baseName = candidate.stripped.split(' - ')[0].trim();
+            console.log(`[POS] Row ${rowIdx + 1}: Trying to find product with baseName "${baseName}"`);
+            
+            let foundProduct = products.find(p => p.name === baseName);
+            if (!foundProduct) {
+              const baseNameLower = baseName.toLowerCase();
+              foundProduct = products.find(p => p.name.toLowerCase() === baseNameLower);
+            }
+            
+            if (foundProduct) {
+              product = foundProduct;
+              detectedPrefixInfo = candidate.prefix;
+              strippedName = candidate.stripped;
+              productNameWithoutPrefix = strippedName;
+              console.log(`[POS] Row ${rowIdx + 1}: Found product "${foundProduct.name}" with prefix "${detectedPrefixInfo.prefix}"`);
+              break;
+            }
+          }
+          
+          if (!product) {
+            console.log(`[POS] Row ${rowIdx + 1}: No product found with stripped names, trying original name`);
+            detectedPrefixInfo = null;
+            strippedName = originalProductName;
+            productNameWithoutPrefix = originalProductName;
+          }
           
           if (detectedPrefixInfo) {
             console.log(`[POS] Row ${rowIdx + 1}: Final detected prefix "${detectedPrefixInfo.prefix}" -> label "${detectedPrefixInfo.label}", stripped name: "${productNameWithoutPrefix}"`);
@@ -635,13 +668,15 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           const baseName = strippedName.split(' - ')[0].trim();
           console.log(`[POS] Row ${rowIdx + 1}: Searching for product with baseName "${baseName}"`);
           
-          let product = products.find(p => p.name === baseName);
-          
           if (!product) {
-            const baseNameLower = baseName.toLowerCase();
-            product = products.find(p => p.name.toLowerCase() === baseNameLower);
-            if (product) {
-              console.log(`[POS] Row ${rowIdx + 1}: Found product by case-insensitive match: "${product.name}"`);
+            product = products.find(p => p.name === baseName);
+            
+            if (!product) {
+              const baseNameLower = baseName.toLowerCase();
+              product = products.find(p => p.name.toLowerCase() === baseNameLower);
+              if (product) {
+                console.log(`[POS] Row ${rowIdx + 1}: Found product by case-insensitive match: "${product.name}"`);
+              }
             }
           }
           
