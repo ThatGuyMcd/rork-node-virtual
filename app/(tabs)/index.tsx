@@ -324,10 +324,14 @@ export default function ProductsScreen() {
   };
 
   const loadAreaData = async (area: string) => {
+    console.time(`[Products] loadAreaData(${area})`);
     setLoadingAreaData(true);
     setDownloadProgress(0);
     try {
       console.log('[Products] Downloading fresh data for area:', area);
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
       const siteInfo = await dataSyncService.getSiteInfo();
       if (!siteInfo) {
         console.error('[Products] No site info found');
@@ -486,24 +490,14 @@ export default function ProductsScreen() {
       }
 
       // Build statuses and store files in memory simultaneously
+      // Keep this path as light as possible: we compute subtotals after UI becomes interactive.
       const quickStatuses = new Map<string, { hasData: boolean; subtotal: number; isLocked: boolean }>();
       
       for (const table of areaTables) {
         const csvContent = tableDataMap.get(table.id);
         const isLocked = lockedTables.has(table.id);
-        
-        if (csvContent) {
-          const rows = dataParser.parseCSV(csvContent);
-          let subtotal = 0;
-          for (let i = 1; i < rows.length; i++) {
-            const qty = parseFloat(rows[i][0] || '1');
-            const price = parseFloat(rows[i][2] || '0');
-            subtotal += qty * price;
-          }
-          quickStatuses.set(table.id, { hasData: rows.length > 1, subtotal, isLocked });
-        } else {
-          quickStatuses.set(table.id, { hasData: false, subtotal: 0, isLocked });
-        }
+        const hasData = typeof csvContent === 'string' && csvContent.trim().length > 0;
+        quickStatuses.set(table.id, { hasData, subtotal: 0, isLocked });
       }
 
       // Store all files in memory at once
@@ -525,11 +519,14 @@ export default function ProductsScreen() {
 
       justFinishedLoadingAreaRef.current = true;
       setLoadingAreaData(false);
+      console.timeEnd(`[Products] loadAreaData(${area})`);
       
-      // Background: save table data locally (fire and forget)
+      // Background: compute subtotals + save table data locally (fire and forget)
       setTimeout(async () => {
         try {
+          console.time(`[Products] loadAreaData(${area}) backgroundWork`);
           const vatRates = await dataSyncService.getStoredVATRates();
+          const subtotalUpdates = new Map<string, number>();
           
           for (const [tableId, csvContent] of tableDataMap) {
             const table = areaTables.find(t => t.id === tableId);
@@ -537,6 +534,14 @@ export default function ProductsScreen() {
             
             const rows = dataParser.parseCSV(csvContent);
             if (rows.length <= 1) continue;
+            
+            let subtotal = 0;
+            for (let i = 1; i < rows.length; i++) {
+              const qty = parseFloat(rows[i][0] || '1');
+              const price = parseFloat(rows[i][2] || '0');
+              subtotal += qty * price;
+            }
+            subtotalUpdates.set(tableId, subtotal);
             
             const tableDataRows = rows.slice(1).map(row => ({
               quantity: parseFloat(row[0] || '1'),
@@ -589,8 +594,24 @@ export default function ProductsScreen() {
               ).catch(() => {});
             }
           }
-        } catch {}
-      }, 100);
+
+          if (subtotalUpdates.size > 0) {
+            setTableStatuses(prev => {
+              const next = new Map(prev);
+              for (const [tableId, subtotal] of subtotalUpdates) {
+                const existing = next.get(tableId);
+                if (existing) {
+                  next.set(tableId, { ...existing, hasData: true, subtotal });
+                }
+              }
+              return next;
+            });
+          }
+          console.timeEnd(`[Products] loadAreaData(${area}) backgroundWork`);
+        } catch (e) {
+          console.warn('[Products] loadAreaData background work failed:', e);
+        }
+      }, 50);
 
       showNotification(`Loaded ${areaTables.length} tables`);
     } catch (error) {
@@ -1807,9 +1828,12 @@ export default function ProductsScreen() {
                         <TouchableOpacity
                           key={area}
                           style={[styles.areaCard, { backgroundColor: areaColor }, getButtonSkinStyle(buttonSkin, areaColor)]}
-                          onPress={async () => {
+                          onPress={() => {
+                            console.log('[Products] Area selected:', area);
                             setSelectedArea(area);
-                            await loadAreaData(area);
+                            setLoadingAreaData(true);
+                            setDownloadProgress(0);
+                            void loadAreaData(area);
                           }}
                           activeOpacity={0.8}
                         >
