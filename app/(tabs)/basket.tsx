@@ -660,8 +660,19 @@ export default function BasketScreen() {
             
             await completeSale(tenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0, payingSplitBillIndex);
             
+            // Remove paid items from the original basket
+            const paidItemIds = new Set(payingSplitBillItems.map(item => `${item.product.id}:${item.selectedPrice.key}`));
+            const remainingBasket = originalBasket.filter(item => {
+              const itemKey = `${item.product.id}:${item.selectedPrice.key}`;
+              if (paidItemIds.has(itemKey)) {
+                paidItemIds.delete(itemKey); // Remove once to handle duplicates correctly
+                return false;
+              }
+              return true;
+            });
+            
             basket.length = 0;
-            basket.push(...originalBasket);
+            basket.push(...remainingBasket);
             
             if (payingSplitBillIndex >= 0) {
               const newSplitBills = [...splitBills];
@@ -730,8 +741,19 @@ export default function BasketScreen() {
         
         await completeSale(tenderId, splitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, 0, payingSplitBillIndex);
         
+        // Remove paid items from the original basket
+        const paidItemIds = new Set(payingSplitBillItems.map(item => `${item.product.id}:${item.selectedPrice.key}`));
+        const remainingBasket = originalBasket.filter(item => {
+          const itemKey = `${item.product.id}:${item.selectedPrice.key}`;
+          if (paidItemIds.has(itemKey)) {
+            paidItemIds.delete(itemKey); // Remove once to handle duplicates correctly
+            return false;
+          }
+          return true;
+        });
+        
         basket.length = 0;
-        basket.push(...originalBasket);
+        basket.push(...remainingBasket);
         
         if (payingSplitBillIndex >= 0) {
           const newSplitBills = [...splitBills];
@@ -1042,8 +1064,19 @@ export default function BasketScreen() {
       
       await completeSale(pendingTenderId, updatedSplitPayments, gratuityAmount > 0 ? gratuityAmount : undefined, changeAmount, payingSplitBillIndex);
       
+      // Remove paid items from the original basket
+      const paidItemIds = new Set(payingSplitBillItems.map(item => `${item.product.id}:${item.selectedPrice.key}`));
+      const remainingBasket = originalBasket.filter(item => {
+        const itemKey = `${item.product.id}:${item.selectedPrice.key}`;
+        if (paidItemIds.has(itemKey)) {
+          paidItemIds.delete(itemKey); // Remove once to handle duplicates correctly
+          return false;
+        }
+        return true;
+      });
+      
       basket.length = 0;
-      basket.push(...originalBasket);
+      basket.push(...remainingBasket);
       
       if (payingSplitBillIndex >= 0) {
         const newSplitBills = [...splitBills];
