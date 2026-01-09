@@ -1318,6 +1318,7 @@ export default function BasketScreen() {
             styles.splitBillFloatingButton,
             { backgroundColor: colors.accent },
             getButtonSkinStyle(buttonSkin, colors.accent),
+            { borderRadius: 28 },
             {
               transform: [
                 { translateX: splitButtonPosition.x },
