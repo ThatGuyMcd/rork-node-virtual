@@ -585,6 +585,12 @@ export default function BasketScreen() {
     const gratuityValue = (total * percentage) / 100;
     setGratuityAmount(gratuityValue);
     setGratuityModalVisible(false);
+    
+    if (payingSplitBillIndex !== null) {
+      setTimeout(() => {
+        openPaymentModal();
+      }, 300);
+    }
   };
 
   const handleCustomGratuity = () => {
@@ -596,11 +602,23 @@ export default function BasketScreen() {
     setGratuityAmount(amount);
     setCustomGratuityInput('');
     setGratuityModalVisible(false);
+    
+    if (payingSplitBillIndex !== null) {
+      setTimeout(() => {
+        openPaymentModal();
+      }, 300);
+    }
   };
 
   const handleSkipGratuity = () => {
     setGratuityAmount(0);
     setGratuityModalVisible(false);
+    
+    if (payingSplitBillIndex !== null) {
+      setTimeout(() => {
+        openPaymentModal();
+      }, 300);
+    }
   };
 
   const closePaymentModal = (callback?: () => void) => {
