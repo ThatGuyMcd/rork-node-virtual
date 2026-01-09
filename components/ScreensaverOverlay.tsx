@@ -56,7 +56,7 @@ export const ScreensaverOverlay = memo(function ScreensaverOverlay() {
               source={{ uri: logoUri }}
               resizeMode="contain"
               style={styles.logo}
-              accessibilityLabel="NODE Virtual logo"
+              accessibilityLabel="NODE Virtual"
               onError={(e) => {
                 console.log('[ScreensaverOverlay] Logo failed to load, falling back', {
                   uri: logoUri,
@@ -72,9 +72,7 @@ export const ScreensaverOverlay = memo(function ScreensaverOverlay() {
 
           <Text testID="screensaver-title" style={[styles.title, { color: colors.text }]}>NODE Virtual</Text>
           <Text testID="screensaver-subtitle" style={[styles.subtitle, { color: colors.textSecondary }]}>Tap to Start</Text>
-          {Platform.OS === 'web' ? (
-            <Text testID="screensaver-hint" style={[styles.hint, { color: colors.textTertiary }]}>Press any key or tap</Text>
-          ) : null}
+          
         </Animated.View>
       </Animated.View>
     </Pressable>
