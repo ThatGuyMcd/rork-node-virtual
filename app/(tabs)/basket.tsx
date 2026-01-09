@@ -25,6 +25,22 @@ import { dataSyncService } from '@/services/dataSync';
 import type { BasketItem, Transaction } from '@/types/pos';
 
 const getPricePrefix = (productName: string, label: string, customPriceNames: Record<string, { name: string; prefix: string } | null>): string => {
+  const builtInPrefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML', '2/3PT', 'OPEN', 'NOT SET'];
+  const customPrefixes: string[] = [];
+  for (const [, customData] of Object.entries(customPriceNames)) {
+    if (customData?.prefix) {
+      customPrefixes.push(customData.prefix.toUpperCase());
+    }
+  }
+  const allPrefixes = [...builtInPrefixes, ...customPrefixes].sort((a, b) => b.length - a.length);
+  
+  const upperName = productName.toUpperCase();
+  for (const prefix of allPrefixes) {
+    if (upperName.startsWith(prefix + ' ')) {
+      return prefix;
+    }
+  }
+  
   const lowerLabel = label.toLowerCase();
   
   const customMatch = label.match(/^custom\s*(\d+)$/i);
@@ -44,26 +60,6 @@ const getPricePrefix = (productName: string, label: string, customPriceNames: Re
   if (lowerLabel === 'open') return 'OPEN';
   if (lowerLabel === 'not set') return 'NOT SET';
   if (label === '125ml' || label === '175ml' || label === '250ml') return label;
-  
-  if (lowerLabel !== 'standard' && label !== '') {
-    return label;
-  }
-  
-  const builtInPrefixes = ['HALF', 'DBL', 'SML', 'LRG', '125ML', '175ML', '250ML', '2/3PT', 'OPEN', 'NOT SET'];
-  const customPrefixes: string[] = [];
-  for (const [, customData] of Object.entries(customPriceNames)) {
-    if (customData?.prefix) {
-      customPrefixes.push(customData.prefix.toUpperCase());
-    }
-  }
-  const allPrefixes = [...builtInPrefixes, ...customPrefixes].sort((a, b) => b.length - a.length);
-  
-  const upperName = productName.toUpperCase();
-  for (const prefix of allPrefixes) {
-    if (upperName.startsWith(prefix + ' ')) {
-      return prefix;
-    }
-  }
   
   return '';
 };
