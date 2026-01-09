@@ -626,20 +626,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
           
           let productNameWithoutPrefix = strippedName;
           
-          if (!detectedPrefixInfo) {
-            const spaceIdx = originalProductName.indexOf(' ');
-            if (spaceIdx > 0) {
-              const possiblePrefix = originalProductName.substring(0, spaceIdx).toUpperCase();
-              const restOfName = originalProductName.substring(spaceIdx + 1);
-              const matchingProduct = products.find(p => p.name.toUpperCase() === restOfName.split(' - ')[0].trim().toUpperCase());
-              if (matchingProduct) {
-                console.log(`[POS] Row ${rowIdx + 1}: Detected unregistered prefix "${possiblePrefix}" by product match`);
-                strippedName = restOfName;
-                productNameWithoutPrefix = restOfName;
-                detectedPrefixInfo = { prefix: possiblePrefix, label: 'unknown' };
-              }
-            }
-          }
+
           
           if (detectedPrefixInfo) {
             console.log(`[POS] Row ${rowIdx + 1}: Final detected prefix "${detectedPrefixInfo.prefix}" -> label "${detectedPrefixInfo.label}", stripped name: "${productNameWithoutPrefix}"`);
