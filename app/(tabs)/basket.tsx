@@ -515,23 +515,40 @@ export default function BasketScreen() {
   const router = useRouter();
   const [customPriceNames, setCustomPriceNames] = useState<Record<string, { name: string; prefix: string } | null>>({});
 
+  const splitButtonIsDragging = useRef(false);
+  const splitButtonStartTime = useRef(0);
   const splitButtonPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        const moved = Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10;
+        return moved;
+      },
       onPanResponderGrant: () => {
+        splitButtonIsDragging.current = false;
+        splitButtonStartTime.current = Date.now();
         splitButtonPosition.setOffset({
           x: (splitButtonPosition.x as any)._value,
           y: (splitButtonPosition.y as any)._value,
         });
         splitButtonPosition.setValue({ x: 0, y: 0 });
       },
-      onPanResponderMove: Animated.event(
-        [null, { dx: splitButtonPosition.x, dy: splitButtonPosition.y }],
-        { useNativeDriver: false }
-      ),
-      onPanResponderRelease: () => {
+      onPanResponderMove: (_, gestureState) => {
+        const moved = Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10;
+        if (moved) {
+          splitButtonIsDragging.current = true;
+          splitButtonPosition.setValue({ x: gestureState.dx, y: gestureState.dy });
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
         splitButtonPosition.flattenOffset();
+        const timeDiff = Date.now() - splitButtonStartTime.current;
+        const moved = Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10;
+        
+        if (!moved && timeDiff < 300) {
+          console.log('[Basket] Split button tapped');
+          openSplitBillModal();
+        }
       },
     })
   ).current;
@@ -1290,18 +1307,14 @@ export default function BasketScreen() {
               ],
             },
           ]}
+          testID="split-bill-button"
         >
-          <TouchableOpacity
-            style={styles.splitBillFloatingButtonInner}
-            onPress={openSplitBillModal}
-            activeOpacity={0.8}
-            testID="split-bill-button"
-          >
+          <View style={styles.splitBillFloatingButtonInner}>
             {getButtonOverlayStyle(buttonSkin) && (
               <View style={[getButtonOverlayStyle(buttonSkin) as any, { borderRadius: 28 }]} />
             )}
             <Split size={24} color="#fff" />
-          </TouchableOpacity>
+          </View>
         </Animated.View>
       )}
 
