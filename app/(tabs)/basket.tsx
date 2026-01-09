@@ -1328,10 +1328,10 @@ export default function BasketScreen() {
           ]}
           testID="split-bill-button"
         >
+          {getButtonOverlayStyle(buttonSkin) && (
+            <View style={[getButtonOverlayStyle(buttonSkin) as any, { borderRadius: 28 }]} />
+          )}
           <View style={styles.splitBillFloatingButtonInner}>
-            {getButtonOverlayStyle(buttonSkin) && (
-              <View style={[getButtonOverlayStyle(buttonSkin) as any, { borderRadius: 28 }]} />
-            )}
             <Split size={24} color="#fff" />
           </View>
         </Animated.View>
@@ -3136,8 +3136,7 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   splitBillFloatingButtonInner: {
-    width: 56,
-    height: 56,
+    ...StyleSheet.absoluteFillObject,
     borderRadius: 28,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
