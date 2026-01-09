@@ -1244,6 +1244,7 @@ export default function BasketScreen() {
         maxToRenderPerBatch={12}
         updateCellsBatchingPeriod={50}
         windowSize={8}
+        extraData={customPriceNames}
         renderItem={({ item, index }) => {
           const isRefundItem = item.quantity < 0;
           const prefix = getPricePrefix(item.product.name, item.selectedPrice.label, customPriceNames);
