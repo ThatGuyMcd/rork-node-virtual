@@ -2035,7 +2035,6 @@ export default function ProductsScreen() {
                                     styles.tableNameText,
                                     { color: '#ffffff' },
                                   ]}
-                                  numberOfLines={1}
                                 >
                                   {table.name}
                                 </Text>
@@ -2773,6 +2772,9 @@ const styles = StyleSheet.create({
     fontWeight: '800' as const,
     textAlign: 'center' as const,
     paddingHorizontal: 6,
+    width: '100%',
+    flexWrap: 'wrap' as const,
+    lineHeight: 18,
   },
   savingModal: {
     borderRadius: 20,
