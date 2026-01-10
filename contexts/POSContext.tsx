@@ -1,5 +1,6 @@
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 import { useCallback, useEffect, useState } from 'react';
 import type { BasketItem, Operator, Product, Tender, VATRate, Table, TableOrder, Transaction, DiscountSettings, GratuitySettings, ReceiptSettings } from '@/types/pos';
 import { dataSyncService } from '@/services/dataSync';
@@ -8,6 +9,7 @@ import { transactionService } from '@/services/transactionService';
 import { printerService } from '@/services/printerService';
 import { transactionUploadService } from '@/services/transactionUploadService';
 import { ESCPOSGenerator } from '@/services/escpos';
+import { teyaPaymentService } from '@/services/teyaPaymentService';
 
 interface POSContextType {
   currentOperator: Operator | null;
@@ -321,14 +323,52 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         return;
       }
 
-    const tender = tenders.find(t => t.id === tenderId);
-    if (!tender) {
-      console.error('[POS] Cannot complete sale: invalid tender');
-      return;
-    }
+      const tender = tenders.find(t => t.id === tenderId);
+      if (!tender) {
+        console.error('[POS] Cannot complete sale: invalid tender');
+        return;
+      }
 
-    const totals = calculateTotals();
-    const finalTotal = totals.total + (gratuity || 0);
+      const totals = calculateTotals();
+      const finalTotal = totals.total + (gratuity || 0);
+
+      const isRefund = basket.some(item => item.quantity < 0);
+      const isCardTender = tender.name.toLowerCase() === 'card' || tender.name.toLowerCase().includes('card');
+      const shouldUseTeya = cardMachineProvider === 'Teya' && isCardTender;
+
+      if (shouldUseTeya) {
+        const amountMinor = Math.round(Math.abs(finalTotal) * 100);
+        const tipMinor = gratuity ? Math.round(Math.abs(gratuity) * 100) : undefined;
+        const reference = `txn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+        console.log('[POS] Teya payment required before completing sale', {
+          amountMinor,
+          tipMinor,
+          currency: 'GBP',
+          reference,
+          isRefund,
+        });
+
+        if (isRefund) {
+          Alert.alert('Refunds not supported', 'Refunds via Teya are not implemented in this app yet. Please use a different method.');
+          return;
+        }
+
+        const teyaResult = await teyaPaymentService.makePayment({
+          amountMinor,
+          currency: 'GBP',
+          reference,
+          tipMinor,
+        });
+
+        if (teyaResult.status !== 'success') {
+          console.warn('[POS] Teya payment not successful, aborting transaction completion:', teyaResult);
+          Alert.alert('Card payment not completed', teyaResult.message || `Teya response: ${teyaResult.status}`);
+          return;
+        }
+
+        console.log('[POS] Teya payment successful. Continuing to record transaction.');
+      }
     
     if (splitPayments && splitPayments.length > 0) {
       const remainingAmount = finalTotal - splitPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -341,7 +381,6 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         ...finalPayment
       ].filter(payment => Math.abs(payment.amount) >= 0.01);
       
-      const isRefund = basket.some(item => item.quantity < 0);
       const transaction: Transaction = {
         id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: new Date().toISOString(),
@@ -397,7 +436,6 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
         console.error('[POS] Failed to open cash drawer:', error);
       }
     } else {
-      const isRefund = basket.some(item => item.quantity < 0);
       const transaction: Transaction = {
         id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: new Date().toISOString(),
@@ -491,7 +529,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     } finally {
       setProcessingTransaction(false);
     }
-  }, [clearBasket, currentTable, currentOperator, tenders, basket, calculateTotals, receiptSettings]);
+  }, [clearBasket, currentTable, currentOperator, tenders, basket, calculateTotals, receiptSettings, cardMachineProvider]);
 
   const saveTableOrder = useCallback(() => {
     if (!currentTable || !currentOperator || basket.length === 0) return;
