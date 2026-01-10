@@ -2029,10 +2029,16 @@ export default function ProductsScreen() {
                               {getButtonOverlayStyle(buttonSkin) && (
                                 <View style={getButtonOverlayStyle(buttonSkin) as any} />
                               )}
-                              <View style={{ flex: 1 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                  <Text style={[styles.tableOptionText, { color: '#ffffff' }]}>{table.name}</Text>
-                                </View>
+                              <View style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                                <Text
+                                  style={[
+                                    styles.tableOptionText,
+                                    { color: '#ffffff', textAlign: 'center' },
+                                  ]}
+                                  numberOfLines={2}
+                                >
+                                  {table.name}
+                                </Text>
                               </View>
 
                               <View
@@ -2053,7 +2059,9 @@ export default function ProductsScreen() {
                                 </Text>
                               </View>
                               {hasData && !isLocked && (
-                                <Text style={[styles.tableSubtotal, { color: 'rgba(255, 255, 255, 0.9)' }]}>Subtotal: £{subtotal.toFixed(2)}</Text>
+                                <Text style={[styles.tableSubtotal, { color: 'rgba(255, 255, 255, 0.92)' }]}>
+                                  £{subtotal.toFixed(2)}
+                                </Text>
                               )}
                               {currentTable?.id === table.id && (
                                 <View style={[styles.selectedIndicator, { backgroundColor: colors.primary }]} />
@@ -2702,9 +2710,11 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   tableSubtotal: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
     fontSize: 14,
-    fontWeight: '700' as const,
-    marginTop: 4,
+    fontWeight: '800' as const,
   },
   tableGrid: {
     flexDirection: 'row' as const,
@@ -2717,12 +2727,11 @@ const styles = StyleSheet.create({
     width: '47%',
     padding: 12,
     paddingTop: 18,
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
     minHeight: 84,
     overflow: 'hidden',
     position: 'relative',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   tableLockedItem: {
     opacity: 0.6,
