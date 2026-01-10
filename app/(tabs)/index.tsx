@@ -1940,7 +1940,7 @@ export default function ProductsScreen() {
                   })()}
                 </View>
               ) : (
-                <>
+                <View>
                   <TouchableOpacity
                     style={styles.backButton}
                     onPress={() => setSelectedArea(null)}
@@ -2057,9 +2057,10 @@ export default function ProductsScreen() {
                               )}
                             </TouchableOpacity>
                           );
-                      })}
-                  </View>
-                </>
+                        })}
+                    </View>
+                  )}
+                </View>
               )}
             </ScrollView>
           </View>
