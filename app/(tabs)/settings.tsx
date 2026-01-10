@@ -1551,12 +1551,23 @@ export default function SettingsScreen() {
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
         <Text style={[styles.infoText, { color: colors.textSecondary, marginBottom: 16 }]}>View transaction history, analytics, and generate reports</Text>
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary, marginBottom: 0 }]}
+          style={[styles.button, { backgroundColor: colors.primary, marginBottom: 12 }]}
           onPress={() => router.push('/reports' as any)}
           activeOpacity={0.8}
+          testID="settings-open-reports"
         >
           <FileText size={20} color="#ffffff" />
           <Text style={styles.buttonText}>Open Reports</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: colors.accent, marginBottom: 0 }]}
+          onPress={() => router.push('/build-report' as any)}
+          activeOpacity={0.8}
+          testID="settings-open-build-report"
+        >
+          <FileText size={20} color="#ffffff" />
+          <Text style={styles.buttonText}>Build a Report</Text>
         </TouchableOpacity>
       </View>
     </>

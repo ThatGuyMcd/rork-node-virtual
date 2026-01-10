@@ -279,6 +279,24 @@ export default function TabLayout() {
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="build-report"
+        options={{
+          href: null,
+          title: 'Build a Report',
+          headerTitle: () => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Image
+                source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/aks991iz9extc1dtz2zq4' }}
+                style={{ width: 24, height: 24 }}
+                resizeMode="contain"
+              />
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>Build a Report</Text>
+            </View>
+          ),
+        }}
+      />
     </Tabs>
   );
 }
