@@ -19,7 +19,7 @@ import { transactionService } from '@/services/transactionService';
 import { dataSyncService } from '@/services/dataSync';
 import type { Transaction, TransactionReport } from '@/types/pos';
 
-type PresetRange = 'today' | 'week' | 'month' | 'custom';
+type PresetRange = 'today' | 'week' | 'month' | 'all' | 'custom';
 
 interface ReportFilters {
   operatorIds: string[];
@@ -188,6 +188,8 @@ export default function BuildReportScreen() {
         return 'Build a report for the last 7 days.';
       case 'month':
         return 'Build a report from the start of this month.';
+      case 'all':
+        return 'Build a report across all time.';
       case 'custom':
         return 'Choose your own date/time range.';
       default:
@@ -209,6 +211,9 @@ export default function BuildReportScreen() {
         break;
       case 'month':
         startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+        break;
+      case 'all':
+        startDate = new Date(0);
         break;
       case 'custom':
         startDate = new Date(customStartDate);
@@ -994,6 +999,27 @@ export default function BuildReportScreen() {
                   ]}
                 >
                   This Month
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.quickRangeButton,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                  presetRange === 'all' && { borderColor: colors.primary, backgroundColor: colors.primary + '20' },
+                ]}
+                onPress={() => setPresetRange('all')}
+                activeOpacity={0.7}
+                testID="build-report-range-all"
+              >
+                <Text
+                  style={[
+                    styles.quickRangeText,
+                    { color: colors.text },
+                    presetRange === 'all' && { color: colors.primary, fontWeight: '700' as const },
+                  ]}
+                >
+                  All Time
                 </Text>
               </TouchableOpacity>
 
