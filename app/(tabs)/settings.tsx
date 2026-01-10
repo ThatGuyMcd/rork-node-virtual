@@ -1557,7 +1557,7 @@ export default function SettingsScreen() {
           testID="settings-open-reports"
         >
           <FileText size={20} color="#ffffff" />
-          <Text style={styles.buttonText}>Open Reports</Text>
+          <Text style={styles.buttonText}>Transactions & Summary Report</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
