@@ -1,4 +1,5 @@
 import { Linking, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type TeyaPaymentStatus = 'success' | 'declined' | 'cancelled' | 'error' | 'timeout';
 
@@ -19,6 +20,12 @@ export interface TeyaPaymentResult {
 }
 
 const DEFAULT_TIMEOUT_MS = 2 * 60 * 1000;
+const PENDING_KEY = 'teya_pending_payment';
+
+type PendingPayment = {
+  reference: string;
+  createdAt: number;
+};
 
 function clampInt(value: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -28,6 +35,36 @@ function clampInt(value: number): number {
 function getCallbackUrlBase(): string {
   const expoScheme = 'rork-app';
   return `${expoScheme}://teya-callback`;
+}
+
+async function setPendingPayment(reference: string): Promise<void> {
+  const pending: PendingPayment = { reference, createdAt: Date.now() };
+  try {
+    await AsyncStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+  } catch (e) {
+    console.warn('[TeyaPayment] Failed to store pending payment state:', e);
+  }
+}
+
+async function clearPendingPayment(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(PENDING_KEY);
+  } catch (e) {
+    console.warn('[TeyaPayment] Failed to clear pending payment state:', e);
+  }
+}
+
+async function getPendingPayment(): Promise<PendingPayment | null> {
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PendingPayment>;
+    if (typeof parsed.reference !== 'string' || typeof parsed.createdAt !== 'number') return null;
+    return { reference: parsed.reference, createdAt: parsed.createdAt };
+  } catch (e) {
+    console.warn('[TeyaPayment] Failed to read pending payment state:', e);
+    return null;
+  }
 }
 
 function buildTeyaPaymentUrl(req: TeyaPaymentRequest): string {
@@ -85,6 +122,36 @@ function parseResultFromUrl(url: string): Partial<TeyaPaymentResult> {
 }
 
 class TeyaPaymentService {
+  async tryRecoverFromInitialUrl(): Promise<TeyaPaymentResult | null> {
+    if (Platform.OS === 'web') return null;
+
+    try {
+      const initialUrl = await Linking.getInitialURL();
+      if (!initialUrl) return null;
+
+      const callbackPrefix = getCallbackUrlBase();
+      if (!initialUrl.startsWith(callbackPrefix)) return null;
+
+      const parsed = parseResultFromUrl(initialUrl);
+      if (!parsed.reference) return null;
+
+      console.log('[TeyaPayment] Recovered callback from initial url:', initialUrl);
+      await clearPendingPayment();
+
+      return {
+        status: (parsed.status ?? 'error') as TeyaPaymentStatus,
+        provider: 'Teya',
+        reference: parsed.reference,
+        providerTransactionId: parsed.providerTransactionId,
+        rawUrl: parsed.rawUrl,
+        message: parsed.message,
+      };
+    } catch (e) {
+      console.warn('[TeyaPayment] Failed to inspect initial url:', e);
+      return null;
+    }
+  }
+
   async makePayment(request: TeyaPaymentRequest, opts?: { timeoutMs?: number }): Promise<TeyaPaymentResult> {
     console.log('[TeyaPayment] makePayment request:', request);
 
@@ -96,6 +163,12 @@ class TeyaPaymentService {
         reference: request.reference,
         message: 'Teya payments are not supported on web preview',
       };
+    }
+
+    const recovered = await this.tryRecoverFromInitialUrl();
+    if (recovered?.reference === request.reference) {
+      console.log('[TeyaPayment] Using recovered result for same reference:', recovered);
+      return recovered;
     }
 
     const paymentUrl = buildTeyaPaymentUrl(request);
@@ -111,6 +184,8 @@ class TeyaPaymentService {
         message: 'Could not open Teya app (missing or URL not supported)',
       };
     }
+
+    await setPendingPayment(request.reference);
 
     const callbackPrefix = getCallbackUrlBase();
     console.log('[TeyaPayment] Waiting for callback prefix:', callbackPrefix);
@@ -131,6 +206,7 @@ class TeyaPaymentService {
         } catch {
           // ignore
         }
+        void clearPendingPayment();
         resolve(result);
       };
 
@@ -174,6 +250,10 @@ class TeyaPaymentService {
         });
       });
     });
+  }
+
+  async getPendingPaymentForDebug(): Promise<PendingPayment | null> {
+    return await getPendingPayment();
   }
 }
 
