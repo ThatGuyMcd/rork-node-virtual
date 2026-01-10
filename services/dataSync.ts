@@ -75,9 +75,104 @@ export class DataSyncService {
     return { siteId, siteName };
   }
 
-  async syncData(onProgress?: (progress: SyncProgress) => void, isIncremental: boolean = false): Promise<void> {
+  private getFriendlyName(folder: string): string {
+    const folderUpper = folder.toUpperCase();
+    switch (folderUpper) {
+      case 'PLUDATA':
+        return 'Syncing Product Database';
+      case 'OPERATORDATA':
+        return 'Syncing Operators';
+      case 'TABDATA':
+        return 'Syncing Tables and Tabs';
+      case 'FUNCTIONDATA':
+        return 'Syncing Functions';
+      case 'MENUDATA':
+        return 'Syncing Menus';
+      case 'VATDATA':
+        return 'Syncing VAT Data';
+      case 'DATA':
+        return 'Syncing Settings';
+      default:
+        return `Syncing from ${folder}`;
+    }
+  }
+
+  private async downloadFilesWithConcurrency(
+    siteId: string,
+    filesToDownload: { path: string; lastModified?: string }[],
+    onProgress?: (progress: SyncProgress) => void,
+    options?: {
+      maxConcurrentDownloads?: number;
+      progressTotalOverride?: number;
+      progressBaseCompleted?: number;
+      progressFolderOverride?: string;
+    }
+  ): Promise<Map<string, string>> {
+    const maxConcurrentDownloads = Math.max(1, Math.min(40, options?.maxConcurrentDownloads ?? 12));
+    const progressTotal = options?.progressTotalOverride ?? filesToDownload.length;
+    const progressBaseCompleted = options?.progressBaseCompleted ?? 0;
+
+    console.log('[DataSync] Download concurrency:', maxConcurrentDownloads);
+    console.log('[DataSync] Files to download:', filesToDownload.length);
+
+    const files: Map<string, string> = new Map();
+    let completed = 0;
+    let lastProgressFolder = '';
+
+    const queue = [...filesToDownload];
+
+    const worker = async (workerId: number) => {
+      while (queue.length > 0) {
+        const next = queue.shift();
+        if (!next) return;
+
+        try {
+          const text = await apiClient.getFile(siteId, next.path);
+          files.set(next.path, text);
+        } catch (error) {
+          console.error(`[DataSync] Worker ${workerId} failed to download ${next.path}:`, error);
+        } finally {
+          completed++;
+
+          const folder = options?.progressFolderOverride ?? (next.path.split('/')[0] || 'root');
+          if (folder !== lastProgressFolder) {
+            lastProgressFolder = folder;
+          }
+
+          const current = progressBaseCompleted + completed;
+          onProgress?.({
+            phase: 'downloading',
+            current,
+            total: progressTotal,
+            message: this.getFriendlyName(lastProgressFolder),
+          });
+        }
+      }
+    };
+
+    const workers = Array.from({ length: Math.min(maxConcurrentDownloads, filesToDownload.length) }, (_, idx) => worker(idx + 1));
+    await Promise.all(workers);
+
+    return files;
+  }
+
+  private isPluFilePath(path: string): boolean {
+    const upper = path.toUpperCase();
+    return upper.startsWith('PLUDATA/') && upper.endsWith('.PLU') && !upper.includes('ERRORCORRECT.PLU');
+  }
+
+  private extractFileName(path: string): string {
+    return path.split('/').pop() || path;
+  }
+
+  async syncData(
+    onProgress?: (progress: SyncProgress) => void,
+    isIncremental: boolean = false,
+    options?: { smartPluDownload?: boolean; maxConcurrentDownloads?: number }
+  ): Promise<void> {
     console.log(`[DataSync] ========== STARTING ${isIncremental ? 'INCREMENTAL' : 'FULL'} DATA SYNC ==========`);
-    
+    console.log('[DataSync] Options:', JSON.stringify(options || {}));
+
     const siteInfo = await this.getSiteInfo();
     if (!siteInfo) {
       throw new Error('No site linked. Please link your account first.');
@@ -91,22 +186,21 @@ export class DataSyncService {
     const manifest = await apiClient.getManifest(siteInfo.siteId);
     console.log(`[DataSync] Manifest loaded: ${manifest.length} total files`);
 
-
     const filteredManifest = this.filterManifest(manifest);
     console.log(`[DataSync] Will check: ${filteredManifest.length} files after filtering`);
     console.log(`[DataSync] Skipped: ${manifest.length - filteredManifest.length} files`);
 
     let filesToDownload = filteredManifest;
-    
+
     if (isIncremental) {
       const previousMetadata = await this.getFileMetadata();
       filesToDownload = [];
-      
+
       console.log('[DataSync] Checking for changed files...');
-      
+
       for (const fileInfo of filteredManifest) {
         const previousMeta = previousMetadata[fileInfo.path];
-        
+
         if (!previousMeta) {
           console.log(`[DataSync] New file detected: ${fileInfo.path}`);
           filesToDownload.push(fileInfo);
@@ -115,9 +209,9 @@ export class DataSyncService {
           filesToDownload.push(fileInfo);
         }
       }
-      
+
       console.log(`[DataSync] Found ${filesToDownload.length} new or changed files`);
-      
+
       if (filesToDownload.length === 0) {
         console.log('[DataSync] No changes detected');
         onProgress?.({ phase: 'complete', current: 1, total: 1, message: 'No changes detected' });
@@ -125,79 +219,74 @@ export class DataSyncService {
       }
     }
 
-    const files: Map<string, string> = new Map();
-
     onProgress?.({ phase: 'downloading', current: 0, total: filesToDownload.length, message: 'Syncing files...' });
 
-    const getFriendlyName = (folder: string): string => {
-      const folderUpper = folder.toUpperCase();
-      switch (folderUpper) {
-        case 'PLUDATA':
-          return 'Syncing Product Database';
-        case 'OPERATORDATA':
-          return 'Syncing Operators';
-        case 'TABDATA':
-          return 'Syncing Tables and Tabs';
-        case 'FUNCTIONDATA':
-          return 'Syncing Functions';
-        case 'MENUDATA':
-          return 'Syncing Menus';
-        case 'VATDATA':
-          return 'Syncing VAT Data';
-        case 'DATA':
-          return 'Syncing Settings';
-        default:
-          return `Syncing from ${folder}`;
-      }
-    };
+    const files: Map<string, string> = new Map();
 
-    const BATCH_SIZE = 25;
-    let downloadedCount = 0;
-    let lastProgressFolder = '';
+    const smartPluDownload = !isIncremental && (options?.smartPluDownload ?? false);
 
+    if (smartPluDownload) {
+      console.log('[DataSync] Smart PLU download ENABLED (menu-driven)');
 
+      const nonPluFiles = filesToDownload.filter(f => !this.isPluFilePath(f.path));
+      const pluFiles = filesToDownload.filter(f => this.isPluFilePath(f.path));
 
-    for (let batchStart = 0; batchStart < filesToDownload.length; batchStart += BATCH_SIZE) {
-      const batchEnd = Math.min(batchStart + BATCH_SIZE, filesToDownload.length);
-      const batch = filesToDownload.slice(batchStart, batchEnd);
-      
+      console.log('[DataSync] Non-PLU files:', nonPluFiles.length);
+      console.log('[DataSync] PLU candidates:', pluFiles.length);
 
-      
-      const batchPromises = batch.map(async (fileInfo) => {
-        try {
-          const text = await apiClient.getFile(siteInfo.siteId, fileInfo.path);
-          return { path: fileInfo.path, text, success: true };
-        } catch (error) {
-          console.error(`[DataSync] Failed to download ${fileInfo.path}:`, error);
-          return { path: fileInfo.path, text: '', success: false };
-        }
+      const nonPluDownloaded = await this.downloadFilesWithConcurrency(siteInfo.siteId, nonPluFiles, onProgress, {
+        maxConcurrentDownloads: options?.maxConcurrentDownloads,
+        progressTotalOverride: nonPluFiles.length + pluFiles.length,
       });
 
-      const results = await Promise.all(batchPromises);
-      
-      for (const result of results) {
-        if (result.success) {
-          files.set(result.path, result.text);
-        }
-        downloadedCount++;
-        
-        const folder = result.path.split('/')[0] || 'root';
-        if (folder !== lastProgressFolder) {
-          lastProgressFolder = folder;
-        }
+      for (const [path, content] of nonPluDownloaded.entries()) {
+        files.set(path, content);
       }
-      
-      const progressUpdate = {
-        phase: 'downloading' as const,
-        current: downloadedCount,
-        total: filesToDownload.length,
-        message: getFriendlyName(lastProgressFolder),
-      };
-      onProgress?.(progressUpdate);
+
+      onProgress?.({ phase: 'parsing', current: 0, total: 1, message: 'Processing menus to optimize download...' });
+
+      let menuData: MenuData = {};
+      try {
+        menuData = await this.parseMenuData(files);
+      } catch (e) {
+        console.error('[DataSync] Failed to parse menus during smart download, falling back to full PLU download:', e);
+      }
+
+      const menuProductFilenames = this.extractMenuProductFilenames(menuData);
+      console.log('[DataSync] Menu referenced products:', menuProductFilenames.size);
+
+      let selectedPluFiles = pluFiles;
+      if (menuProductFilenames.size > 0) {
+        selectedPluFiles = pluFiles.filter(f => {
+          const fileNameUpper = this.extractFileName(f.path).toUpperCase();
+          return menuProductFilenames.has(fileNameUpper);
+        });
+      }
+
+      console.log('[DataSync] Selected PLU files to download:', selectedPluFiles.length);
+
+      const pluDownloaded = await this.downloadFilesWithConcurrency(siteInfo.siteId, selectedPluFiles, onProgress, {
+        maxConcurrentDownloads: options?.maxConcurrentDownloads,
+        progressTotalOverride: nonPluFiles.length + pluFiles.length,
+        progressBaseCompleted: nonPluFiles.length,
+        progressFolderOverride: 'PLUDATA',
+      });
+
+      for (const [path, content] of pluDownloaded.entries()) {
+        files.set(path, content);
+      }
+
+      const skippedPluCount = pluFiles.length - selectedPluFiles.length;
+      console.log('[DataSync] Smart download skipped PLU files:', skippedPluCount);
+    } else {
+      const downloaded = await this.downloadFilesWithConcurrency(siteInfo.siteId, filesToDownload, onProgress, {
+        maxConcurrentDownloads: options?.maxConcurrentDownloads,
+      });
+      for (const [path, content] of downloaded.entries()) {
+        files.set(path, content);
+      }
     }
 
-
-    
     onProgress?.({ phase: 'parsing', current: 0, total: 1, message: 'Processing data...' });
 
     await this.saveTableDataFiles(files);

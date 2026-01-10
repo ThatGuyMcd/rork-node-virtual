@@ -1095,9 +1095,16 @@ export default function SettingsScreen() {
     setSyncProgress(null);
 
     try {
-      await dataSyncService.syncData((progress) => {
-        setSyncProgress(progress);
-      }, incremental);
+      await dataSyncService.syncData(
+        (progress) => {
+          setSyncProgress(progress);
+        },
+        incremental,
+        {
+          smartPluDownload: !incremental,
+          maxConcurrentDownloads: 14,
+        }
+      );
 
       await loadProductData();
       await loadLastSyncTime();
