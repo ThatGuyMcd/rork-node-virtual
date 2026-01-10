@@ -1965,59 +1965,79 @@ export default function ProductsScreen() {
                     </View>
                   )}
 
-                  <View style={styles.tableGrid}>
-                    {tables
-                      .filter(table => table.area === selectedArea)
-                      .sort((a, b) => a.name.localeCompare(b.name))
-                      .map((table) => {
-                        const status = tableStatuses.get(table.id);
-                        const hasData = status?.hasData || false;
-                        const isLocked = status?.isLocked || false;
-                        const subtotal = status?.subtotal || 0;
-                        const statusColor = isLocked ? '#6b7280' : (hasData ? '#166534' : '#1e3a8a');
+                  {loadingAreaData ? (
+                    <View style={styles.tableGrid}>
+                      {Array.from({ length: Math.max(12, tables.filter(t => t.area === selectedArea).length || 0) }).map((_, idx) => (
+                        <View
+                          key={`table-skeleton-${idx}`}
+                          style={[
+                            styles.tableGridItem,
+                            {
+                              backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
+                              borderWidth: 1,
+                              borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.08)',
+                            },
+                          ]}
+                          testID={`table-skeleton-${idx}`}
+                        />
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={styles.tableGrid}>
+                      {tables
+                        .filter(table => table.area === selectedArea)
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((table) => {
+                          const status = tableStatuses.get(table.id);
+                          const hasData = status?.hasData || false;
+                          const isLocked = status?.isLocked || false;
+                          const subtotal = status?.subtotal || 0;
+                          const statusColor = isLocked ? '#6b7280' : (hasData ? '#166534' : '#1e3a8a');
 
-                        return (
-                          <TouchableOpacity
-                            key={table.id}
-                            style={[
-                              styles.tableGridItem,
-                              { backgroundColor: statusColor },
-                              getButtonSkinStyle(buttonSkin, statusColor),
-                              currentTable?.id === table.id && styles.tableOptionSelected,
-                              isLocked && styles.tableLockedItem,
-                            ]}
-                            onPress={() => {
-                              if (isLocked) {
-                                showNotification(`Table ${table.name} is locked by another terminal`, true);
-                                return;
-                              }
-                              selectTable(table);
-                              setTableModalVisible(false);
-                              setSelectedArea(null);
-                              showNotification(`Selected table: ${table.name} (${selectedArea})`);
-                            }}
-                            activeOpacity={isLocked ? 1 : 0.8}
-                          >
-                            {isLiquidGlassAvailable() ? (
-                              <GlassView
-                                style={StyleSheet.absoluteFill}
-                                glassEffectStyle="regular"
-                                tintColor={statusColor}
-                              />
-                            ) : (
-                              <View style={[StyleSheet.absoluteFill, { backgroundColor: statusColor, opacity: 0.9 }]} />
-                            )}
-                            {getButtonOverlayStyle(buttonSkin) && (
-                              <View style={getButtonOverlayStyle(buttonSkin) as any} />
-                            )}
-                            <View style={{ flex: 1 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                <Text style={[styles.tableOptionText, { color: '#ffffff' }]}>{table.name}</Text>
-                                {isLocked && (
-                                  <View style={[styles.tableInUseIndicator, { backgroundColor: '#f97316' }]}>
-                                    <Text style={styles.tableInUseText}>LOCKED</Text>
-                                  </View>
-                                )}
+                          return (
+                            <TouchableOpacity
+                              key={table.id}
+                              style={[
+                                styles.tableGridItem,
+                                { backgroundColor: statusColor },
+                                getButtonSkinStyle(buttonSkin, statusColor),
+                                currentTable?.id === table.id && styles.tableOptionSelected,
+                                isLocked && styles.tableLockedItem,
+                              ]}
+                              onPress={() => {
+                                if (isLocked) {
+                                  showNotification(`Table ${table.name} is locked by another terminal`, true);
+                                  return;
+                                }
+                                selectTable(table);
+                                setTableModalVisible(false);
+                                setSelectedArea(null);
+                                showNotification(`Selected table: ${table.name} (${selectedArea})`);
+                              }}
+                              activeOpacity={isLocked ? 1 : 0.8}
+                              testID={`table-button-${table.id}`}
+                            >
+                              {isLiquidGlassAvailable() ? (
+                                <GlassView
+                                  style={StyleSheet.absoluteFill}
+                                  glassEffectStyle="regular"
+                                  tintColor={statusColor}
+                                />
+                              ) : (
+                                <View style={[StyleSheet.absoluteFill, { backgroundColor: statusColor, opacity: 0.9 }]} />
+                              )}
+                              {getButtonOverlayStyle(buttonSkin) && (
+                                <View style={getButtonOverlayStyle(buttonSkin) as any} />
+                              )}
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                  <Text style={[styles.tableOptionText, { color: '#ffffff' }]}>{table.name}</Text>
+                                  {isLocked && (
+                                    <View style={[styles.tableInUseIndicator, { backgroundColor: '#f97316' }]}>
+                                      <Text style={styles.tableInUseText}>LOCKED</Text>
+                                    </View>
+                                  )}
+                                </View>
                                 {hasData && !isLocked && (
                                   <View style={[styles.tableInUseIndicator, { backgroundColor: colors.warning }]}>
                                     <Text style={styles.tableInUseText}>IN USE</Text>
@@ -2032,12 +2052,11 @@ export default function ProductsScreen() {
                               {hasData && !isLocked && (
                                 <Text style={[styles.tableSubtotal, { color: 'rgba(255, 255, 255, 0.9)' }]}>Subtotal: £{subtotal.toFixed(2)}</Text>
                               )}
-                            </View>
-                            {currentTable?.id === table.id && (
-                              <View style={[styles.selectedIndicator, { backgroundColor: colors.primary }]} />
-                            )}
-                          </TouchableOpacity>
-                        );
+                              {currentTable?.id === table.id && (
+                                <View style={[styles.selectedIndicator, { backgroundColor: colors.primary }]} />
+                              )}
+                            </TouchableOpacity>
+                          );
                       })}
                   </View>
                 </>
