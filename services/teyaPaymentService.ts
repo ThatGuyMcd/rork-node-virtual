@@ -1,4 +1,5 @@
-import { Linking, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type TeyaPaymentStatus = 'success' | 'declined' | 'cancelled' | 'error' | 'timeout';
@@ -33,8 +34,9 @@ function clampInt(value: number): number {
 }
 
 function getCallbackUrlBase(): string {
-  const expoScheme = 'rork-app';
-  return `${expoScheme}://teya-callback`;
+  const url = Linking.createURL('teya-callback');
+  const withoutQuery = url.split('?')[0] ?? url;
+  return withoutQuery;
 }
 
 async function setPendingPayment(reference: string): Promise<void> {
@@ -229,7 +231,8 @@ class TeyaPaymentService {
         });
       };
 
-      sub = Linking.addEventListener('url', handler);
+      const subscription = Linking.addEventListener('url', handler);
+      sub = { remove: () => subscription.remove() };
 
       setTimeout(() => {
         finish({
