@@ -2029,40 +2029,41 @@ export default function ProductsScreen() {
                               {getButtonOverlayStyle(buttonSkin) && (
                                 <View style={getButtonOverlayStyle(buttonSkin) as any} />
                               )}
-                              <View style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                              <View style={styles.tableButtonContent}>
                                 <Text
                                   style={[
-                                    styles.tableOptionText,
-                                    { color: '#ffffff', textAlign: 'center' },
+                                    styles.tableNameText,
+                                    { color: '#ffffff' },
                                   ]}
-                                  numberOfLines={2}
+                                  numberOfLines={1}
                                 >
                                   {table.name}
                                 </Text>
-                              </View>
 
-                              <View
-                                pointerEvents="none"
-                                style={[
-                                  styles.tableStatusBadge,
-                                  {
-                                    backgroundColor: isLocked
-                                      ? '#f97316'
-                                      : hasData
-                                        ? colors.warning
-                                        : '#10b981',
-                                  },
-                                ]}
-                              >
-                                <Text style={styles.tableStatusBadgeText}>
-                                  {isLocked ? 'LOCKED' : hasData ? 'IN USE' : 'FREE'}
-                                </Text>
+                                <View
+                                  pointerEvents="none"
+                                  style={[
+                                    styles.tableStatusBadge,
+                                    {
+                                      backgroundColor: isLocked
+                                        ? '#f97316'
+                                        : hasData
+                                          ? colors.warning
+                                          : '#10b981',
+                                    },
+                                  ]}
+                                >
+                                  <Text style={styles.tableStatusBadgeText}>
+                                    {isLocked ? 'LOCKED' : hasData ? 'IN USE' : 'FREE'}
+                                  </Text>
+                                </View>
+
+                                {hasData && !isLocked && (
+                                  <Text style={[styles.tableSubtotal, { color: 'rgba(255, 255, 255, 0.92)' }]}>
+                                    £{subtotal.toFixed(2)}
+                                  </Text>
+                                )}
                               </View>
-                              {hasData && !isLocked && (
-                                <Text style={[styles.tableSubtotal, { color: 'rgba(255, 255, 255, 0.92)' }]}>
-                                  £{subtotal.toFixed(2)}
-                                </Text>
-                              )}
                               {currentTable?.id === table.id && (
                                 <View style={[styles.selectedIndicator, { backgroundColor: colors.primary }]} />
                               )}
@@ -2710,11 +2711,10 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   tableSubtotal: {
-    position: 'absolute',
-    right: 10,
-    bottom: 10,
+    marginTop: 6,
     fontSize: 14,
-    fontWeight: '800' as const,
+    fontWeight: '900' as const,
+    letterSpacing: 0.2,
   },
   tableGrid: {
     flexDirection: 'row' as const,
@@ -2726,12 +2726,13 @@ const styles = StyleSheet.create({
   tableGridItem: {
     width: '47%',
     padding: 12,
-    paddingTop: 18,
-    minHeight: 84,
+    paddingTop: 14,
+    paddingBottom: 12,
+    minHeight: 96,
     overflow: 'hidden',
     position: 'relative',
     alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    justifyContent: 'flex-start' as const,
   },
   tableLockedItem: {
     opacity: 0.6,
@@ -2747,20 +2748,31 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   tableStatusBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.22)',
+    alignSelf: 'center',
   },
   tableStatusBadgeText: {
-    fontSize: 10,
-    fontWeight: '800' as const,
+    fontSize: 11,
+    fontWeight: '900' as const,
     color: '#fff',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
+  },
+  tableButtonContent: {
+    width: '100%',
+    alignItems: 'center' as const,
+    justifyContent: 'flex-start' as const,
+    paddingTop: 6,
+  },
+  tableNameText: {
+    fontSize: 16,
+    fontWeight: '800' as const,
+    textAlign: 'center' as const,
+    paddingHorizontal: 6,
   },
   savingModal: {
     borderRadius: 20,
