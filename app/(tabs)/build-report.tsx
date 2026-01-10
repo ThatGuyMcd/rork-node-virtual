@@ -935,35 +935,90 @@ export default function BuildReportScreen() {
 
             <View style={styles.quickRow}>
               <TouchableOpacity
-                style={[styles.pill, { backgroundColor: colors.inputBackground, borderColor: colors.border }, presetRange === 'today' && { borderColor: colors.primary }]}
+                style={[
+                  styles.quickRangeButton,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                  presetRange === 'today' && { borderColor: colors.primary, backgroundColor: colors.primary + '20' },
+                ]}
                 onPress={() => setPresetRange('today')}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
+                testID="build-report-range-today"
               >
-                <Text style={[styles.pillText, { color: colors.text }]}>Today</Text>
+                <Text
+                  style={[
+                    styles.quickRangeText,
+                    { color: colors.text },
+                    presetRange === 'today' && { color: colors.primary, fontWeight: '700' as const },
+                  ]}
+                >
+                  Today
+                </Text>
               </TouchableOpacity>
+
               <TouchableOpacity
-                style={[styles.pill, { backgroundColor: colors.inputBackground, borderColor: colors.border }, presetRange === 'week' && { borderColor: colors.primary }]}
+                style={[
+                  styles.quickRangeButton,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                  presetRange === 'week' && { borderColor: colors.primary, backgroundColor: colors.primary + '20' },
+                ]}
                 onPress={() => setPresetRange('week')}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
+                testID="build-report-range-week"
               >
-                <Text style={[styles.pillText, { color: colors.text }]}>Last 7 Days</Text>
+                <Text
+                  style={[
+                    styles.quickRangeText,
+                    { color: colors.text },
+                    presetRange === 'week' && { color: colors.primary, fontWeight: '700' as const },
+                  ]}
+                >
+                  Last 7 Days
+                </Text>
               </TouchableOpacity>
+
               <TouchableOpacity
-                style={[styles.pill, { backgroundColor: colors.inputBackground, borderColor: colors.border }, presetRange === 'month' && { borderColor: colors.primary }]}
+                style={[
+                  styles.quickRangeButton,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                  presetRange === 'month' && { borderColor: colors.primary, backgroundColor: colors.primary + '20' },
+                ]}
                 onPress={() => setPresetRange('month')}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
+                testID="build-report-range-month"
               >
-                <Text style={[styles.pillText, { color: colors.text }]}>This Month</Text>
+                <Text
+                  style={[
+                    styles.quickRangeText,
+                    { color: colors.text },
+                    presetRange === 'month' && { color: colors.primary, fontWeight: '700' as const },
+                  ]}
+                >
+                  This Month
+                </Text>
               </TouchableOpacity>
+
               <TouchableOpacity
-                style={[styles.pill, { backgroundColor: colors.inputBackground, borderColor: colors.border }, presetRange === 'custom' && { borderColor: colors.primary }]}
+                style={[
+                  styles.quickRangeButton,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                  presetRange === 'custom' && { borderColor: colors.primary, backgroundColor: colors.primary + '20' },
+                ]}
                 onPress={() => {
                   setPresetRange('custom');
                   setShowDatePicker(true);
                 }}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
+                testID="build-report-range-custom"
               >
-                <Text style={[styles.pillText, { color: colors.text }]}>Custom</Text>
+                <Text
+                  style={[
+                    styles.quickRangeText,
+                    { color: colors.text },
+                    presetRange === 'custom' && { color: colors.primary, fontWeight: '700' as const },
+                  ]}
+                >
+                  Custom
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -1659,18 +1714,21 @@ const styles = StyleSheet.create({
   },
   quickRow: {
     flexDirection: 'row' as const,
+    gap: 8,
     flexWrap: 'wrap' as const,
-    gap: 10,
   },
-  pill: {
-    paddingHorizontal: 12,
+  quickRangeButton: {
+    flex: 1,
+    minWidth: 92,
     paddingVertical: 10,
-    borderRadius: 999,
-    borderWidth: 1,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    alignItems: 'center' as const,
   },
-  pillText: {
-    fontSize: 13,
-    fontWeight: '700' as const,
+  quickRangeText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
   },
   inputCard: {
     borderWidth: 1,
