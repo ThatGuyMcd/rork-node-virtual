@@ -402,6 +402,48 @@ export default function BuildReportScreen() {
     }));
   };
 
+  const toggleAllOperators = () => {
+    if (filters.operatorIds.length === operators.length) {
+      setFilters(prev => ({ ...prev, operatorIds: [] }));
+    } else {
+      setFilters(prev => ({ ...prev, operatorIds: operators.map(op => op.id) }));
+    }
+  };
+
+  const toggleAllTenders = () => {
+    if (filters.tenderIds.length === tenders.length) {
+      setFilters(prev => ({ ...prev, tenderIds: [] }));
+    } else {
+      setFilters(prev => ({ ...prev, tenderIds: tenders.map(t => t.id) }));
+    }
+  };
+
+  const toggleAllGroups = () => {
+    const groupIds = Object.keys(groups);
+    if (filters.groupIds.length === groupIds.length) {
+      setFilters(prev => ({ ...prev, groupIds: [] }));
+    } else {
+      setFilters(prev => ({ ...prev, groupIds: groupIds }));
+    }
+  };
+
+  const toggleAllDepartments = () => {
+    const departmentIds = Object.keys(departments);
+    if (filters.departmentIds.length === departmentIds.length) {
+      setFilters(prev => ({ ...prev, departmentIds: [] }));
+    } else {
+      setFilters(prev => ({ ...prev, departmentIds: departmentIds }));
+    }
+  };
+
+  const toggleAllTables = () => {
+    if (filters.tableIds.length === tables.length) {
+      setFilters(prev => ({ ...prev, tableIds: [] }));
+    } else {
+      setFilters(prev => ({ ...prev, tableIds: tables.map(t => t.id) }));
+    }
+  };
+
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (filters.operatorIds.length > 0) count++;
@@ -1237,7 +1279,18 @@ export default function BuildReportScreen() {
             <ScrollView style={{ maxHeight: 500 }}>
               <View style={{ gap: 20 }}>
                 <View>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Operators</Text>
+                  <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Operators</Text>
+                    <TouchableOpacity
+                      onPress={toggleAllOperators}
+                      activeOpacity={0.7}
+                      style={[styles.selectAllButton, { backgroundColor: colors.background }]}
+                    >
+                      <Text style={[styles.selectAllText, { color: colors.primary }]}>
+                        {filters.operatorIds.length === operators.length ? 'Deselect All' : 'Select All'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   {operators.map(op => (
                     <TouchableOpacity
                       key={op.id}
@@ -1256,7 +1309,18 @@ export default function BuildReportScreen() {
                 </View>
 
                 <View>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment Methods</Text>
+                  <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment Methods</Text>
+                    <TouchableOpacity
+                      onPress={toggleAllTenders}
+                      activeOpacity={0.7}
+                      style={[styles.selectAllButton, { backgroundColor: colors.background }]}
+                    >
+                      <Text style={[styles.selectAllText, { color: colors.primary }]}>
+                        {filters.tenderIds.length === tenders.length ? 'Deselect All' : 'Select All'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   {tenders.map(tender => (
                     <TouchableOpacity
                       key={tender.id}
@@ -1276,7 +1340,18 @@ export default function BuildReportScreen() {
 
                 {Object.keys(groups).length > 0 && (
                   <View>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Product Groups</Text>
+                    <View style={styles.sectionHeader}>
+                      <Text style={[styles.sectionTitle, { color: colors.text }]}>Product Groups</Text>
+                      <TouchableOpacity
+                        onPress={toggleAllGroups}
+                        activeOpacity={0.7}
+                        style={[styles.selectAllButton, { backgroundColor: colors.background }]}
+                      >
+                        <Text style={[styles.selectAllText, { color: colors.primary }]}>
+                          {filters.groupIds.length === Object.keys(groups).length ? 'Deselect All' : 'Select All'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                     {Object.entries(groups).map(([id, name]) => (
                       <TouchableOpacity
                         key={id}
@@ -1297,7 +1372,18 @@ export default function BuildReportScreen() {
 
                 {Object.keys(departments).length > 0 && (
                   <View>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Departments</Text>
+                    <View style={styles.sectionHeader}>
+                      <Text style={[styles.sectionTitle, { color: colors.text }]}>Departments</Text>
+                      <TouchableOpacity
+                        onPress={toggleAllDepartments}
+                        activeOpacity={0.7}
+                        style={[styles.selectAllButton, { backgroundColor: colors.background }]}
+                      >
+                        <Text style={[styles.selectAllText, { color: colors.primary }]}>
+                          {filters.departmentIds.length === Object.keys(departments).length ? 'Deselect All' : 'Select All'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                     {Object.entries(departments).map(([id, name]) => (
                       <TouchableOpacity
                         key={id}
@@ -1318,7 +1404,18 @@ export default function BuildReportScreen() {
 
                 {tables.length > 0 && (
                   <View>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Tables</Text>
+                    <View style={styles.sectionHeader}>
+                      <Text style={[styles.sectionTitle, { color: colors.text }]}>Tables</Text>
+                      <TouchableOpacity
+                        onPress={toggleAllTables}
+                        activeOpacity={0.7}
+                        style={[styles.selectAllButton, { backgroundColor: colors.background }]}
+                      >
+                        <Text style={[styles.selectAllText, { color: colors.primary }]}>
+                          {filters.tableIds.length === tables.length ? 'Deselect All' : 'Select All'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                     {tables.map(table => (
                       <TouchableOpacity
                         key={table.id}
@@ -1806,7 +1903,21 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700' as const,
+  },
+  sectionHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     marginBottom: 12,
+  },
+  selectAllButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  selectAllText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
   },
   checkboxRow: {
     flexDirection: 'row' as const,
