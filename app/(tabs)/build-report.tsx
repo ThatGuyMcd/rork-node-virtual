@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Stack } from 'expo-router';
-import { Calendar, FileText, Filter, Layers, Wand2, X, Download, CheckSquare, Square, TrendingUp, Users, CreditCard, BarChart3, Trophy, Clock, RotateCcw, Percent, Gift, Banknote } from 'lucide-react-native';
+import { Calendar, FileText, Filter, Layers, Wand2, X, Download, CheckSquare, Square, TrendingUp, Users, CreditCard, BarChart3, Trophy, Clock, RotateCcw, Percent, Gift, Banknote, Activity, DollarSign, PieChart, ShoppingCart, Target, MapPin } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { transactionService } from '@/services/transactionService';
@@ -24,23 +24,41 @@ type PresetRange = 'today' | 'week' | 'month' | 'custom';
 interface ReportFilters {
   operatorIds: string[];
   tenderIds: string[];
+  groupIds: string[];
+  departmentIds: string[];
+  tableIds: string[];
   includeRefunds: boolean;
   refundsOnly: boolean;
+  minTransactionValue: string;
+  maxTransactionValue: string;
+  minItems: string;
+  maxItems: string;
+  hasDiscount: boolean;
+  hasGratuity: boolean;
+  hasCashback: boolean;
 }
 
 interface ReportSections {
-  summary: boolean;
-  vat: boolean;
-  operators: boolean;
-  paymentMethods: boolean;
-  refunds: boolean;
-  discounts: boolean;
-  gratuities: boolean;
-  cashback: boolean;
-  groups: boolean;
+  executiveSummary: boolean;
+  financialOverview: boolean;
+  salesMetrics: boolean;
+  vatDetailed: boolean;
+  operatorPerformance: boolean;
+  paymentAnalysis: boolean;
+  refundAnalysis: boolean;
+  discountAnalysis: boolean;
+  gratuityAnalysis: boolean;
+  cashbackAnalysis: boolean;
+  productGroups: boolean;
   departments: boolean;
   topProducts: boolean;
-  hourlyActivity: boolean;
+  slowMovingProducts: boolean;
+  hourlyBreakdown: boolean;
+  dailyBreakdown: boolean;
+  tableAnalysis: boolean;
+  transactionSizeDistribution: boolean;
+  averageMetrics: boolean;
+  itemsPerTransaction: boolean;
 }
 
 const formatDate = (date: Date): string => {
@@ -84,27 +102,46 @@ export default function BuildReportScreen() {
   const [filters, setFilters] = useState<ReportFilters>({
     operatorIds: [],
     tenderIds: [],
+    groupIds: [],
+    departmentIds: [],
+    tableIds: [],
     includeRefunds: true,
     refundsOnly: false,
+    minTransactionValue: '',
+    maxTransactionValue: '',
+    minItems: '',
+    maxItems: '',
+    hasDiscount: false,
+    hasGratuity: false,
+    hasCashback: false,
   });
   const [sections, setSections] = useState<ReportSections>({
-    summary: true,
-    vat: true,
-    operators: true,
-    paymentMethods: true,
-    refunds: true,
-    discounts: true,
-    gratuities: true,
-    cashback: true,
-    groups: true,
+    executiveSummary: true,
+    financialOverview: true,
+    salesMetrics: true,
+    vatDetailed: true,
+    operatorPerformance: true,
+    paymentAnalysis: true,
+    refundAnalysis: true,
+    discountAnalysis: true,
+    gratuityAnalysis: true,
+    cashbackAnalysis: true,
+    productGroups: true,
     departments: true,
     topProducts: true,
-    hourlyActivity: true,
+    slowMovingProducts: false,
+    hourlyBreakdown: true,
+    dailyBreakdown: false,
+    tableAnalysis: false,
+    transactionSizeDistribution: false,
+    averageMetrics: true,
+    itemsPerTransaction: false,
   });
   const [operators, setOperators] = useState<{ id: string; name: string }[]>([]);
   const [tenders, setTenders] = useState<{ id: string; name: string }[]>([]);
   const [groups, setGroups] = useState<Record<string, string>>({});
   const [departments, setDepartments] = useState<Record<string, string>>({});
+  const [tables, setTables] = useState<{ id: string; name: string; area: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [generatedReport, setGeneratedReport] = useState<TransactionReport | null>(null);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
@@ -135,6 +172,9 @@ export default function BuildReportScreen() {
       departmentMap[dept.id] = dept.name;
     });
     setDepartments(departmentMap);
+
+    const loadedTables = await dataSyncService.getStoredTables();
+    setTables(loadedTables.map(t => ({ id: t.id, name: t.name, area: t.area })));
   };
 
   const subtitle = useMemo(() => {
@@ -213,6 +253,62 @@ export default function BuildReportScreen() {
         });
       }
 
+      if (filters.groupIds.length > 0) {
+        transactions = transactions.filter(t => 
+          t.items.some(item => filters.groupIds.includes(item.product.groupId))
+        );
+      }
+
+      if (filters.departmentIds.length > 0) {
+        transactions = transactions.filter(t => 
+          t.items.some(item => filters.departmentIds.includes(item.product.departmentId))
+        );
+      }
+
+      if (filters.tableIds.length > 0) {
+        transactions = transactions.filter(t => t.tableId && filters.tableIds.includes(t.tableId));
+      }
+
+      if (filters.minTransactionValue) {
+        const minValue = parseFloat(filters.minTransactionValue);
+        if (!isNaN(minValue)) {
+          transactions = transactions.filter(t => t.total >= minValue);
+        }
+      }
+
+      if (filters.maxTransactionValue) {
+        const maxValue = parseFloat(filters.maxTransactionValue);
+        if (!isNaN(maxValue)) {
+          transactions = transactions.filter(t => t.total <= maxValue);
+        }
+      }
+
+      if (filters.minItems) {
+        const minItems = parseInt(filters.minItems);
+        if (!isNaN(minItems)) {
+          transactions = transactions.filter(t => t.items.reduce((sum, item) => sum + item.quantity, 0) >= minItems);
+        }
+      }
+
+      if (filters.maxItems) {
+        const maxItems = parseInt(filters.maxItems);
+        if (!isNaN(maxItems)) {
+          transactions = transactions.filter(t => t.items.reduce((sum, item) => sum + item.quantity, 0) <= maxItems);
+        }
+      }
+
+      if (filters.hasDiscount) {
+        transactions = transactions.filter(t => t.discount && t.discount > 0);
+      }
+
+      if (filters.hasGratuity) {
+        transactions = transactions.filter(t => t.gratuity && t.gratuity > 0);
+      }
+
+      if (filters.hasCashback) {
+        transactions = transactions.filter(t => t.cashback && t.cashback > 0);
+      }
+
       setFilteredTransactions(transactions.reverse());
 
       const report = await transactionService.generateReport(startDate, endDate);
@@ -279,12 +375,49 @@ export default function BuildReportScreen() {
     }));
   };
 
+  const toggleGroupFilter = (groupId: string) => {
+    setFilters(prev => ({
+      ...prev,
+      groupIds: prev.groupIds.includes(groupId)
+        ? prev.groupIds.filter(id => id !== groupId)
+        : [...prev.groupIds, groupId],
+    }));
+  };
+
+  const toggleDepartmentFilter = (departmentId: string) => {
+    setFilters(prev => ({
+      ...prev,
+      departmentIds: prev.departmentIds.includes(departmentId)
+        ? prev.departmentIds.filter(id => id !== departmentId)
+        : [...prev.departmentIds, departmentId],
+    }));
+  };
+
+  const toggleTableFilter = (tableId: string) => {
+    setFilters(prev => ({
+      ...prev,
+      tableIds: prev.tableIds.includes(tableId)
+        ? prev.tableIds.filter(id => id !== tableId)
+        : [...prev.tableIds, tableId],
+    }));
+  };
+
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (filters.operatorIds.length > 0) count++;
     if (filters.tenderIds.length > 0) count++;
+    if (filters.groupIds.length > 0) count++;
+    if (filters.departmentIds.length > 0) count++;
+    if (filters.tableIds.length > 0) count++;
     if (filters.refundsOnly) count++;
     if (!filters.includeRefunds) count++;
+    if (filters.minTransactionValue) count++;
+    if (filters.maxTransactionValue) count++;
+    if (filters.minItems) count++;
+    if (filters.maxItems) count++;
+    if (filters.hasDiscount) count++;
+    if (filters.hasGratuity) count++;
+    if (filters.hasCashback) count++;
     return count;
   }, [filters]);
 
@@ -317,9 +450,13 @@ export default function BuildReportScreen() {
       return t.tenderName !== 'Cash';
     });
 
+    const totalItems = filteredTransactions.reduce((sum, t) => sum + t.items.reduce((itemSum, item) => itemSum + Math.abs(item.quantity), 0), 0);
+    const avgTransactionValue = filteredTransactions.length > 0 ? generatedReport.totalRevenue / filteredTransactions.length : 0;
+    const avgItemsPerTransaction = filteredTransactions.length > 0 ? totalItems / filteredTransactions.length : 0;
+
     return (
       <>
-        {sections.summary && (
+        {sections.executiveSummary && (
           <View style={[styles.reportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.cardHeader}>
               <BarChart3 size={20} color={colors.primary} />
@@ -345,7 +482,7 @@ export default function BuildReportScreen() {
           </View>
         )}
 
-        {sections.operators && (
+        {sections.operatorPerformance && (
           <View style={[styles.reportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.cardHeader}>
               <Users size={20} color={colors.primary} />
@@ -369,7 +506,7 @@ export default function BuildReportScreen() {
           </View>
         )}
 
-        {sections.paymentMethods && (
+        {sections.paymentAnalysis && (
           <View style={[styles.reportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.cardHeader}>
               <CreditCard size={20} color={colors.primary} />
@@ -386,7 +523,7 @@ export default function BuildReportScreen() {
           </View>
         )}
 
-        {sections.refunds && refundTransactions.length > 0 && (
+        {sections.refundAnalysis && refundTransactions.length > 0 && (
           <View style={[styles.reportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.cardHeader}>
               <RotateCcw size={20} color="#ef4444" />
@@ -409,7 +546,7 @@ export default function BuildReportScreen() {
           </View>
         )}
 
-        {sections.discounts && discountTransactions.length > 0 && (
+        {sections.discountAnalysis && discountTransactions.length > 0 && (
           <View style={[styles.reportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.cardHeader}>
               <Percent size={20} color="#f59e0b" />
@@ -432,7 +569,7 @@ export default function BuildReportScreen() {
           </View>
         )}
 
-        {sections.gratuities && gratuityTransactions.length > 0 && (
+        {sections.gratuityAnalysis && gratuityTransactions.length > 0 && (
           <View style={[styles.reportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.cardHeader}>
               <Gift size={20} color="#10b981" />
@@ -455,7 +592,7 @@ export default function BuildReportScreen() {
           </View>
         )}
 
-        {sections.cashback && cashbackTransactions.length > 0 && (
+        {sections.cashbackAnalysis && cashbackTransactions.length > 0 && (
           <View style={[styles.reportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <View style={styles.cardHeader}>
               <Banknote size={20} color="#3b82f6" />
@@ -478,7 +615,7 @@ export default function BuildReportScreen() {
           </View>
         )}
 
-        {sections.groups && (() => {
+        {sections.productGroups && (() => {
           const groupSales: Record<string, { quantity: number; revenue: number }> = {};
           filteredTransactions.forEach(transaction => {
             transaction.items.forEach(item => {
@@ -601,7 +738,79 @@ export default function BuildReportScreen() {
           );
         })()}
 
-        {sections.hourlyActivity && (() => {
+        {sections.averageMetrics && (
+          <View style={[styles.reportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>  
+            <View style={styles.cardHeader}>
+              <Target size={20} color="#8b5cf6" />
+              <Text style={[styles.cardTitle, { color: colors.text }]}>Average Metrics</Text>
+            </View>
+            <View style={styles.summaryGrid}>
+              <View style={[styles.summaryItem, { backgroundColor: colors.background }]}>
+                <DollarSign size={24} color="#10b981" />
+                <Text style={[styles.summaryValue, { color: colors.text }]}>£{avgTransactionValue.toFixed(2)}</Text>
+                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Avg Transaction</Text>
+              </View>
+              <View style={[styles.summaryItem, { backgroundColor: colors.background }]}>
+                <ShoppingCart size={24} color="#3b82f6" />
+                <Text style={[styles.summaryValue, { color: colors.text }]}>{avgItemsPerTransaction.toFixed(1)}</Text>
+                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Avg Items/Txn</Text>
+              </View>
+              <View style={[styles.summaryItem, { backgroundColor: colors.background }]}>
+                <Activity size={24} color="#f59e0b" />
+                <Text style={[styles.summaryValue, { color: colors.text }]}>{totalItems}</Text>
+                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total Items</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {sections.vatDetailed && (
+          <View style={[styles.reportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>  
+            <View style={styles.cardHeader}>
+              <PieChart size={20} color="#ec4899" />
+              <Text style={[styles.cardTitle, { color: colors.text }]}>VAT Breakdown</Text>
+            </View>
+            {Object.entries(generatedReport.vatBreakdownByRate)
+              .sort((a, b) => b[1].totalVAT - a[1].totalVAT)
+              .map(([code, data]) => (
+                <View key={code} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.breakdownLabel, { color: colors.text }]}>VAT {code} ({data.percentage}%)</Text>
+                    <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
+                      Net: £{data.totalNet.toFixed(2)} • VAT: £{data.totalVAT.toFixed(2)}
+                    </Text>
+                  </View>
+                  <Text style={[styles.breakdownValue, { color: colors.primary }]}>£{(data.totalNet + data.totalVAT).toFixed(2)}</Text>
+                </View>
+              ))}
+          </View>
+        )}
+
+        {sections.tableAnalysis && generatedReport.transactionsByTable && Object.keys(generatedReport.transactionsByTable).length > 0 && (
+          <View style={[styles.reportCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>  
+            <View style={styles.cardHeader}>
+              <MapPin size={20} color="#06b6d4" />
+              <Text style={[styles.cardTitle, { color: colors.text }]}>By Table</Text>
+            </View>
+            {Object.entries(generatedReport.transactionsByTable)
+              .sort((a, b) => b[1].revenue - a[1].revenue)
+              .map(([tableId, data]) => (
+                <View key={tableId} style={[styles.breakdownItem, { borderBottomColor: colors.border }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.breakdownLabel, { color: colors.text }]}>
+                      {tables.find(t => t.id === tableId)?.name || `Table ${tableId}`}
+                    </Text>
+                    <Text style={[styles.breakdownSubtext, { color: colors.textTertiary }]}>
+                      {data.count} txns • Avg: £{(data.revenue / data.count).toFixed(2)}
+                    </Text>
+                  </View>
+                  <Text style={[styles.breakdownValue, { color: colors.primary }]}>£{data.revenue.toFixed(2)}</Text>
+                </View>
+              ))}
+          </View>
+        )}
+
+        {sections.hourlyBreakdown && (() => {
           const hourlyData: Record<number, { count: number; revenue: number }> = {};
           for (let i = 0; i < 24; i++) {
             hourlyData[i] = { count: 0, revenue: 0 };
@@ -1065,6 +1274,161 @@ export default function BuildReportScreen() {
                   ))}
                 </View>
 
+                {Object.keys(groups).length > 0 && (
+                  <View>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Product Groups</Text>
+                    {Object.entries(groups).map(([id, name]) => (
+                      <TouchableOpacity
+                        key={id}
+                        style={[styles.checkboxRow, { borderBottomColor: colors.border }]}
+                        onPress={() => toggleGroupFilter(id)}
+                        activeOpacity={0.7}
+                      >
+                        {filters.groupIds.includes(id) ? (
+                          <CheckSquare size={20} color={colors.primary} />
+                        ) : (
+                          <Square size={20} color={colors.textTertiary} />
+                        )}
+                        <Text style={[styles.checkboxLabel, { color: colors.text }]}>{name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {Object.keys(departments).length > 0 && (
+                  <View>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Departments</Text>
+                    {Object.entries(departments).map(([id, name]) => (
+                      <TouchableOpacity
+                        key={id}
+                        style={[styles.checkboxRow, { borderBottomColor: colors.border }]}
+                        onPress={() => toggleDepartmentFilter(id)}
+                        activeOpacity={0.7}
+                      >
+                        {filters.departmentIds.includes(id) ? (
+                          <CheckSquare size={20} color={colors.primary} />
+                        ) : (
+                          <Square size={20} color={colors.textTertiary} />
+                        )}
+                        <Text style={[styles.checkboxLabel, { color: colors.text }]}>{name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {tables.length > 0 && (
+                  <View>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Tables</Text>
+                    {tables.map(table => (
+                      <TouchableOpacity
+                        key={table.id}
+                        style={[styles.checkboxRow, { borderBottomColor: colors.border }]}
+                        onPress={() => toggleTableFilter(table.id)}
+                        activeOpacity={0.7}
+                      >
+                        {filters.tableIds.includes(table.id) ? (
+                          <CheckSquare size={20} color={colors.primary} />
+                        ) : (
+                          <Square size={20} color={colors.textTertiary} />
+                        )}
+                        <Text style={[styles.checkboxLabel, { color: colors.text }]}>{table.name} ({table.area})</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                <View>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Transaction Value Range</Text>
+                  <View style={[styles.inputCard, { backgroundColor: colors.background, borderColor: colors.border, marginBottom: 8 }]}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Min Value (£)</Text>
+                    <TextInput
+                      value={filters.minTransactionValue}
+                      onChangeText={(text) => setFilters(prev => ({ ...prev, minTransactionValue: text }))}
+                      placeholder="0.00"
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="decimal-pad"
+                      style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                    />
+                  </View>
+                  <View style={[styles.inputCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Max Value (£)</Text>
+                    <TextInput
+                      value={filters.maxTransactionValue}
+                      onChangeText={(text) => setFilters(prev => ({ ...prev, maxTransactionValue: text }))}
+                      placeholder="999999.99"
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="decimal-pad"
+                      style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                    />
+                  </View>
+                </View>
+
+                <View>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Items Per Transaction</Text>
+                  <View style={[styles.inputCard, { backgroundColor: colors.background, borderColor: colors.border, marginBottom: 8 }]}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Min Items</Text>
+                    <TextInput
+                      value={filters.minItems}
+                      onChangeText={(text) => setFilters(prev => ({ ...prev, minItems: text }))}
+                      placeholder="1"
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="number-pad"
+                      style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                    />
+                  </View>
+                  <View style={[styles.inputCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Max Items</Text>
+                    <TextInput
+                      value={filters.maxItems}
+                      onChangeText={(text) => setFilters(prev => ({ ...prev, maxItems: text }))}
+                      placeholder="100"
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="number-pad"
+                      style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                    />
+                  </View>
+                </View>
+
+                <View>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Transaction Attributes</Text>
+                  <TouchableOpacity
+                    style={[styles.checkboxRow, { borderBottomColor: colors.border }]}
+                    onPress={() => setFilters(prev => ({ ...prev, hasDiscount: !prev.hasDiscount }))}
+                    activeOpacity={0.7}
+                  >
+                    {filters.hasDiscount ? (
+                      <CheckSquare size={20} color={colors.primary} />
+                    ) : (
+                      <Square size={20} color={colors.textTertiary} />
+                    )}
+                    <Text style={[styles.checkboxLabel, { color: colors.text }]}>Has Discount</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.checkboxRow, { borderBottomColor: colors.border }]}
+                    onPress={() => setFilters(prev => ({ ...prev, hasGratuity: !prev.hasGratuity }))}
+                    activeOpacity={0.7}
+                  >
+                    {filters.hasGratuity ? (
+                      <CheckSquare size={20} color={colors.primary} />
+                    ) : (
+                      <Square size={20} color={colors.textTertiary} />
+                    )}
+                    <Text style={[styles.checkboxLabel, { color: colors.text }]}>Has Gratuity</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.checkboxRow, { borderBottomColor: colors.border }]}
+                    onPress={() => setFilters(prev => ({ ...prev, hasCashback: !prev.hasCashback }))}
+                    activeOpacity={0.7}
+                  >
+                    {filters.hasCashback ? (
+                      <CheckSquare size={20} color={colors.primary} />
+                    ) : (
+                      <Square size={20} color={colors.textTertiary} />
+                    )}
+                    <Text style={[styles.checkboxLabel, { color: colors.text }]}>Has Cashback</Text>
+                  </TouchableOpacity>
+                </View>
+
                 <View>
                   <Text style={[styles.sectionTitle, { color: colors.text }]}>Refunds</Text>
                   <TouchableOpacity
@@ -1403,7 +1767,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 500,
   },
   modalHeader: {
     flexDirection: 'row' as const,
