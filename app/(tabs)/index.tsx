@@ -2032,22 +2032,25 @@ export default function ProductsScreen() {
                               <View style={{ flex: 1 }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                   <Text style={[styles.tableOptionText, { color: '#ffffff' }]}>{table.name}</Text>
-                                  {isLocked && (
-                                    <View style={[styles.tableInUseIndicator, { backgroundColor: '#f97316' }]}>
-                                      <Text style={styles.tableInUseText}>LOCKED</Text>
-                                    </View>
-                                  )}
                                 </View>
-                                {hasData && !isLocked && (
-                                  <View style={[styles.tableInUseIndicator, { backgroundColor: colors.warning }]}>
-                                    <Text style={styles.tableInUseText}>IN USE</Text>
-                                  </View>
-                                )}
-                                {!hasData && !isLocked && (
-                                  <View style={[styles.tableFreeIndicator, { backgroundColor: '#10b981' }]}>
-                                    <Text style={styles.tableFreeText}>FREE</Text>
-                                  </View>
-                                )}
+                              </View>
+
+                              <View
+                                pointerEvents="none"
+                                style={[
+                                  styles.tableStatusBadge,
+                                  {
+                                    backgroundColor: isLocked
+                                      ? '#f97316'
+                                      : hasData
+                                        ? colors.warning
+                                        : '#10b981',
+                                  },
+                                ]}
+                              >
+                                <Text style={styles.tableStatusBadgeText}>
+                                  {isLocked ? 'LOCKED' : hasData ? 'IN USE' : 'FREE'}
+                                </Text>
                               </View>
                               {hasData && !isLocked && (
                                 <Text style={[styles.tableSubtotal, { color: 'rgba(255, 255, 255, 0.9)' }]}>Subtotal: £{subtotal.toFixed(2)}</Text>
@@ -2713,11 +2716,13 @@ const styles = StyleSheet.create({
   tableGridItem: {
     width: '47%',
     padding: 12,
+    paddingTop: 18,
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
-    minHeight: 80,
+    minHeight: 84,
     overflow: 'hidden',
+    position: 'relative',
   },
   tableLockedItem: {
     opacity: 0.6,
@@ -2731,6 +2736,22 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700' as const,
     color: '#fff',
+  },
+  tableStatusBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+  },
+  tableStatusBadgeText: {
+    fontSize: 10,
+    fontWeight: '800' as const,
+    color: '#fff',
+    letterSpacing: 0.3,
   },
   savingModal: {
     borderRadius: 20,
