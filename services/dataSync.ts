@@ -367,20 +367,28 @@ export class DataSyncService {
 
   private async saveTableDataFiles(files: Map<string, string>): Promise<void> {
     const isWeb = Platform.OS === 'web' || !FileSystem.documentDirectory;
-    
+
+    const tabEntries: { path: string; content: string }[] = [];
+    for (const [path, content] of files.entries()) {
+      const upper = path.toUpperCase();
+      if (!upper.startsWith('TABDATA/')) continue;
+      if (upper.endsWith('.INI')) {
+        console.log(`[DataSync] Skipping .ini file: ${path}`);
+        continue;
+      }
+      tabEntries.push({ path, content });
+    }
+
+    if (tabEntries.length === 0) {
+      console.log('[DataSync] No TABDATA files present in this sync payload');
+      return;
+    }
+
     if (isWeb) {
       console.log('[DataSync] Saving TABDATA files to memory storage for web...');
       const tableFilesMap = new Map<string, Map<string, string>>();
-      
-      for (const [path, content] of files.entries()) {
-        const upper = path.toUpperCase();
-        if (!upper.startsWith('TABDATA/')) continue;
-        
-        if (upper.endsWith('.INI')) {
-          console.log(`[DataSync] Skipping .ini file: ${path}`);
-          continue;
-        }
-        
+
+      for (const { path, content } of tabEntries) {
         const parts = path.slice('TABDATA/'.length).split('/');
         if (parts.length < 3) continue;
 
@@ -388,59 +396,87 @@ export class DataSyncService {
         const table = parts[1];
         const fileName = parts[2];
         const tableKey = `${area}/${table}`;
-        
+
         if (!tableFilesMap.has(tableKey)) {
           tableFilesMap.set(tableKey, new Map());
         }
-        
+
         tableFilesMap.get(tableKey)!.set(fileName, content);
         console.log(`[DataSync] Added to memory: ${area}/${table}/${fileName} (${content.length} bytes)`);
       }
-      
+
       const { tableDataService } = await import('./tableDataService');
       for (const [tableKey, fileMap] of tableFilesMap.entries()) {
         const [area, tableName] = tableKey.split('/');
         tableDataService.storeTableFilesInMemory(area, tableName, fileMap);
       }
-      
+
       console.log(`[DataSync] Stored ${tableFilesMap.size} tables in memory with their files`);
       return;
     }
 
     console.log('[DataSync] Saving TABDATA files to local file system...');
-    let savedCount = 0;
 
-    for (const [path, content] of files.entries()) {
-      const upper = path.toUpperCase();
-      if (!upper.startsWith('TABDATA/')) continue;
-      
-      if (upper.endsWith('.INI')) {
-        console.log(`[DataSync] Skipping .ini file: ${path}`);
-        continue;
+    const folderCache = new Set<string>();
+
+    const ensureFolder = async (folderPath: string) => {
+      if (folderCache.has(folderPath)) return;
+      const folderInfo = await FileSystem.getInfoAsync(folderPath);
+      if (!folderInfo.exists) {
+        await FileSystem.makeDirectoryAsync(folderPath, { intermediates: true });
       }
-      
-      const parts = path.slice('TABDATA/'.length).split('/');
-      if (parts.length < 3) continue;
+      folderCache.add(folderPath);
+    };
 
-      const area = parts[0];
-      const table = parts[1];
-      const fileName = parts[2];
-      
-      try {
+    const tasks = tabEntries
+      .map(({ path, content }) => {
+        const parts = path.slice('TABDATA/'.length).split('/');
+        if (parts.length < 3) return null;
+
+        const area = parts[0];
+        const table = parts[1];
+        const fileName = parts[2];
         const tableFolder = `${FileSystem.documentDirectory}tables/${area}/${table}/`;
-        const folderInfo = await FileSystem.getInfoAsync(tableFolder);
-        if (!folderInfo.exists) {
-          await FileSystem.makeDirectoryAsync(tableFolder, { intermediates: true });
-        }
-        
         const filePath = `${tableFolder}${fileName}`;
-        await FileSystem.writeAsStringAsync(filePath, content);
-        savedCount++;
-        console.log(`[DataSync] Saved: ${area}/${table}/${fileName} (${content.length} bytes)`);
-      } catch (error) {
-        console.error(`[DataSync] Error saving table file ${path}:`, error);
-      }
-    }
+
+        return async () => {
+          try {
+            await ensureFolder(tableFolder);
+            await FileSystem.writeAsStringAsync(filePath, content);
+            console.log(`[DataSync] Saved: ${area}/${table}/${fileName} (${content.length} bytes)`);
+            return true;
+          } catch (error) {
+            console.error(`[DataSync] Error saving table file ${path}:`, error);
+            return false;
+          }
+        };
+      })
+      .filter((t): t is () => Promise<boolean> => !!t);
+
+    const maxConcurrentWrites = Math.max(2, Math.min(20, Math.round(tasks.length / 8) + 6));
+    console.log('[DataSync] TABDATA write concurrency:', maxConcurrentWrites);
+
+    const runWithConcurrency = async <T,>(fns: (() => Promise<T>)[], concurrency: number): Promise<T[]> => {
+      const results: T[] = [];
+      let index = 0;
+
+      const workers = Array.from({ length: Math.min(concurrency, fns.length) }, async () => {
+        while (index < fns.length) {
+          const currentIndex = index++;
+          try {
+            results[currentIndex] = await fns[currentIndex]!();
+          } catch (e) {
+            console.error('[DataSync] TABDATA write task failed:', e);
+          }
+        }
+      });
+
+      await Promise.all(workers);
+      return results;
+    };
+
+    const results = await runWithConcurrency(tasks, maxConcurrentWrites);
+    const savedCount = results.filter(Boolean).length;
 
     console.log(`[DataSync] Saved ${savedCount} table data files to local file system`);
   }
