@@ -274,6 +274,9 @@ export default function SettingsScreen() {
   const [terminalNumber, setTerminalNumber] = useState('01');
   const [terminalNumberModalVisible, setTerminalNumberModalVisible] = useState(false);
   const [terminalNumberInput, setTerminalNumberInput] = useState('');
+  const [terminalNickname, setTerminalNickname] = useState('');
+  const [terminalNicknameModalVisible, setTerminalNicknameModalVisible] = useState(false);
+  const [terminalNicknameInput, setTerminalNicknameInput] = useState('');
   const [settingsProfiles, setSettingsProfiles] = useState<Array<{ name: string; timestamp: string }>>([]);
   const [createProfileModalVisible, setCreateProfileModalVisible] = useState(false);
   const [profileNameInput, setProfileNameInput] = useState('');
@@ -314,6 +317,7 @@ export default function SettingsScreen() {
     loadPrinterSettings();
     loadBackgroundSyncInterval();
     loadTerminalNumber();
+    loadTerminalNickname();
     loadSettingsProfiles();
   }, []);
 
@@ -397,6 +401,17 @@ export default function SettingsScreen() {
   const loadTerminalNumber = async () => {
     const number = await transactionUploadService.getTerminalNumber();
     setTerminalNumber(number);
+  };
+
+  const loadTerminalNickname = async () => {
+    try {
+      const nickname = await AsyncStorage.getItem('pos_terminal_nickname');
+      if (nickname) {
+        setTerminalNickname(nickname);
+      }
+    } catch (error) {
+      console.error('Error loading terminal nickname:', error);
+    }
   };
 
   const loadSettingsProfiles = async () => {
@@ -522,6 +537,7 @@ export default function SettingsScreen() {
         receiptSettings,
         backgroundSyncInterval,
         terminalNumber,
+        terminalNickname,
       };
 
       const profile = {
@@ -660,6 +676,10 @@ export default function SettingsScreen() {
         setTerminalNumber(profileData.terminalNumber);
         await transactionUploadService.setTerminalNumber(profileData.terminalNumber);
       }
+      if (profileData.terminalNickname !== undefined) {
+        setTerminalNickname(profileData.terminalNickname);
+        await AsyncStorage.setItem('pos_terminal_nickname', profileData.terminalNickname);
+      }
 
       setLoadProfileModalVisible(false);
       Alert.alert('Success', `Settings profile "${profileName}" loaded successfully!`);
@@ -711,6 +731,23 @@ export default function SettingsScreen() {
     setTerminalNumber(number);
     setTerminalNumberModalVisible(false);
     Alert.alert('Success', `Terminal number set to NV${number.padStart(2, '0')}`);
+  };
+
+  const handleTerminalNicknameUpdate = async () => {
+    const nickname = terminalNicknameInput.trim();
+    try {
+      await AsyncStorage.setItem('pos_terminal_nickname', nickname);
+      setTerminalNickname(nickname);
+      setTerminalNicknameModalVisible(false);
+      if (nickname) {
+        Alert.alert('Success', `Terminal nickname set to "${nickname}"`);
+      } else {
+        Alert.alert('Success', 'Terminal nickname cleared');
+      }
+    } catch (error) {
+      console.error('Error saving terminal nickname:', error);
+      Alert.alert('Error', 'Failed to save terminal nickname');
+    }
   };
 
   const handleConnectBluetooth = async () => {
@@ -1486,6 +1523,24 @@ export default function SettingsScreen() {
             onPress={() => {
               setTerminalNumberInput(terminalNumber);
               setTerminalNumberModalVisible(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.buttonText, { fontSize: 14 }]}>Edit</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>Terminal Nickname</Text>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>{terminalNickname ? `"${terminalNickname}"` : 'Give this terminal a friendly name'}</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.primary, marginBottom: 0, paddingVertical: 8, paddingHorizontal: 16 }]}
+            onPress={() => {
+              setTerminalNicknameInput(terminalNickname);
+              setTerminalNicknameModalVisible(true);
             }}
             activeOpacity={0.8}
           >
@@ -3841,6 +3896,51 @@ export default function SettingsScreen() {
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: colors.primary, flex: 1 }]}
                 onPress={handleTerminalNumberUpdate}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={terminalNicknameModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTerminalNicknameModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Set Terminal Nickname</Text>
+            
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Nickname</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+              value={terminalNicknameInput}
+              onChangeText={setTerminalNicknameInput}
+              placeholder="e.g., Bar, Kitchen, Front Desk"
+              placeholderTextColor={colors.textTertiary}
+              autoCapitalize="words"
+              maxLength={30}
+            />
+
+            <Text style={[styles.infoText, { color: colors.textSecondary, marginTop: 12, fontSize: 13 }]}>
+              This nickname helps identify the terminal. Leave empty to remove.
+            </Text>
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.textTertiary, flex: 1 }]}
+                onPress={() => setTerminalNicknameModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary, flex: 1 }]}
+                onPress={handleTerminalNicknameUpdate}
                 activeOpacity={0.8}
               >
                 <Text style={styles.buttonText}>Save</Text>
