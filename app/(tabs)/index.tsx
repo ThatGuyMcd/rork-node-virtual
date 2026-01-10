@@ -431,33 +431,70 @@ export default function ProductsScreen() {
         return [...otherAreaTables, ...areaTables];
       });
 
-      // Download all files in parallel with larger batch size
-      const BATCH_SIZE = 30;
-      const files: Map<string, string> = new Map();
-      
-      for (let i = 0; i < areaFiles.length; i += BATCH_SIZE) {
-        const batch = areaFiles.slice(i, i + BATCH_SIZE);
-        const batchPromises = batch.map(fileInfo => 
-          apiClient.getFile(siteInfo.siteId, fileInfo.path)
-            .then(content => ({ path: fileInfo.path, content }))
-            .catch(() => null)
-        );
-        
-        const results = await Promise.all(batchPromises);
-        for (const result of results) {
-          if (result) {
-            files.set(result.path, result.content);
-          }
-        }
-        
-        setDownloadProgress(Math.round((Math.min(i + BATCH_SIZE, areaFiles.length) / areaFiles.length) * 100));
-      }
+      const downloadFiles = async (
+        filesToDownload: { path: string; lastModified?: string }[],
+        options?: { batchSize?: number; onProgress?: (completed: number, total: number) => void }
+      ): Promise<Map<string, string>> => {
+        const batchSize = Math.max(10, Math.min(60, options?.batchSize ?? 50));
+        const files: Map<string, string> = new Map();
+        let completed = 0;
 
-      // Process files in single pass - build statuses and file maps together
+        for (let i = 0; i < filesToDownload.length; i += batchSize) {
+          const batch = filesToDownload.slice(i, i + batchSize);
+          const batchPromises = batch.map((fileInfo) =>
+            apiClient
+              .getFile(siteInfo.siteId, fileInfo.path)
+              .then((content) => ({ path: fileInfo.path, content }))
+              .catch((e) => {
+                console.warn('[Products] Failed to download file (skipping):', fileInfo.path, e);
+                return null;
+              })
+          );
+
+          const results = await Promise.all(batchPromises);
+          for (const result of results) {
+            if (result) {
+              files.set(result.path, result.content);
+            }
+          }
+
+          completed = Math.min(filesToDownload.length, completed + batch.length);
+          options?.onProgress?.(completed, filesToDownload.length);
+        }
+
+        return files;
+      };
+
+      const isPriorityTableFile = (path: string): boolean => {
+        const upper = path.toUpperCase();
+        if (!upper.startsWith(`TABDATA/${area.toUpperCase()}/`)) return false;
+        if (upper.endsWith('/TABLEDATA.CSV')) return true;
+        if (upper.endsWith('/TABLEOPEN.INI')) return true;
+        if (upper === `TABDATA/${area.toUpperCase()}/TABLEPLAN.INI`) return true;
+        if (upper === `TABDATA/${area.toUpperCase()}/AREA_SETTINGS.INI`) return true;
+        return false;
+      };
+
+      const priorityFiles = areaFiles.filter((f) => isPriorityTableFile(f.path));
+      const secondaryFiles = areaFiles.filter((f) => !isPriorityTableFile(f.path));
+
+      console.log(`[Products] Priority files: ${priorityFiles.length}, secondary files: ${secondaryFiles.length}`);
+
+      setDownloadProgress(0);
+
+      const files = await downloadFiles(priorityFiles, {
+        batchSize: 60,
+        onProgress: (completed, total) => {
+          const pct = total === 0 ? 100 : Math.round((completed / total) * 100);
+          setDownloadProgress(pct);
+        },
+      });
+
+      // Process priority files in single pass - build statuses and file maps together
       const tableDataMap = new Map<string, string>();
       const lockedTables = new Set<string>();
       const tableFilesMap = new Map<string, Map<string, string>>();
-      
+
       // Initialize file maps
       for (const key of tableSet.keys()) {
         tableFilesMap.set(key, new Map());
@@ -466,7 +503,7 @@ export default function ProductsScreen() {
       for (const [path, content] of files) {
         const upper = path.toUpperCase();
         if (!upper.startsWith('TABDATA/')) continue;
-        
+
         const parts = path.slice('TABDATA/'.length).split('/');
         if (parts.length < 3) continue;
 
@@ -475,18 +512,60 @@ export default function ProductsScreen() {
         const fileName = parts[2];
         const key = `${areaName}/${table}`;
         const tableInfo = tableSet.get(key);
-        
+
         const tableFiles = tableFilesMap.get(key);
         if (tableFiles) {
           tableFiles.set(fileName, content);
         }
-        
+
         const fileNameUpper = fileName.toUpperCase();
         if (fileNameUpper === 'TABLEOPEN.INI' && tableInfo) {
           lockedTables.add(tableInfo.tableId);
         } else if (fileNameUpper === 'TABLEDATA.CSV' && tableInfo) {
           tableDataMap.set(tableInfo.tableId, content);
         }
+      }
+
+      // Background: download non-critical files and merge into memory (do not block UI)
+      if (secondaryFiles.length > 0) {
+        setTimeout(() => {
+          console.log('[Products] Background downloading secondary area files...');
+          downloadFiles(secondaryFiles, { batchSize: 60 })
+            .then((secondaryDownloaded) => {
+              const secondaryTableFilesMap = new Map<string, Map<string, string>>();
+
+              for (const [path, content] of secondaryDownloaded) {
+                const upper = path.toUpperCase();
+                if (!upper.startsWith('TABDATA/')) continue;
+
+                const parts = path.slice('TABDATA/'.length).split('/');
+                if (parts.length < 3) continue;
+
+                const areaName = parts[0];
+                const table = parts[1];
+                const fileName = parts[2];
+                const key = `${areaName}/${table}`;
+
+                if (!secondaryTableFilesMap.has(key)) {
+                  secondaryTableFilesMap.set(key, new Map());
+                }
+
+                secondaryTableFilesMap.get(key)!.set(fileName, content);
+              }
+
+              for (const [key, mergedFiles] of secondaryTableFilesMap) {
+                const parts = key.split('/');
+                if (parts.length === 2) {
+                  tableDataService.mergeTableFilesInMemory(parts[0], parts[1], mergedFiles);
+                }
+              }
+
+              console.log('[Products] Background area file download complete');
+            })
+            .catch((e) => {
+              console.warn('[Products] Background secondary download failed:', e);
+            });
+        }, 50);
       }
 
       // Build statuses and store files in memory simultaneously
@@ -1874,14 +1953,19 @@ export default function ProductsScreen() {
                     <Text style={[styles.areaTitle, { color: colors.text }]}>{selectedArea} Tables</Text>
                   </View>
 
-                  {loadingAreaData ? (
-                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-                      <ActivityIndicator size="large" color={colors.primary} />
-                      <Text style={[styles.loadingText, { color: colors.textSecondary, marginTop: 16 }]}>Loading tables...</Text>
-                      <Text style={[styles.loadingText, { color: colors.primary, marginTop: 8, fontSize: 18, fontWeight: '700' }]}>{downloadProgress}%</Text>
+                  {loadingAreaData && (
+                    <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                      <Text style={[styles.loadingText, { color: colors.textSecondary, marginTop: 8 }]}>
+                        Refreshing {selectedArea}…
+                      </Text>
+                      <Text style={[styles.loadingText, { color: colors.primary, marginTop: 6, fontSize: 16, fontWeight: '700' }]}>
+                        {downloadProgress}%
+                      </Text>
                     </View>
-                  ) : (
-                    <View style={styles.tableGrid}>
+                  )}
+
+                  <View style={styles.tableGrid}>
                     {tables
                       .filter(table => table.area === selectedArea)
                       .sort((a, b) => a.name.localeCompare(b.name))
@@ -1955,8 +2039,7 @@ export default function ProductsScreen() {
                           </TouchableOpacity>
                         );
                       })}
-                    </View>
-                  )}
+                  </View>
                 </>
               )}
             </ScrollView>

@@ -509,6 +509,23 @@ class TableDataService {
     console.log(`[TableDataService] Stored ${files.size} files in memory for ${tableKey}`);
   }
 
+  mergeTableFilesInMemory(area: string, tableName: string, files: Map<string, string>): void {
+    const tableKey = `${area}/${tableName}`;
+    const existing = this.tableFiles.get(tableKey);
+
+    if (!existing) {
+      this.tableFiles.set(tableKey, new Map(files));
+      console.log(`[TableDataService] Merged ${files.size} files into new in-memory set for ${tableKey}`);
+      return;
+    }
+
+    for (const [name, content] of files.entries()) {
+      existing.set(name, content);
+    }
+
+    console.log(`[TableDataService] Merged ${files.size} files into existing in-memory set for ${tableKey} (total now ${existing.size})`);
+  }
+
   private determinePrinter(group: string): string {
     if (group.toLowerCase().includes('food')) {
       return 'KITCHEN_PRINTER_1';
