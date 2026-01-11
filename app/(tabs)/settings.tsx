@@ -3019,7 +3019,7 @@ export default function SettingsScreen() {
 
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
         <Text style={[styles.label, { color: colors.textSecondary }]}>Version</Text>
-        <Text style={[styles.value, { color: colors.text }]}>1.0.5 Beta</Text>
+        <Text style={[styles.value, { color: colors.text }]}>1.0.6 Beta</Text>
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>

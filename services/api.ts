@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 const getApiUrl = () => {
   const url = 'https://app.positron-portal.com';
   console.log('[API] Using direct Positron server:', url);
@@ -15,6 +17,44 @@ export interface LinkResponse {
   venueName?: string;
   error?: string;
 }
+
+const fetchWithTimeout = async (
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  label: string
+): Promise<Response> => {
+  const startedAt = Date.now();
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        const elapsed = Date.now() - startedAt;
+        console.error(`[API] ${label} timed out after ${timeoutMs}ms (elapsed ${elapsed}ms):`, url);
+        reject(new Error(`${label} timeout`));
+      }, timeoutMs);
+    });
+
+    const fetchPromise = (async () => {
+      try {
+        const controller = new AbortController();
+        const response = await fetch(url, {
+          ...init,
+          signal: controller.signal,
+        });
+        return response;
+      } catch (e) {
+        console.error(`[API] ${label} fetch error:`, e);
+        throw e;
+      }
+    })();
+
+    return (await Promise.race([fetchPromise, timeoutPromise])) as Response;
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+  }
+};
 
 export class PositronAPI {
   private siteId: string | null = null;
@@ -76,20 +116,17 @@ export class PositronAPI {
 
   async getManifest(siteId: string): Promise<{ path: string; lastModified?: string }[]> {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-
       const baseUrl = getApiUrl();
       const url = `${baseUrl}/api/v1/sites/${encodeURIComponent(siteId)}/data/manifest`;
       console.log('[API] GET', url);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        signal: controller.signal,
-      });
+      const response = await fetchWithTimeout(
+        url,
+        { method: 'GET' },
+        Platform.OS === 'android' ? 45000 : 30000,
+        'Manifest'
+      );
 
-      clearTimeout(timeoutId);
-      
       console.log('[API] Manifest response status:', response.status);
 
       if (!response.ok) {
@@ -122,30 +159,25 @@ export class PositronAPI {
       }
     } catch (error: any) {
       console.error('[API] Manifest error:', error);
-      console.error('[API] Error type:', error.constructor.name);
-      console.error('[API] Error message:', error.message);
-      if (error.name === 'AbortError') {
-        throw new Error('Timeout fetching manifest');
-      }
+      console.error('[API] Error type:', error?.constructor?.name);
+      console.error('[API] Error message:', error?.message);
       throw error;
     }
   }
 
   async getFile(siteId: string, path: string): Promise<string> {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const baseUrl = getApiUrl();
+    const url = `${baseUrl}/api/v1/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`;
 
-      const baseUrl = getApiUrl();
-      const url = `${baseUrl}/api/v1/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`;
+    try {
       console.log('[API] GET file:', path);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
+      const response = await fetchWithTimeout(
+        url,
+        { method: 'GET' },
+        Platform.OS === 'android' ? 45000 : 30000,
+        `File(${path})`
+      );
 
       if (!response.ok) {
         const text = await response.text();
@@ -157,16 +189,16 @@ export class PositronAPI {
         throw new Error(`HTTP ${response.status}: ${text}`);
       }
 
-      return await response.text();
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.error('[API] File download timeout:', path);
-        throw new Error(`Timeout downloading: ${path}`);
+      const text = await response.text();
+      if (text.trim().startsWith('<')) {
+        console.warn('[API] File response looks like HTML:', path);
       }
-      if (!error.message?.includes('404')) {
+      return text;
+    } catch (error: any) {
+      if (!error?.message?.includes('404')) {
         console.error('[API] File error:', error);
-        console.error('[API] Error type:', error.constructor.name);
-        console.error('[API] Error message:', error.message);
+        console.error('[API] Error type:', error?.constructor?.name);
+        console.error('[API] Error message:', error?.message);
       }
       throw error;
     }
