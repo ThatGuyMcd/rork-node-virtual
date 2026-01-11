@@ -109,8 +109,10 @@ export class DataSyncService {
     }
   ): Promise<Map<string, string>> {
     const isAndroid = Platform.OS === 'android';
-    const defaultConcurrency = isAndroid ? 6 : 12;
-    const maxAllowed = isAndroid ? 8 : 40;
+
+    const androidMax = options?.maxConcurrentDownloads ? Math.max(1, options.maxConcurrentDownloads) : 8;
+    const defaultConcurrency = isAndroid ? 12 : 12;
+    const maxAllowed = isAndroid ? Math.max(8, androidMax) : 40;
     const maxConcurrentDownloads = Math.max(1, Math.min(maxAllowed, options?.maxConcurrentDownloads ?? defaultConcurrency));
     const progressTotal = options?.progressTotalOverride ?? filesToDownload.length;
     const progressBaseCompleted = options?.progressBaseCompleted ?? 0;
@@ -174,13 +176,17 @@ export class DataSyncService {
   async syncData(
     onProgress?: (progress: SyncProgress) => void,
     isIncremental: boolean = false,
-    options?: { smartPluDownload?: boolean; maxConcurrentDownloads?: number }
+    options?: { smartPluDownload?: boolean; maxConcurrentDownloads?: number; aggressiveAndroidConcurrency?: boolean }
   ): Promise<void> {
     const isAndroid = Platform.OS === 'android';
+
+    const androidMax = options?.aggressiveAndroidConcurrency ? 16 : 8;
+    const androidDefault = options?.aggressiveAndroidConcurrency ? 12 : 6;
+
     const effectiveOptions = {
       ...options,
-      maxConcurrentDownloads: isAndroid 
-        ? Math.min(options?.maxConcurrentDownloads ?? 6, 8) 
+      maxConcurrentDownloads: isAndroid
+        ? Math.min(options?.maxConcurrentDownloads ?? androidDefault, androidMax)
         : (options?.maxConcurrentDownloads ?? 12),
     };
     

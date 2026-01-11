@@ -58,6 +58,7 @@ const fetchWithTimeout = async (
 
 export class PositronAPI {
   private siteId: string | null = null;
+  private fileLogCount: number = 0;
 
   async linkAccount(credentials: AuthCredentials): Promise<LinkResponse> {
     try {
@@ -170,7 +171,10 @@ export class PositronAPI {
     const url = `${baseUrl}/api/v1/sites/${encodeURIComponent(siteId)}/data/file?path=${encodeURIComponent(path)}`;
 
     try {
-      console.log('[API] GET file:', path);
+      this.fileLogCount += 1;
+      if (__DEV__ && (this.fileLogCount <= 5 || this.fileLogCount % 150 === 0)) {
+        console.log('[API] GET file:', path, `(log ${this.fileLogCount})`);
+      }
 
       const response = await fetchWithTimeout(
         url,
