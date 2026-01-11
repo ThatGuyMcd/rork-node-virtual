@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
   TextInput,
   Platform,
-  InteractionManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -333,19 +332,6 @@ export default function ProductsScreen() {
     setLoadingAreaData(true);
     setDownloadProgress(0);
     
-    // On Android native, we need to ensure the UI updates before starting heavy work
-    // Use InteractionManager to wait for animations/interactions to complete
-    if (Platform.OS !== 'web') {
-      await new Promise<void>((resolve) => {
-        InteractionManager.runAfterInteractions(() => {
-          console.log('[Products] InteractionManager completed, starting data load');
-          resolve();
-        });
-        // Fallback timeout in case runAfterInteractions doesn't fire
-        setTimeout(resolve, 100);
-      });
-    }
-    
     const startedAt = Date.now();
 
     const setProgress = (next: number) => {
@@ -376,10 +362,8 @@ export default function ProductsScreen() {
       setProgress(2);
       
       // Give the UI time to render the loading state
-      // Use a longer delay on Android native to ensure state updates are flushed
-      const uiDelayMs = Platform.OS === 'android' ? 50 : 16;
       await new Promise<void>((resolve) => {
-        setTimeout(resolve, uiDelayMs);
+        setTimeout(resolve, 16);
       });
       console.log('[Products] Initial UI delay completed');
 
@@ -515,9 +499,8 @@ export default function ProductsScreen() {
         filesToDownload: { path: string; lastModified?: string }[],
         options?: { maxConcurrent?: number; onProgress?: (completed: number, total: number) => void }
       ): Promise<Map<string, string>> => {
-        const isAndroid = Platform.OS === 'android';
-        const defaultConcurrency = isAndroid ? 6 : 12;
-        const maxConcurrent = Math.max(1, Math.min(isAndroid ? 8 : 24, options?.maxConcurrent ?? defaultConcurrency));
+        const defaultConcurrency = 12;
+        const maxConcurrent = Math.max(1, Math.min(24, options?.maxConcurrent ?? defaultConcurrency));
 
         console.log('[Products] downloadFiles concurrency:', maxConcurrent);
 
@@ -591,7 +574,7 @@ export default function ProductsScreen() {
 
       const files = await withTimeout(
         downloadFiles(priorityFiles, {
-          maxConcurrent: Platform.OS === 'android' ? 6 : 12,
+          maxConcurrent: 12,
           onProgress: (completed, total) => {
             const downloadPct = total === 0 ? 100 : Math.round((completed / total) * 100);
             const mapped = 40 + (downloadPct * 45) / 100;
@@ -644,7 +627,7 @@ export default function ProductsScreen() {
       if (secondaryFiles.length > 0) {
         setTimeout(() => {
           console.log('[Products] Background downloading secondary area files...');
-          downloadFiles(secondaryFiles, { maxConcurrent: Platform.OS === 'android' ? 4 : 10 })
+          downloadFiles(secondaryFiles, { maxConcurrent: 10 })
             .then((secondaryDownloaded) => {
               const secondaryTableFilesMap = new Map<string, Map<string, string>>();
 
