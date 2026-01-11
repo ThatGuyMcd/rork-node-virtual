@@ -340,10 +340,57 @@ class TableDataService {
   }
 
   async loadTableData(tableId: string): Promise<TableDataRow[]> {
-
     try {
+      // Check memory data first (from this.data)
+      const memoryRows = this.data.get(tableId);
+      if (memoryRows && memoryRows.length > 0) {
+        console.log(`[TableDataService] Found ${memoryRows.length} rows in memory for table: ${tableId}`);
+        return memoryRows;
+      }
+      
+      // Check memory files (from this.tableFiles - used by loadAreaData)
+      const tables = await dataSyncService.getStoredTables();
+      const table = tables.find(t => t.id === tableId);
+      if (table) {
+        const tableKey = `${table.area}/${table.name}`;
+        const memoryFiles = this.tableFiles.get(tableKey);
+        if (memoryFiles) {
+          const csvContent = memoryFiles.get('tabledata.csv');
+          if (csvContent && csvContent.trim().length > 0) {
+            const rows = dataParser.parseCSV(csvContent);
+            if (rows.length > 1) {
+              const tableRows: TableDataRow[] = [];
+              for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                tableRows.push({
+                  quantity: parseFloat(row[0] || '1'),
+                  productName: row[1]?.trim() || '',
+                  price: parseFloat(row[2] || '0'),
+                  pluFile: row[3]?.trim() || '',
+                  group: row[4]?.trim() || '',
+                  department: row[5]?.trim() || '',
+                  vatCode: row[6]?.trim() || '',
+                  vatPercentage: parseFloat(row[7] || '0'),
+                  vatAmount: parseFloat(row[8] || '0'),
+                  addedBy: row[9]?.trim() || '',
+                  timeDate: row[10]?.trim() || '',
+                  printer1: row[11]?.trim() || 'NOT SET',
+                  printer2: row[12]?.trim() || 'NOT SET',
+                  printer3: row[13]?.trim() || 'NOT SET',
+                  itemPrinted: row[14]?.trim() || 'NO',
+                  tableId: tableId,
+                });
+              }
+              console.log(`[TableDataService] Found ${tableRows.length} rows in memory files for table: ${tableId}`);
+              return tableRows;
+            }
+          }
+        }
+      }
+      
+      // Fall back to file system only if no memory data
       if (!this.isFileSystemAvailable()) {
-        return this.data.get(tableId) || [];
+        return [];
       }
       
       const filePath = this.getFilePath();
@@ -388,6 +435,7 @@ class TableDataService {
         }
       }
 
+      console.log(`[TableDataService] Found ${tableRows.length} rows in file system for table: ${tableId}`);
       return tableRows;
     } catch (error) {
       console.error('[TableDataService] Load error:', error);
@@ -581,76 +629,75 @@ class TableDataService {
     const statusMap = new Map<string, { hasData: boolean; subtotal: number; isLocked: boolean }>();
     
     try {
-      if (!this.isFileSystemAvailable()) {
-        for (const tableId of tableIds) {
-          const rows = this.data.get(tableId) || [];
-          const hasData = rows.length > 0;
-          const subtotal = rows.reduce((sum, row) => sum + (row.quantity * row.price), 0);
-          const isLocked = await this.isTableLockedInMemory(tableId);
-          statusMap.set(tableId, { hasData, subtotal, isLocked });
-        }
-        return statusMap;
-      }
+      // Always check memory first for both web and native
+      // This ensures consistent behavior when loadAreaData stores data in memory
+      const tables = await dataSyncService.getStoredTables();
       
-      const filePath = this.getFilePath();
-      if (!filePath) {
-        tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0, isLocked: false }));
-        return statusMap;
-      }
-      
-      const fileInfo = await FileSystem.getInfoAsync(filePath);
-      
-      if (!fileInfo.exists) {
-        tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0, isLocked: false }));
-        return statusMap;
-      }
-
-      const content = await FileSystem.readAsStringAsync(filePath);
-      const rows = dataParser.parseCSV(content);
-
-      if (rows.length <= 1) {
-        tableIds.forEach(id => statusMap.set(id, { hasData: false, subtotal: 0, isLocked: false }));
-        return statusMap;
-      }
-
-      const header = rows[0].map(h => h.trim());
-      const tableIdIndex = header.findIndex(h => /table.*id/i.test(h));
-      
-      const tableDataMap = new Map<string, TableDataRow[]>();
-      tableIds.forEach(id => tableDataMap.set(id, []));
-
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        const rowTableId = tableIdIndex >= 0 ? row[tableIdIndex]?.trim() : '';
-        
-        if (tableIds.includes(rowTableId)) {
-          const tableRow: TableDataRow = {
-            quantity: parseFloat(row[0] || '1'),
-            productName: row[1]?.trim() || '',
-            price: parseFloat(row[2] || '0'),
-            pluFile: row[3]?.trim() || '',
-            group: row[4]?.trim() || '',
-            department: row[5]?.trim() || '',
-            vatCode: row[6]?.trim() || '',
-            vatPercentage: parseFloat(row[7] || '0'),
-            vatAmount: parseFloat(row[8] || '0'),
-            addedBy: row[9]?.trim() || '',
-            timeDate: row[10]?.trim() || '',
-            printer1: row[11]?.trim() || 'NOT SET',
-            printer2: row[12]?.trim() || 'NOT SET',
-            printer3: row[13]?.trim() || 'NOT SET',
-            itemPrinted: row[14]?.trim() || 'NO',
-            tableId: rowTableId,
-          };
-          tableDataMap.get(rowTableId)?.push(tableRow);
-        }
-      }
-
       for (const tableId of tableIds) {
-        const tableRows = tableDataMap.get(tableId) || [];
-        const hasData = tableRows.length > 0;
-        const subtotal = tableRows.reduce((sum, row) => sum + (row.quantity * row.price), 0);
-        const isLocked = await this.isTableLockedInFileSystem(tableId);
+        const table = tables.find(t => t.id === tableId);
+        let hasData = false;
+        let subtotal = 0;
+        let isLocked = false;
+        
+        // Check memory data first (from this.data)
+        const memoryRows = this.data.get(tableId);
+        if (memoryRows && memoryRows.length > 0) {
+          hasData = true;
+          subtotal = memoryRows.reduce((sum, row) => sum + (row.quantity * row.price), 0);
+        }
+        
+        // Check memory files (from this.tableFiles - used by loadAreaData)
+        if (table) {
+          const tableKey = `${table.area}/${table.name}`;
+          const memoryFiles = this.tableFiles.get(tableKey);
+          if (memoryFiles) {
+            const csvContent = memoryFiles.get('tabledata.csv');
+            if (csvContent && csvContent.trim().length > 0) {
+              const rows = dataParser.parseCSV(csvContent);
+              if (rows.length > 1) {
+                hasData = true;
+                for (let i = 1; i < rows.length; i++) {
+                  const qty = parseFloat(rows[i][0] || '1');
+                  const price = parseFloat(rows[i][2] || '0');
+                  subtotal += qty * price;
+                }
+              }
+            }
+            isLocked = memoryFiles.has('tableopen.ini');
+          }
+        }
+        
+        // Only fall back to file system if no memory data and file system is available
+        if (!hasData && !isLocked && this.isFileSystemAvailable() && table) {
+          try {
+            const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+            const tabledataPath = `${tableFolder}tabledata.csv`;
+            const tableopenPath = `${tableFolder}tableopen.ini`;
+            
+            const [tabledataInfo, tableopenInfo] = await Promise.all([
+              FileSystem.getInfoAsync(tabledataPath),
+              FileSystem.getInfoAsync(tableopenPath)
+            ]);
+            
+            if (tabledataInfo.exists) {
+              const content = await FileSystem.readAsStringAsync(tabledataPath);
+              const rows = dataParser.parseCSV(content);
+              if (rows.length > 1) {
+                hasData = true;
+                for (let i = 1; i < rows.length; i++) {
+                  const qty = parseFloat(rows[i][0] || '1');
+                  const price = parseFloat(rows[i][2] || '0');
+                  subtotal += qty * price;
+                }
+              }
+            }
+            
+            isLocked = tableopenInfo.exists;
+          } catch (fsError) {
+            console.warn('[TableDataService] File system read failed for table:', tableId, fsError);
+          }
+        }
+        
         statusMap.set(tableId, { hasData, subtotal, isLocked });
       }
     } catch (error) {
