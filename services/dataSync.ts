@@ -108,10 +108,14 @@ export class DataSyncService {
       progressFolderOverride?: string;
     }
   ): Promise<Map<string, string>> {
-    const maxConcurrentDownloads = Math.max(1, Math.min(40, options?.maxConcurrentDownloads ?? 12));
+    const isAndroid = Platform.OS === 'android';
+    const defaultConcurrency = isAndroid ? 6 : 12;
+    const maxAllowed = isAndroid ? 8 : 40;
+    const maxConcurrentDownloads = Math.max(1, Math.min(maxAllowed, options?.maxConcurrentDownloads ?? defaultConcurrency));
     const progressTotal = options?.progressTotalOverride ?? filesToDownload.length;
     const progressBaseCompleted = options?.progressBaseCompleted ?? 0;
 
+    console.log('[DataSync] Platform:', Platform.OS);
     console.log('[DataSync] Download concurrency:', maxConcurrentDownloads);
     console.log('[DataSync] Files to download:', filesToDownload.length);
 
@@ -140,12 +144,14 @@ export class DataSyncService {
           }
 
           const current = progressBaseCompleted + completed;
-          onProgress?.({
-            phase: 'downloading',
-            current,
-            total: progressTotal,
-            message: this.getFriendlyName(lastProgressFolder),
-          });
+          if (completed % 5 === 0 || completed === filesToDownload.length) {
+            onProgress?.({
+              phase: 'downloading',
+              current,
+              total: progressTotal,
+              message: this.getFriendlyName(lastProgressFolder),
+            });
+          }
         }
       }
     };
@@ -170,8 +176,17 @@ export class DataSyncService {
     isIncremental: boolean = false,
     options?: { smartPluDownload?: boolean; maxConcurrentDownloads?: number }
   ): Promise<void> {
+    const isAndroid = Platform.OS === 'android';
+    const effectiveOptions = {
+      ...options,
+      maxConcurrentDownloads: isAndroid 
+        ? Math.min(options?.maxConcurrentDownloads ?? 6, 8) 
+        : (options?.maxConcurrentDownloads ?? 12),
+    };
+    
     console.log(`[DataSync] ========== STARTING ${isIncremental ? 'INCREMENTAL' : 'FULL'} DATA SYNC ==========`);
-    console.log('[DataSync] Options:', JSON.stringify(options || {}));
+    console.log('[DataSync] Platform:', Platform.OS);
+    console.log('[DataSync] Options:', JSON.stringify(effectiveOptions));
 
     const siteInfo = await this.getSiteInfo();
     if (!siteInfo) {
@@ -235,7 +250,7 @@ export class DataSyncService {
       console.log('[DataSync] PLU candidates:', pluFiles.length);
 
       const nonPluDownloaded = await this.downloadFilesWithConcurrency(siteInfo.siteId, nonPluFiles, onProgress, {
-        maxConcurrentDownloads: options?.maxConcurrentDownloads,
+        maxConcurrentDownloads: effectiveOptions.maxConcurrentDownloads,
         progressTotalOverride: nonPluFiles.length + pluFiles.length,
       });
 
@@ -266,7 +281,7 @@ export class DataSyncService {
       console.log('[DataSync] Selected PLU files to download:', selectedPluFiles.length);
 
       const pluDownloaded = await this.downloadFilesWithConcurrency(siteInfo.siteId, selectedPluFiles, onProgress, {
-        maxConcurrentDownloads: options?.maxConcurrentDownloads,
+        maxConcurrentDownloads: effectiveOptions.maxConcurrentDownloads,
         progressTotalOverride: nonPluFiles.length + pluFiles.length,
         progressBaseCompleted: nonPluFiles.length,
         progressFolderOverride: 'PLUDATA',
@@ -280,7 +295,7 @@ export class DataSyncService {
       console.log('[DataSync] Smart download skipped PLU files:', skippedPluCount);
     } else {
       const downloaded = await this.downloadFilesWithConcurrency(siteInfo.siteId, filesToDownload, onProgress, {
-        maxConcurrentDownloads: options?.maxConcurrentDownloads,
+        maxConcurrentDownloads: effectiveOptions.maxConcurrentDownloads,
       });
       for (const [path, content] of downloaded.entries()) {
         files.set(path, content);
@@ -367,6 +382,7 @@ export class DataSyncService {
 
   private async saveTableDataFiles(files: Map<string, string>): Promise<void> {
     const isWeb = Platform.OS === 'web' || !FileSystem.documentDirectory;
+    const isAndroid = Platform.OS === 'android';
 
     const tabEntries: { path: string; content: string }[] = [];
     for (const [path, content] of files.entries()) {
@@ -402,7 +418,6 @@ export class DataSyncService {
         }
 
         tableFilesMap.get(tableKey)!.set(fileName, content);
-        console.log(`[DataSync] Added to memory: ${area}/${table}/${fileName} (${content.length} bytes)`);
       }
 
       const { tableDataService } = await import('./tableDataService');
@@ -428,55 +443,54 @@ export class DataSyncService {
       folderCache.add(folderPath);
     };
 
-    const tasks = tabEntries
-      .map(({ path, content }) => {
-        const parts = path.slice('TABDATA/'.length).split('/');
-        if (parts.length < 3) return null;
+    const folderGroups = new Map<string, { path: string; content: string; fileName: string }[]>();
+    for (const { path, content } of tabEntries) {
+      const parts = path.slice('TABDATA/'.length).split('/');
+      if (parts.length < 3) continue;
+      const area = parts[0];
+      const table = parts[1];
+      const fileName = parts[2];
+      const tableFolder = `${FileSystem.documentDirectory}tables/${area}/${table}/`;
+      
+      if (!folderGroups.has(tableFolder)) {
+        folderGroups.set(tableFolder, []);
+      }
+      folderGroups.get(tableFolder)!.push({ path, content, fileName });
+    }
 
-        const area = parts[0];
-        const table = parts[1];
-        const fileName = parts[2];
-        const tableFolder = `${FileSystem.documentDirectory}tables/${area}/${table}/`;
-        const filePath = `${tableFolder}${fileName}`;
+    const folders = Array.from(folderGroups.keys());
+    for (const folder of folders) {
+      await ensureFolder(folder);
+    }
 
-        return async () => {
-          try {
-            await ensureFolder(tableFolder);
-            await FileSystem.writeAsStringAsync(filePath, content);
-            console.log(`[DataSync] Saved: ${area}/${table}/${fileName} (${content.length} bytes)`);
-            return true;
-          } catch (error) {
-            console.error(`[DataSync] Error saving table file ${path}:`, error);
-            return false;
-          }
-        };
-      })
-      .filter((t): t is () => Promise<boolean> => !!t);
+    const allFiles = Array.from(folderGroups.entries()).flatMap(([folder, files]) =>
+      files.map(f => ({ folder, ...f }))
+    );
 
-    const maxConcurrentWrites = Math.max(2, Math.min(20, Math.round(tasks.length / 8) + 6));
+    const maxConcurrentWrites = isAndroid ? 4 : Math.max(2, Math.min(20, Math.round(allFiles.length / 8) + 6));
     console.log('[DataSync] TABDATA write concurrency:', maxConcurrentWrites);
 
-    const runWithConcurrency = async <T,>(fns: (() => Promise<T>)[], concurrency: number): Promise<T[]> => {
-      const results: T[] = [];
-      let index = 0;
+    let savedCount = 0;
+    let index = 0;
 
-      const workers = Array.from({ length: Math.min(concurrency, fns.length) }, async () => {
-        while (index < fns.length) {
-          const currentIndex = index++;
-          try {
-            results[currentIndex] = await fns[currentIndex]!();
-          } catch (e) {
-            console.error('[DataSync] TABDATA write task failed:', e);
-          }
+    const writeWorker = async () => {
+      while (index < allFiles.length) {
+        const currentIndex = index++;
+        const file = allFiles[currentIndex];
+        if (!file) continue;
+        
+        try {
+          const filePath = `${file.folder}${file.fileName}`;
+          await FileSystem.writeAsStringAsync(filePath, file.content);
+          savedCount++;
+        } catch (error) {
+          console.error(`[DataSync] Error saving table file ${file.path}:`, error);
         }
-      });
-
-      await Promise.all(workers);
-      return results;
+      }
     };
 
-    const results = await runWithConcurrency(tasks, maxConcurrentWrites);
-    const savedCount = results.filter(Boolean).length;
+    const workers = Array.from({ length: Math.min(maxConcurrentWrites, allFiles.length) }, writeWorker);
+    await Promise.all(workers);
 
     console.log(`[DataSync] Saved ${savedCount} table data files to local file system`);
   }
