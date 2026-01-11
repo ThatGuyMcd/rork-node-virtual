@@ -6,26 +6,23 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   Switch,
   StatusBar,
   Modal,
   PanResponder,
-  FlatList,
 } from 'react-native';
 
 import { RefreshCw, LogIn, Database, Trash2, Settings as SettingsIcon, LayoutGrid, Layers, Sun, Moon, Palette, MonitorSmartphone, CheckCircle, CreditCard, ChevronDown, Filter, Eye, EyeOff, AlertTriangle, Paintbrush, X, FileText, Percent, Printer, Bluetooth, Wifi, ArrowUp, ArrowDown, Info, Server, Users, Menu, Loader, Edit2, Download } from 'lucide-react-native';
 import { dataSyncService, type SyncProgress } from '@/services/dataSync';
 import { apiClient } from '@/services/api';
-import { trpcClient } from '@/lib/trpc';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { printerService } from '@/services/printerService';
 import { transactionUploadService } from '@/services/transactionUploadService';
 import { useRouter } from 'expo-router';
-import type { ProductDisplaySettings, ProductGroup, Department, DiscountSettings, GratuitySettings, PrinterSettings, ReceiptLineSize } from '@/types/pos';
+import type { ProductDisplaySettings, ProductGroup, Department, PrinterSettings, ReceiptLineSize } from '@/types/pos';
 import { usePOS } from '@/contexts/POSContext';
-import { useTheme, type ThemeName, type ThemePreference, type ButtonSkin } from '@/contexts/ThemeContext';
+import { useTheme, type ButtonSkin } from '@/contexts/ThemeContext';
 import { Colors, type ThemeColors } from '@/constants/colors';
 import { hexToRgb, rgbToHex } from '@/utils/colorUtils';
 
@@ -202,6 +199,125 @@ const getButtonOverlayStyleStatic = (skin: ButtonSkin) => {
   }
 };
 
+type AppAlertButton = {
+  text: string;
+  style?: 'default' | 'cancel' | 'destructive';
+  onPress?: () => void | Promise<void>;
+};
+
+type AppAlertState = {
+  visible: boolean;
+  title: string;
+  message?: string;
+  buttons: AppAlertButton[];
+};
+
+function AppAlertModal({
+  visible,
+  title,
+  message,
+  buttons,
+  colors,
+  onRequestClose,
+}: {
+  visible: boolean;
+  title: string;
+  message?: string;
+  buttons: AppAlertButton[];
+  colors: any;
+  onRequestClose: () => void;
+}) {
+  const primary = buttons.find((b) => b.style !== 'cancel') ?? buttons[0];
+  const accentStyle = primary?.style === 'destructive' ? 'destructive' : 'default';
+  const iconBg = accentStyle === 'destructive' ? '#ef444420' : '#10b98120';
+  const iconColor = accentStyle === 'destructive' ? '#ef4444' : '#10b981';
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onRequestClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View
+          style={[
+            styles.modalContent,
+            {
+              backgroundColor: colors.cardBackground,
+              alignItems: 'center',
+              maxWidth: 520,
+              width: '92%',
+            },
+          ]}
+        >
+          <View style={[styles.syncResultIconContainer, { backgroundColor: iconBg }]}>
+            {accentStyle === 'destructive' ? (
+              <AlertTriangle size={48} color={iconColor} />
+            ) : (
+              <CheckCircle size={48} color={iconColor} />
+            )}
+          </View>
+
+          <Text style={[styles.syncResultTitle, { color: iconColor }]}>{title}</Text>
+
+          {!!message && (
+            <Text
+              style={[styles.syncResultMessage, { color: colors.textSecondary, textAlign: 'center' }]}
+            >
+              {message}
+            </Text>
+          )}
+
+          <View style={{ width: '100%', marginTop: 8, gap: 10 }}>
+            {buttons.map((b, idx) => {
+              const isCancel = b.style === 'cancel';
+              const isDestructive = b.style === 'destructive';
+
+              const backgroundColor = isCancel
+                ? colors.textTertiary
+                : isDestructive
+                  ? '#ef4444'
+                  : '#10b981';
+
+              return (
+                <TouchableOpacity
+                  key={`${b.text}-${idx}`}
+                  testID={`app-alert-btn-${idx}`}
+                  style={[
+                    styles.button,
+                    {
+                      backgroundColor,
+                      width: '100%',
+                      marginTop: 0,
+                      marginBottom: 0,
+                    },
+                  ]}
+                  onPress={() => {
+                    try {
+                      const result = b.onPress?.();
+                      if (result && typeof (result as any).then === 'function') {
+                        (result as Promise<void>).catch((e) => {
+                          console.error('[Settings][AppAlertModal] Button onPress failed', e);
+                        });
+                      }
+                    } finally {
+                      onRequestClose();
+                    }
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.buttonText}>{b.text}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function SettingsScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -262,32 +378,68 @@ export default function SettingsScreen() {
   const [isConnectingPrinter, setIsConnectingPrinter] = useState(false);
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
   const [editingReceiptSection, setEditingReceiptSection] = useState<'header' | 'footer'>('header');
-  const [editingReceiptLineIndex, setEditingReceiptLineIndex] = useState<number | null>(null);
   const [receiptLineText, setReceiptLineText] = useState('');
   const [receiptLineSize, setReceiptLineSize] = useState<ReceiptLineSize>('normal');
   const redSliderWidth = useRef(300);
   const greenSliderWidth = useRef(300);
   const blueSliderWidth = useRef(300);
-  const [isDraggingRed, setIsDraggingRed] = useState(false);
-  const [isDraggingGreen, setIsDraggingGreen] = useState(false);
-  const [isDraggingBlue, setIsDraggingBlue] = useState(false);
   const [terminalNumber, setTerminalNumber] = useState('01');
   const [terminalNumberModalVisible, setTerminalNumberModalVisible] = useState(false);
   const [terminalNumberInput, setTerminalNumberInput] = useState('');
   const [terminalNickname, setTerminalNickname] = useState('');
   const [terminalNicknameModalVisible, setTerminalNicknameModalVisible] = useState(false);
   const [terminalNicknameInput, setTerminalNicknameInput] = useState('');
-  const [settingsProfiles, setSettingsProfiles] = useState<Array<{ name: string; timestamp: string }>>([]);
+  const [settingsProfiles, setSettingsProfiles] = useState<{ name: string; timestamp: string }[]>([]);
   const [createProfileModalVisible, setCreateProfileModalVisible] = useState(false);
   const [profileNameInput, setProfileNameInput] = useState('');
-  const [loadProfileModalVisible, setLoadProfileModalVisible] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isDownloadingProfiles, setIsDownloadingProfiles] = useState(false);
-  const [syncResultModal, setSyncResultModal] = useState<{ visible: boolean; type: 'success' | 'error'; title: string; message: string }>({ visible: false, type: 'success', title: '', message: '' });
-  
+  const [appAlert, setAppAlert] = useState<AppAlertState>({
+    visible: false,
+    title: '',
+    message: '',
+    buttons: [{ text: 'OK', style: 'default' }],
+  });
 
-  
+  const presentAlert = useCallback(
+    (
+      title: string,
+      message?: string,
+      buttons?: AppAlertButton[],
+    ) => {
+      const resolvedButtons: AppAlertButton[] =
+        buttons && buttons.length > 0
+          ? buttons
+          : [{ text: 'OK', style: 'default' }];
+
+      console.log('[Settings][Alert] present', {
+        title,
+        message,
+        buttons: resolvedButtons.map((b) => ({ text: b.text, style: b.style })),
+      });
+
+      setAppAlert({
+        visible: true,
+        title,
+        message,
+        buttons: resolvedButtons,
+      });
+    },
+    [],
+  );
+
+  const Alert = useMemo(
+    () => ({
+      alert: (
+        title: string,
+        message?: string,
+        buttons?: AppAlertButton[],
+      ) => {
+        presentAlert(title, message, buttons);
+      },
+    }),
+    [presentAlert],
+  );
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     account: true,
     dataSync: false,
@@ -625,7 +777,6 @@ export default function SettingsScreen() {
   };
 
   const loadSettingsProfile = async (profileName: string) => {
-    setIsLoadingProfile(true);
     try {
       const stored = await AsyncStorage.getItem(`pos_settings_profile_${profileName}`);
       if (!stored) {
@@ -682,13 +833,10 @@ export default function SettingsScreen() {
         await AsyncStorage.setItem('pos_terminal_nickname', profileData.terminalNickname);
       }
 
-      setLoadProfileModalVisible(false);
       Alert.alert('Success', `Settings profile "${profileName}" loaded successfully!`);
     } catch (error) {
       console.error('Error loading settings profile:', error);
       Alert.alert('Error', 'Failed to load settings profile');
-    } finally {
-      setIsLoadingProfile(false);
     }
   };
 
@@ -907,12 +1055,6 @@ export default function SettingsScreen() {
     await dataSyncService.setProductDisplaySettings(newSettings);
   };
 
-  const changeSortOrder = async (sortOrder: 'filename' | 'alphabetical' | 'custom') => {
-    const newSettings = { ...productSettings, sortOrder };
-    setProductSettings(newSettings);
-    await dataSyncService.setProductDisplaySettings(newSettings);
-  };
-
   const moveGroupUp = async (groupId: string) => {
     const visibleGroups = groups.filter(g => !productSettings.hiddenGroupIds.includes(g.id));
     const currentOrder = productSettings.customGroupOrder || visibleGroups.map(g => g.id);
@@ -1019,26 +1161,6 @@ export default function SettingsScreen() {
     });
   }, []);
 
-  const expandedSection = useMemo(() => 
-    Object.keys(expandedSections).find(key => expandedSections[key]) || null
-  , [expandedSections]);
-
-  const applyCustomColor = () => {
-    let colorValue = customColorInput.trim();
-    if (!colorValue) return;
-    
-    if (!colorValue.startsWith('#')) {
-      colorValue = '#' + colorValue;
-    }
-    
-    const hexRegex = /^#([0-9A-Fa-f]{3}){1,2}$/;
-    if (hexRegex.test(colorValue)) {
-      setCustomColor(colorValue);
-    } else {
-      Alert.alert('Invalid Color', 'Please enter a valid hex color code (e.g., #FF5733 or #F57)');
-    }
-  };
-
   const getItemColor = (type: 'group' | 'department', id: string): string | undefined => {
     if (type === 'group') {
       return productSettings.groupColors?.[id];
@@ -1112,13 +1234,19 @@ export default function SettingsScreen() {
       await loadSettingsProfiles();
       
       if (incremental) {
-        setSyncResultModal({ visible: true, type: 'success', title: 'Sync Complete', message: 'Incremental sync completed successfully!' });
+        presentAlert('Sync Complete', 'Incremental sync completed successfully!', [
+          { text: 'OK', style: 'default' },
+        ]);
       } else {
-        setSyncResultModal({ visible: true, type: 'success', title: 'Sync Complete', message: 'Full sync completed successfully!' });
+        presentAlert('Sync Complete', 'Full sync completed successfully!', [
+          { text: 'OK', style: 'default' },
+        ]);
       }
     } catch (error) {
       console.error('Sync error:', error);
-      setSyncResultModal({ visible: true, type: 'error', title: 'Sync Failed', message: error instanceof Error ? error.message : 'Failed to sync data' });
+      presentAlert('Sync Failed', error instanceof Error ? error.message : 'Failed to sync data', [
+        { text: 'OK', style: 'destructive' },
+      ]);
     } finally {
       setIsSyncing(false);
       setSyncProgress(null);
@@ -1580,11 +1708,6 @@ export default function SettingsScreen() {
       </View>
     </>
   );
-
-  const openCustomThemeModal = () => {
-    setCustomThemeColors(customColors || colors);
-    setCustomThemeModalVisible(true);
-  };
 
   const saveCustomTheme = async () => {
     await setCustomColors(customThemeColors);
@@ -2810,7 +2933,6 @@ export default function SettingsScreen() {
           style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
           onPress={() => {
             setEditingReceiptSection('header');
-            setEditingReceiptLineIndex(null);
             setReceiptLineText('');
             setReceiptLineSize('normal');
             setReceiptModalVisible(true);
@@ -2846,7 +2968,6 @@ export default function SettingsScreen() {
           style={[styles.button, { backgroundColor: colors.primary, marginTop: 12 }]}
           onPress={() => {
             setEditingReceiptSection('footer');
-            setEditingReceiptLineIndex(null);
             setReceiptLineText('');
             setReceiptLineSize('normal');
             setReceiptModalVisible(true);
@@ -3168,7 +3289,6 @@ export default function SettingsScreen() {
                   onStartShouldSetPanResponder: () => true,
                   onMoveShouldSetPanResponder: () => true,
                   onPanResponderGrant: (event) => {
-                    setIsDraggingRed(true);
                     const locationX = event.nativeEvent.locationX;
                     const sliderWidth = redSliderWidth.current;
                     const newValue = Math.round((locationX / sliderWidth) * 255);
@@ -3181,7 +3301,6 @@ export default function SettingsScreen() {
                     setCustomColorRgb(prev => ({ ...prev, r: Math.max(0, Math.min(255, newValue)) }));
                   },
                   onPanResponderRelease: () => {
-                    setIsDraggingRed(false);
                   },
                 }).panHandlers}
               >
@@ -3240,7 +3359,6 @@ export default function SettingsScreen() {
                   onStartShouldSetPanResponder: () => true,
                   onMoveShouldSetPanResponder: () => true,
                   onPanResponderGrant: (event) => {
-                    setIsDraggingGreen(true);
                     const locationX = event.nativeEvent.locationX;
                     const sliderWidth = greenSliderWidth.current;
                     const newValue = Math.round((locationX / sliderWidth) * 255);
@@ -3253,7 +3371,6 @@ export default function SettingsScreen() {
                     setCustomColorRgb(prev => ({ ...prev, g: Math.max(0, Math.min(255, newValue)) }));
                   },
                   onPanResponderRelease: () => {
-                    setIsDraggingGreen(false);
                   },
                 }).panHandlers}
               >
@@ -3312,7 +3429,6 @@ export default function SettingsScreen() {
                   onStartShouldSetPanResponder: () => true,
                   onMoveShouldSetPanResponder: () => true,
                   onPanResponderGrant: (event) => {
-                    setIsDraggingBlue(true);
                     const locationX = event.nativeEvent.locationX;
                     const sliderWidth = blueSliderWidth.current;
                     const newValue = Math.round((locationX / sliderWidth) * 255);
@@ -3325,7 +3441,6 @@ export default function SettingsScreen() {
                     setCustomColorRgb(prev => ({ ...prev, b: Math.max(0, Math.min(255, newValue)) }));
                   },
                   onPanResponderRelease: () => {
-                    setIsDraggingBlue(false);
                   },
                 }).panHandlers}
               >
@@ -3694,7 +3809,6 @@ export default function SettingsScreen() {
                   onStartShouldSetPanResponder: () => true,
                   onMoveShouldSetPanResponder: () => true,
                   onPanResponderGrant: (event) => {
-                    setIsDraggingRed(true);
                     const locationX = event.nativeEvent.locationX;
                     const sliderWidth = redSliderWidth.current;
                     const newValue = Math.round((locationX / sliderWidth) * 255);
@@ -3707,7 +3821,6 @@ export default function SettingsScreen() {
                     setCustomColorRgb(prev => ({ ...prev, r: Math.max(0, Math.min(255, newValue)) }));
                   },
                   onPanResponderRelease: () => {
-                    setIsDraggingRed(false);
                   },
                 }).panHandlers}
               >
@@ -3766,7 +3879,6 @@ export default function SettingsScreen() {
                   onStartShouldSetPanResponder: () => true,
                   onMoveShouldSetPanResponder: () => true,
                   onPanResponderGrant: (event) => {
-                    setIsDraggingGreen(true);
                     const locationX = event.nativeEvent.locationX;
                     const sliderWidth = greenSliderWidth.current;
                     const newValue = Math.round((locationX / sliderWidth) * 255);
@@ -3779,7 +3891,6 @@ export default function SettingsScreen() {
                     setCustomColorRgb(prev => ({ ...prev, g: Math.max(0, Math.min(255, newValue)) }));
                   },
                   onPanResponderRelease: () => {
-                    setIsDraggingGreen(false);
                   },
                 }).panHandlers}
               >
@@ -3838,7 +3949,6 @@ export default function SettingsScreen() {
                   onStartShouldSetPanResponder: () => true,
                   onMoveShouldSetPanResponder: () => true,
                   onPanResponderGrant: (event) => {
-                    setIsDraggingBlue(true);
                     const locationX = event.nativeEvent.locationX;
                     const sliderWidth = blueSliderWidth.current;
                     const newValue = Math.round((locationX / sliderWidth) * 255);
@@ -3851,7 +3961,6 @@ export default function SettingsScreen() {
                     setCustomColorRgb(prev => ({ ...prev, b: Math.max(0, Math.min(255, newValue)) }));
                   },
                   onPanResponderRelease: () => {
-                    setIsDraggingBlue(false);
                   },
                 }).panHandlers}
               >
@@ -4009,54 +4118,14 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
-      <Modal
-        visible={syncResultModal.visible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSyncResultModal(prev => ({ ...prev, visible: false }))}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground, alignItems: 'center' }]}>
-            <View style={[
-              styles.syncResultIconContainer,
-              { backgroundColor: syncResultModal.type === 'success' ? '#10b98120' : '#ef444420' }
-            ]}>
-              {syncResultModal.type === 'success' ? (
-                <CheckCircle size={48} color="#10b981" />
-              ) : (
-                <AlertTriangle size={48} color="#ef4444" />
-              )}
-            </View>
-            
-            <Text style={[
-              styles.syncResultTitle,
-              { color: syncResultModal.type === 'success' ? '#10b981' : '#ef4444' }
-            ]}>
-              {syncResultModal.title}
-            </Text>
-            
-            <Text style={[styles.syncResultMessage, { color: colors.textSecondary }]}>
-              {syncResultModal.message}
-            </Text>
-            
-            <TouchableOpacity
-              style={[
-                styles.button,
-                { 
-                  backgroundColor: syncResultModal.type === 'success' ? '#10b981' : '#ef4444',
-                  width: '100%',
-                  marginTop: 8,
-                  marginBottom: 0
-                }
-              ]}
-              onPress={() => setSyncResultModal(prev => ({ ...prev, visible: false }))}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.buttonText}>OK</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <AppAlertModal
+        visible={appAlert.visible}
+        title={appAlert.title}
+        message={appAlert.message}
+        buttons={appAlert.buttons}
+        colors={colors}
+        onRequestClose={() => setAppAlert((prev) => ({ ...prev, visible: false }))}
+      />
 
       <Modal
         visible={createProfileModalVisible}
