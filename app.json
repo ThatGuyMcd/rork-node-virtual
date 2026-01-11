@@ -62,13 +62,18 @@
       "typedRoutes": true
     },
     "updates": {
-      "enabled": false
+      "enabled": false,
+      "url": "<UNKNOWN>",
+      "requestHeaders": {},
+      "checkAutomatically": "ALWAYS",
+      "fallbackToCacheTimeout": 0,
+      "useEmbeddedUpdate": true,
+      "codeSigningCertificate": "<UNKNOWN>",
+      "codeSigningMetadata": "<UNKNOWN>",
+      "assetPatternsToBeBundled": [],
+      "disableAntiBrickingMeasures": false
     },
-    "runtimeVersion":
-    {
-      "policy": "appVersion"
-    },
-    "runtimeVersion":"1.0.6",
+    "runtimeVersion": "1.0.6",
     "extra": {
       "router": {
         "origin": "https://rork.com/"
@@ -79,4 +84,3 @@
     }
   }
 }
-

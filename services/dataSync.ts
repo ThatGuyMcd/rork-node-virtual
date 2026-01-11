@@ -110,9 +110,8 @@ export class DataSyncService {
   ): Promise<Map<string, string>> {
     const isAndroid = Platform.OS === 'android';
 
-    const androidMax = options?.maxConcurrentDownloads ? Math.max(1, options.maxConcurrentDownloads) : 8;
-    const defaultConcurrency = isAndroid ? 12 : 12;
-    const maxAllowed = isAndroid ? Math.max(8, androidMax) : 40;
+    const defaultConcurrency = isAndroid ? 16 : 12;
+    const maxAllowed = isAndroid ? 24 : 40;
     const maxConcurrentDownloads = Math.max(1, Math.min(maxAllowed, options?.maxConcurrentDownloads ?? defaultConcurrency));
     const progressTotal = options?.progressTotalOverride ?? filesToDownload.length;
     const progressBaseCompleted = options?.progressBaseCompleted ?? 0;
@@ -180,8 +179,8 @@ export class DataSyncService {
   ): Promise<void> {
     const isAndroid = Platform.OS === 'android';
 
-    const androidMax = options?.aggressiveAndroidConcurrency ? 16 : 8;
-    const androidDefault = options?.aggressiveAndroidConcurrency ? 12 : 6;
+    const androidMax = options?.aggressiveAndroidConcurrency ? 24 : 12;
+    const androidDefault = options?.aggressiveAndroidConcurrency ? 16 : 10;
 
     const effectiveOptions = {
       ...options,
@@ -189,8 +188,11 @@ export class DataSyncService {
         ? Math.min(options?.maxConcurrentDownloads ?? androidDefault, androidMax)
         : (options?.maxConcurrentDownloads ?? 12),
     };
+
+    const syncStartedAt = Date.now();
     
     console.log(`[DataSync] ========== STARTING ${isIncremental ? 'INCREMENTAL' : 'FULL'} DATA SYNC ==========`);
+    console.log('[DataSync] Sync start timestamp:', new Date(syncStartedAt).toISOString());
     console.log('[DataSync] Platform:', Platform.OS);
     console.log('[DataSync] Options:', JSON.stringify(effectiveOptions));
 
@@ -204,8 +206,9 @@ export class DataSyncService {
 
     onProgress?.({ phase: 'connecting', current: 0, total: 1, message: 'Connecting to server...' });
 
+    const manifestStartedAt = Date.now();
     const manifest = await apiClient.getManifest(siteInfo.siteId);
-    console.log(`[DataSync] Manifest loaded: ${manifest.length} total files`);
+    console.log(`[DataSync] Manifest loaded: ${manifest.length} total files (took ${Date.now() - manifestStartedAt}ms)`);
 
     const filteredManifest = this.filterManifest(manifest);
     console.log(`[DataSync] Will check: ${filteredManifest.length} files after filtering`);
@@ -240,6 +243,7 @@ export class DataSyncService {
       }
     }
 
+    const downloadStartedAt = Date.now();
     onProgress?.({ phase: 'downloading', current: 0, total: filesToDownload.length, message: 'Syncing files...' });
 
     const files: Map<string, string> = new Map();
@@ -308,22 +312,30 @@ export class DataSyncService {
       }
     }
 
+    console.log(`[DataSync] Download phase complete (took ${Date.now() - downloadStartedAt}ms)`);
+
     onProgress?.({ phase: 'parsing', current: 0, total: 1, message: 'Processing data...' });
 
+    const tableSaveStartedAt = Date.now();
     await this.saveTableDataFiles(files);
+    console.log(`[DataSync] TABDATA save complete (took ${Date.now() - tableSaveStartedAt}ms)`);
 
+    const parseStartedAt = Date.now();
     if (isIncremental) {
       await this.parseAndMergeData(files);
     } else {
       await this.parseAndStoreData(files);
     }
+    console.log(`[DataSync] Parse/store complete (took ${Date.now() - parseStartedAt}ms)`);
 
+    const metaStartedAt = Date.now();
     await this.saveFileMetadata(filteredManifest);
     await AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
+    console.log(`[DataSync] Metadata save complete (took ${Date.now() - metaStartedAt}ms)`);
 
     onProgress?.({ phase: 'complete', current: 1, total: 1, message: 'Sync complete!' });
 
-    console.log('[DataSync] ========== SYNC COMPLETE ==========');
+    console.log(`[DataSync] ========== SYNC COMPLETE (total ${Date.now() - syncStartedAt}ms) ==========`);
   }
 
   private filterManifest(manifest: { path: string; lastModified?: string }[]): { path: string; lastModified?: string }[] {
@@ -438,15 +450,11 @@ export class DataSyncService {
 
     console.log('[DataSync] Saving TABDATA files to local file system...');
 
-    const folderCache = new Set<string>();
-
     const ensureFolder = async (folderPath: string) => {
-      if (folderCache.has(folderPath)) return;
-      const folderInfo = await FileSystem.getInfoAsync(folderPath);
-      if (!folderInfo.exists) {
+      try {
         await FileSystem.makeDirectoryAsync(folderPath, { intermediates: true });
+      } catch {
       }
-      folderCache.add(folderPath);
     };
 
     const folderGroups = new Map<string, { path: string; content: string; fileName: string }[]>();
@@ -465,15 +473,27 @@ export class DataSyncService {
     }
 
     const folders = Array.from(folderGroups.keys());
-    for (const folder of folders) {
-      await ensureFolder(folder);
-    }
+
+    const ensureConcurrency = isAndroid ? 12 : 24;
+    let ensureIdx = 0;
+
+    const ensureWorker = async () => {
+      while (ensureIdx < folders.length) {
+        const currentIdx = ensureIdx++;
+        const folder = folders[currentIdx];
+        if (!folder) continue;
+        await ensureFolder(folder);
+      }
+    };
+
+    const ensureWorkers = Array.from({ length: Math.min(ensureConcurrency, folders.length) }, ensureWorker);
+    await Promise.all(ensureWorkers);
 
     const allFiles = Array.from(folderGroups.entries()).flatMap(([folder, files]) =>
       files.map(f => ({ folder, ...f }))
     );
 
-    const maxConcurrentWrites = isAndroid ? 4 : Math.max(2, Math.min(20, Math.round(allFiles.length / 8) + 6));
+    const maxConcurrentWrites = isAndroid ? 12 : Math.max(2, Math.min(24, Math.round(allFiles.length / 8) + 6));
     console.log('[DataSync] TABDATA write concurrency:', maxConcurrentWrites);
 
     let savedCount = 0;
