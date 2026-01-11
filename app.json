@@ -2,7 +2,7 @@
   "expo": {
     "name": "NODE Virtual",
     "slug": "node-virtual",
-    "version": "1.0.0",
+    "version": "1.0.6",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "rork-app",
@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#333445"
     },
     "ios": {
       "supportsTablet": false,
@@ -24,7 +24,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#333445"
       },
       "package": "app.rork.node_virtual",
       "permissions": [
@@ -32,7 +32,9 @@
         "RECORD_AUDIO",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
-        "INTERNET"
+        "INTERNET",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -59,21 +61,21 @@
     "experiments": {
       "typedRoutes": true
     },
-    "backend": {
-      "enabled": true
-    },
     "updates": {
-      "enabled": true,
-      "url": "<UNKNOWN>",
-      "requestHeaders": {},
-      "checkAutomatically": "ALWAYS",
-      "fallbackToCacheTimeout": 0,
-      "useEmbeddedUpdate": true,
-      "codeSigningCertificate": "<UNKNOWN>",
-      "codeSigningMetadata": "<UNKNOWN>",
-      "assetPatternsToBeBundled": [],
-      "disableAntiBrickingMeasures": false
+      "enabled": false
     },
-    "runtimeVersion": "<UNKNOWN>"
+    "runtimeVersion":
+    {
+      "policy": "appVersion"
+    },
+    "runtimeVersion":"1.0.6",
+    "extra": {
+      "router": {
+        "origin": "https://rork.com/"
+      },
+      "eas": {
+        "projectId": "d7005955-7561-4b27-9d13-6e8841c08a21"
+      }
+    }
   }
 }
