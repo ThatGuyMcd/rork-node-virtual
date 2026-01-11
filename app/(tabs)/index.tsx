@@ -324,66 +324,73 @@ export default function ProductsScreen() {
     console.log('[Products] Table statuses loaded:', statuses.size);
   };
 
-  const loadAreaData = async (area: string) => {
+  const loadAreaData = async (area: string): Promise<void> => {
+    console.log('[Products] ========== loadAreaData START ==========');
+    console.log('[Products] loadAreaData called for area:', area);
+    console.log('[Products] Platform.OS:', Platform.OS);
     console.time(`[Products] loadAreaData(${area})`);
-    console.log('[Products] loadAreaData entered:', { area, platform: Platform.OS });
-    
-    // Set loading state first
-    setLoadingAreaData(true);
-    setDownloadProgress(0);
     
     const startedAt = Date.now();
 
-    const setProgress = (next: number) => {
-      const clamped = Math.max(0, Math.min(100, Math.round(next)));
-      setDownloadProgress((prev) => (clamped > prev ? clamped : prev));
-    };
-
-    const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
-      let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-      try {
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timeoutHandle = setTimeout(() => {
-            const elapsedMs = Date.now() - startedAt;
-            console.error(`[Products] ${label} timed out after ${ms}ms (elapsed ${elapsedMs}ms)`);
-            reject(new Error(`${label} timed out`));
-          }, ms);
-        });
-
-        return (await Promise.race([promise, timeoutPromise])) as T;
-      } finally {
-        if (timeoutHandle) clearTimeout(timeoutHandle);
-      }
-    };
-
     try {
-      console.log('[Products] Downloading fresh data for area:', area);
-      console.log('[Products] Platform:', Platform.OS);
-      setProgress(2);
+      // Set loading state first - use direct state setter for reliability
+      console.log('[Products] Setting initial loading state...');
+      setLoadingAreaData(true);
+      setDownloadProgress(0);
       
-      // Give the UI time to render the loading state
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 16);
-      });
-      console.log('[Products] Initial UI delay completed');
+      // Force a longer delay on Android to ensure state updates are flushed to UI
+      const initialDelay = Platform.OS === 'android' ? 100 : 50;
+      console.log(`[Products] Waiting ${initialDelay}ms for UI to update...`);
+      await new Promise<void>((resolve) => setTimeout(resolve, initialDelay));
+      console.log('[Products] UI delay completed, proceeding with data fetch');
 
-      setProgress(6);
+      const setProgress = (next: number) => {
+        const clamped = Math.max(0, Math.min(100, Math.round(next)));
+        console.log(`[Products] setProgress called: ${clamped}%`);
+        setDownloadProgress(clamped);
+      };
+
+      const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+        let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+        try {
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            timeoutHandle = setTimeout(() => {
+              const elapsedMs = Date.now() - startedAt;
+              console.error(`[Products] ${label} timed out after ${ms}ms (elapsed ${elapsedMs}ms)`);
+              reject(new Error(`${label} timed out`));
+            }, ms);
+          });
+
+          return (await Promise.race([promise, timeoutPromise])) as T;
+        } finally {
+          if (timeoutHandle) clearTimeout(timeoutHandle);
+        }
+      };
+
+      console.log('[Products] Starting data download for area:', area);
+      setProgress(5);
+
+      setProgress(10);
+      console.log('[Products] Fetching site info...');
       const siteInfo = await withTimeout(dataSyncService.getSiteInfo(), 10000, 'Loading site info');
+      console.log('[Products] Site info result:', siteInfo ? `Found: ${siteInfo.siteId}` : 'NULL');
       if (!siteInfo) {
-        console.error('[Products] No site info found');
+        console.error('[Products] No site info found - aborting loadAreaData');
         showNotification('Cannot sync data: No site linked', true);
-        setLoadingAreaData(false);
-        setDownloadProgress(0);
         return;
       }
 
-      setProgress(12);
+      setProgress(15);
+      console.log('[Products] Fetching manifest from server...');
 
       let manifest: { path: string; lastModified?: string }[] = [];
       try {
-        manifest = await withTimeout(apiClient.getManifest(siteInfo.siteId), 45000, 'Fetching manifest');
+        console.log('[Products] Calling apiClient.getManifest...');
+        manifest = await withTimeout(apiClient.getManifest(siteInfo.siteId), 60000, 'Fetching manifest');
+        console.log('[Products] Manifest received, total files:', manifest.length);
       } catch (e) {
-        console.error('[Products] Failed to fetch manifest (will fallback to cached tables):', e);
+        console.error('[Products] Failed to fetch manifest:', e);
+        console.error('[Products] Will fallback to cached tables');
 
         const cachedTables = await dataSyncService.getStoredTables();
         const cachedAreaTables = cachedTables.filter((t) => (t.area ?? '').toUpperCase() === area.toUpperCase());
@@ -400,20 +407,23 @@ export default function ProductsScreen() {
       }
 
       setProgress(20);
+      console.log('[Products] Filtering manifest for area:', area);
       const areaFiles = manifest.filter(fileInfo => {
         const upper = fileInfo.path.toUpperCase();
         return upper.startsWith(`TABDATA/${area.toUpperCase()}/`);
       });
 
       console.log(`[Products] Found ${areaFiles.length} files for area ${area}`);
-      setProgress(24);
+      setProgress(25);
 
       const allTableFolders = new Set<string>();
       
       try {
         const tableplanPath = `TABDATA/${area}/tableplan.ini`;
         setProgress(28);
-        const tableplanContent = await withTimeout(apiClient.getFile(siteInfo.siteId, tableplanPath), 45000, `Downloading ${tableplanPath}`);
+        console.log('[Products] Downloading tableplan.ini from:', tableplanPath);
+        const tableplanContent = await withTimeout(apiClient.getFile(siteInfo.siteId, tableplanPath), 60000, `Downloading ${tableplanPath}`);
+        console.log('[Products] tableplan.ini downloaded, length:', tableplanContent.length);
         
         const lines = tableplanContent.split(/[\r\n]+/);
         for (const line of lines) {
@@ -429,6 +439,7 @@ export default function ProductsScreen() {
           }
         }
       } catch {
+        console.log('[Products] tableplan.ini not found, building table list from manifest');
         manifest.forEach(fileInfo => {
           const upper = fileInfo.path.toUpperCase();
           if (!upper.startsWith('TABDATA/')) return;
@@ -450,7 +461,8 @@ export default function ProductsScreen() {
       }
 
       // Build table objects immediately so UI can show them while downloading
-      setProgress(34);
+      setProgress(35);
+      console.log('[Products] Building table objects from', allTableFolders.size, 'folders');
       const hashTimestamp = Date.now();
       const tableSet = new Map<string, { area: string; table: string; tableId: string }>();
       const areaTables: Table[] = [];
@@ -499,10 +511,11 @@ export default function ProductsScreen() {
         filesToDownload: { path: string; lastModified?: string }[],
         options?: { maxConcurrent?: number; onProgress?: (completed: number, total: number) => void }
       ): Promise<Map<string, string>> => {
-        const defaultConcurrency = 12;
+        // Use lower concurrency on Android for better stability
+        const defaultConcurrency = Platform.OS === 'android' ? 6 : 12;
         const maxConcurrent = Math.max(1, Math.min(24, options?.maxConcurrent ?? defaultConcurrency));
 
-        console.log('[Products] downloadFiles concurrency:', maxConcurrent);
+        console.log('[Products] downloadFiles starting, files:', filesToDownload.length, 'concurrency:', maxConcurrent);
 
         const files: Map<string, string> = new Map();
         let completed = 0;
@@ -559,7 +572,8 @@ export default function ProductsScreen() {
       console.log(`[Products] Priority files: ${priorityFiles.length}, secondary files: ${secondaryFiles.length}`);
 
       if (priorityFiles.length === 0) {
-        console.warn('[Products] No priority files found for area - skipping download to avoid stuck refresh UI');
+        console.warn('[Products] No priority files found for area');
+        console.log('[Products] Completing with tables from tableplan/manifest only');
         setProgress(100);
 
         justFinishedLoadingAreaRef.current = true;
@@ -569,23 +583,26 @@ export default function ProductsScreen() {
         return;
       }
 
-      setDownloadProgress(0);
       setProgress(40);
+      console.log('[Products] Starting priority file downloads...');
 
       const files = await withTimeout(
         downloadFiles(priorityFiles, {
-          maxConcurrent: 12,
+          maxConcurrent: Platform.OS === 'android' ? 6 : 12,
           onProgress: (completed, total) => {
             const downloadPct = total === 0 ? 100 : Math.round((completed / total) * 100);
             const mapped = 40 + (downloadPct * 45) / 100;
             setProgress(mapped);
           },
         }),
-        120000,
+        180000,
         'Downloading priority files'
       );
 
-      setProgress(85);
+      console.log('[Products] Priority files downloaded, count:', files.size);
+
+      setProgress(88);
+      console.log('[Products] Processing downloaded files...');
 
       // Process priority files in single pass - build statuses and file maps together
       const tableDataMap = new Map<string, string>();
@@ -693,11 +710,16 @@ export default function ProductsScreen() {
         return newStatuses;
       });
 
-      setProgress(95);
+      setProgress(98);
+      console.log('[Products] Data processing complete, finalizing...');
       justFinishedLoadingAreaRef.current = true;
-      setLoadingAreaData(false);
       setProgress(100);
+      
+      // Small delay before hiding loading to ensure UI updates
+      await new Promise<void>((resolve) => setTimeout(resolve, 50));
+      
       console.timeEnd(`[Products] loadAreaData(${area})`);
+      console.log('[Products] ========== loadAreaData SUCCESS ==========');
       
       // Background: compute subtotals + save table data locally (fire and forget)
       setTimeout(async () => {
@@ -795,9 +817,13 @@ export default function ProductsScreen() {
 
       showNotification(`Loaded ${areaTables.length} tables`);
     } catch (error) {
-      console.error('[Products] Failed to load area data:', error);
+      console.error('[Products] ========== loadAreaData ERROR ==========');
+      console.error('[Products] Error type:', (error as any)?.constructor?.name);
+      console.error('[Products] Error message:', (error as any)?.message);
+      console.error('[Products] Full error:', error);
       showNotification('Failed to refresh area data', true);
     } finally {
+      console.log('[Products] loadAreaData finally block - setting loadingAreaData to false');
       setLoadingAreaData(false);
     }
   };
@@ -2010,9 +2036,14 @@ export default function ProductsScreen() {
                           key={area}
                           style={[styles.areaCard, { backgroundColor: areaColor }, getButtonSkinStyle(buttonSkin, areaColor)]}
                           onPress={() => {
+                            console.log('[Products] ========== AREA BUTTON PRESSED ==========');
                             console.log('[Products] Area selected:', area);
                             setSelectedArea(area);
-                            void loadAreaData(area);
+                            // Call loadAreaData with proper error handling
+                            loadAreaData(area).catch((err) => {
+                              console.error('[Products] loadAreaData promise rejected:', err);
+                              showNotification('Failed to load area data', true);
+                            });
                           }}
                           activeOpacity={0.8}
                         >
