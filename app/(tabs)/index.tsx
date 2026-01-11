@@ -328,12 +328,31 @@ export default function ProductsScreen() {
     console.time(`[Products] loadAreaData(${area})`);
     setLoadingAreaData(true);
     setDownloadProgress(0);
+    const startedAt = Date.now();
+
+    const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+      let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+      try {
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutHandle = setTimeout(() => {
+            const elapsedMs = Date.now() - startedAt;
+            console.error(`[Products] ${label} timed out after ${ms}ms (elapsed ${elapsedMs}ms)`);
+            reject(new Error(`${label} timed out`));
+          }, ms);
+        });
+
+        return (await Promise.race([promise, timeoutPromise])) as T;
+      } finally {
+        if (timeoutHandle) clearTimeout(timeoutHandle);
+      }
+    };
+
     try {
       console.log('[Products] Downloading fresh data for area:', area);
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => resolve());
       });
-      const siteInfo = await dataSyncService.getSiteInfo();
+      const siteInfo = await withTimeout(dataSyncService.getSiteInfo(), 10000, 'Loading site info');
       if (!siteInfo) {
         console.error('[Products] No site info found');
         showNotification('Cannot sync data: No site linked', true);
@@ -341,7 +360,7 @@ export default function ProductsScreen() {
         return;
       }
 
-      const manifest = await apiClient.getManifest(siteInfo.siteId);
+      const manifest = await withTimeout(apiClient.getManifest(siteInfo.siteId), 45000, 'Fetching manifest');
       const areaFiles = manifest.filter(fileInfo => {
         const upper = fileInfo.path.toUpperCase();
         return upper.startsWith(`TABDATA/${area.toUpperCase()}/`);
@@ -353,7 +372,7 @@ export default function ProductsScreen() {
       
       try {
         const tableplanPath = `TABDATA/${area}/tableplan.ini`;
-        const tableplanContent = await apiClient.getFile(siteInfo.siteId, tableplanPath);
+        const tableplanContent = await withTimeout(apiClient.getFile(siteInfo.siteId, tableplanPath), 45000, `Downloading ${tableplanPath}`);
         
         const lines = tableplanContent.split(/[\r\n]+/);
         for (const line of lines) {
@@ -483,15 +502,32 @@ export default function ProductsScreen() {
 
       console.log(`[Products] Priority files: ${priorityFiles.length}, secondary files: ${secondaryFiles.length}`);
 
+      if (priorityFiles.length === 0) {
+        console.warn('[Products] No priority files found for area - skipping download to avoid stuck refresh UI');
+        setDownloadProgress(100);
+
+        justFinishedLoadingAreaRef.current = true;
+        setLoadingAreaData(false);
+        console.timeEnd(`[Products] loadAreaData(${area})`);
+        showNotification(`Loaded ${areaTables.length} tables`);
+        return;
+      }
+
       setDownloadProgress(0);
 
-      const files = await downloadFiles(priorityFiles, {
-        batchSize: Platform.OS === 'android' ? 15 : 60,
-        onProgress: (completed, total) => {
-          const pct = total === 0 ? 100 : Math.round((completed / total) * 100);
-          setDownloadProgress(pct);
-        },
-      });
+      const files = await withTimeout(
+        downloadFiles(priorityFiles, {
+          batchSize: Platform.OS === 'android' ? 15 : 60,
+          onProgress: (completed, total) => {
+            const pct = total === 0 ? 100 : Math.round((completed / total) * 100);
+            setDownloadProgress(pct);
+          },
+        }),
+        120000,
+        'Downloading priority files'
+      );
+
+      setDownloadProgress(100);
 
       // Process priority files in single pass - build statuses and file maps together
       const tableDataMap = new Map<string, string>();
