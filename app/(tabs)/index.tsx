@@ -330,6 +330,11 @@ export default function ProductsScreen() {
     setDownloadProgress(0);
     const startedAt = Date.now();
 
+    const setProgress = (next: number) => {
+      const clamped = Math.max(0, Math.min(100, Math.round(next)));
+      setDownloadProgress((prev) => (clamped > prev ? clamped : prev));
+    };
+
     const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
       let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
       try {
@@ -349,29 +354,37 @@ export default function ProductsScreen() {
 
     try {
       console.log('[Products] Downloading fresh data for area:', area);
+      setProgress(2);
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => resolve());
       });
+
+      setProgress(6);
       const siteInfo = await withTimeout(dataSyncService.getSiteInfo(), 10000, 'Loading site info');
       if (!siteInfo) {
         console.error('[Products] No site info found');
         showNotification('Cannot sync data: No site linked', true);
         setLoadingAreaData(false);
+        setDownloadProgress(0);
         return;
       }
 
+      setProgress(12);
       const manifest = await withTimeout(apiClient.getManifest(siteInfo.siteId), 45000, 'Fetching manifest');
+      setProgress(20);
       const areaFiles = manifest.filter(fileInfo => {
         const upper = fileInfo.path.toUpperCase();
         return upper.startsWith(`TABDATA/${area.toUpperCase()}/`);
       });
 
       console.log(`[Products] Found ${areaFiles.length} files for area ${area}`);
+      setProgress(24);
 
       const allTableFolders = new Set<string>();
       
       try {
         const tableplanPath = `TABDATA/${area}/tableplan.ini`;
+        setProgress(28);
         const tableplanContent = await withTimeout(apiClient.getFile(siteInfo.siteId, tableplanPath), 45000, `Downloading ${tableplanPath}`);
         
         const lines = tableplanContent.split(/[\r\n]+/);
@@ -409,6 +422,7 @@ export default function ProductsScreen() {
       }
 
       // Build table objects immediately so UI can show them while downloading
+      setProgress(34);
       const hashTimestamp = Date.now();
       const tableSet = new Map<string, { area: string; table: string; tableId: string }>();
       const areaTables: Table[] = [];
@@ -450,6 +464,8 @@ export default function ProductsScreen() {
         const otherAreaTables = prevTables.filter(t => t.area !== area);
         return [...otherAreaTables, ...areaTables];
       });
+
+      setProgress(40);
 
       const downloadFiles = async (
         filesToDownload: { path: string; lastModified?: string }[],
@@ -504,7 +520,7 @@ export default function ProductsScreen() {
 
       if (priorityFiles.length === 0) {
         console.warn('[Products] No priority files found for area - skipping download to avoid stuck refresh UI');
-        setDownloadProgress(100);
+        setProgress(100);
 
         justFinishedLoadingAreaRef.current = true;
         setLoadingAreaData(false);
@@ -514,20 +530,22 @@ export default function ProductsScreen() {
       }
 
       setDownloadProgress(0);
+      setProgress(40);
 
       const files = await withTimeout(
         downloadFiles(priorityFiles, {
           batchSize: Platform.OS === 'android' ? 15 : 60,
           onProgress: (completed, total) => {
-            const pct = total === 0 ? 100 : Math.round((completed / total) * 100);
-            setDownloadProgress(pct);
+            const downloadPct = total === 0 ? 100 : Math.round((completed / total) * 100);
+            const mapped = 40 + (downloadPct * 45) / 100;
+            setProgress(mapped);
           },
         }),
         120000,
         'Downloading priority files'
       );
 
-      setDownloadProgress(100);
+      setProgress(85);
 
       // Process priority files in single pass - build statuses and file maps together
       const tableDataMap = new Map<string, string>();
@@ -635,8 +653,10 @@ export default function ProductsScreen() {
         return newStatuses;
       });
 
+      setProgress(95);
       justFinishedLoadingAreaRef.current = true;
       setLoadingAreaData(false);
+      setProgress(100);
       console.timeEnd(`[Products] loadAreaData(${area})`);
       
       // Background: compute subtotals + save table data locally (fire and forget)
