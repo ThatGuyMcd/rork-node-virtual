@@ -330,6 +330,8 @@ export default function ProductsScreen() {
     setDownloadProgress(0);
     const startedAt = Date.now();
 
+    console.log('[Products] loadAreaData entered:', { area, platform: Platform.OS });
+
     const setProgress = (next: number) => {
       const clamped = Math.max(0, Math.min(100, Math.round(next)));
       setDownloadProgress((prev) => (clamped > prev ? clamped : prev));
@@ -375,7 +377,27 @@ export default function ProductsScreen() {
       }
 
       setProgress(12);
-      const manifest = await withTimeout(apiClient.getManifest(siteInfo.siteId), 45000, 'Fetching manifest');
+
+      let manifest: { path: string; lastModified?: string }[] = [];
+      try {
+        manifest = await withTimeout(apiClient.getManifest(siteInfo.siteId), 45000, 'Fetching manifest');
+      } catch (e) {
+        console.error('[Products] Failed to fetch manifest (will fallback to cached tables):', e);
+
+        const cachedTables = await dataSyncService.getStoredTables();
+        const cachedAreaTables = cachedTables.filter((t) => (t.area ?? '').toUpperCase() === area.toUpperCase());
+
+        setTables((prevTables) => {
+          const otherAreaTables = prevTables.filter((t) => (t.area ?? '').toUpperCase() !== area.toUpperCase());
+          return [...otherAreaTables, ...cachedAreaTables];
+        });
+
+        justFinishedLoadingAreaRef.current = true;
+        setDownloadProgress(100);
+        showNotification(`Loaded cached tables for ${area}`, true);
+        return;
+      }
+
       setProgress(20);
       const areaFiles = manifest.filter(fileInfo => {
         const upper = fileInfo.path.toUpperCase();
@@ -775,6 +797,7 @@ export default function ProductsScreen() {
     } catch (error) {
       console.error('[Products] Failed to load area data:', error);
       showNotification('Failed to refresh area data', true);
+    } finally {
       setLoadingAreaData(false);
     }
   };
@@ -1989,8 +2012,6 @@ export default function ProductsScreen() {
                           onPress={() => {
                             console.log('[Products] Area selected:', area);
                             setSelectedArea(area);
-                            setLoadingAreaData(true);
-                            setDownloadProgress(0);
                             void loadAreaData(area);
                           }}
                           activeOpacity={0.8}
