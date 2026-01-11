@@ -354,10 +354,15 @@ export default function ProductsScreen() {
 
     try {
       console.log('[Products] Downloading fresh data for area:', area);
+      console.log('[Products] Platform:', Platform.OS);
       setProgress(2);
+      
+      // Use setTimeout instead of requestAnimationFrame for cross-platform reliability
+      // requestAnimationFrame can hang on Android native in certain scenarios
       await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => resolve());
+        setTimeout(resolve, 16);
       });
+      console.log('[Products] Initial UI delay completed');
 
       setProgress(6);
       const siteInfo = await withTimeout(dataSyncService.getSiteInfo(), 10000, 'Loading site info');
