@@ -861,7 +861,7 @@ export default function BasketScreen() {
   const handleSaveTab = async () => {
     try {
       await saveTableTab();
-      router.replace('/login');
+      router.replace('/login' as any);
     } catch (error) {
       console.error('[Basket] Failed to save table:', error);
       setSaveErrorModalVisible(true);

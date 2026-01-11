@@ -219,7 +219,7 @@ export default function ProductsScreen() {
   const handleSaveTab = async () => {
     try {
       await saveTableTab();
-      router.replace('/login');
+      router.replace('/login' as any);
     } catch (error) {
       console.error('[Products] Failed to save table:', error);
       setSaveErrorModalVisible(true);
@@ -254,8 +254,8 @@ export default function ProductsScreen() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      loadDisplaySettings();
-    }, 500);
+      void loadDisplaySettings();
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -474,36 +474,49 @@ export default function ProductsScreen() {
 
       const downloadFiles = async (
         filesToDownload: { path: string; lastModified?: string }[],
-        options?: { batchSize?: number; onProgress?: (completed: number, total: number) => void }
+        options?: { maxConcurrent?: number; onProgress?: (completed: number, total: number) => void }
       ): Promise<Map<string, string>> => {
-        const defaultBatchSize = Platform.OS === 'android' ? 12 : 50;
-        const maxBatchSize = Platform.OS === 'android' ? 20 : 60;
-        const batchSize = Math.max(5, Math.min(maxBatchSize, options?.batchSize ?? defaultBatchSize));
+        const isAndroid = Platform.OS === 'android';
+        const defaultConcurrency = isAndroid ? 6 : 12;
+        const maxConcurrent = Math.max(1, Math.min(isAndroid ? 8 : 24, options?.maxConcurrent ?? defaultConcurrency));
+
+        console.log('[Products] downloadFiles concurrency:', maxConcurrent);
+
         const files: Map<string, string> = new Map();
         let completed = 0;
+        let lastProgressEmit = 0;
 
-        for (let i = 0; i < filesToDownload.length; i += batchSize) {
-          const batch = filesToDownload.slice(i, i + batchSize);
-          const batchPromises = batch.map((fileInfo) =>
-            apiClient
-              .getFile(siteInfo.siteId, fileInfo.path)
-              .then((content) => ({ path: fileInfo.path, content }))
-              .catch((e) => {
-                console.warn('[Products] Failed to download file (skipping):', fileInfo.path, e);
-                return null;
-              })
-          );
+        const queue = [...filesToDownload];
 
-          const results = await Promise.all(batchPromises);
-          for (const result of results) {
-            if (result) {
-              files.set(result.path, result.content);
+        const worker = async (workerId: number) => {
+          while (queue.length > 0) {
+            const next = queue.shift();
+            if (!next) return;
+
+            try {
+              const content = await apiClient.getFile(siteInfo.siteId, next.path);
+              files.set(next.path, content);
+            } catch (e) {
+              console.warn('[Products] Failed to download file (skipping):', next.path, e);
+            } finally {
+              completed++;
+              const now = Date.now();
+              if (now - lastProgressEmit > 150 || completed === filesToDownload.length) {
+                lastProgressEmit = now;
+                options?.onProgress?.(completed, filesToDownload.length);
+              }
+              if (completed % 50 === 0) {
+                console.log(`[Products] downloadFiles progress: ${completed}/${filesToDownload.length}`);
+              }
             }
           }
+        };
 
-          completed = Math.min(filesToDownload.length, completed + batch.length);
-          options?.onProgress?.(completed, filesToDownload.length);
-        }
+        const workers = Array.from(
+          { length: Math.min(maxConcurrent, filesToDownload.length) },
+          (_, idx) => worker(idx + 1)
+        );
+        await Promise.all(workers);
 
         return files;
       };
@@ -539,7 +552,7 @@ export default function ProductsScreen() {
 
       const files = await withTimeout(
         downloadFiles(priorityFiles, {
-          batchSize: Platform.OS === 'android' ? 15 : 60,
+          maxConcurrent: Platform.OS === 'android' ? 6 : 12,
           onProgress: (completed, total) => {
             const downloadPct = total === 0 ? 100 : Math.round((completed / total) * 100);
             const mapped = 40 + (downloadPct * 45) / 100;
@@ -592,7 +605,7 @@ export default function ProductsScreen() {
       if (secondaryFiles.length > 0) {
         setTimeout(() => {
           console.log('[Products] Background downloading secondary area files...');
-          downloadFiles(secondaryFiles, { batchSize: 60 })
+          downloadFiles(secondaryFiles, { maxConcurrent: Platform.OS === 'android' ? 4 : 10 })
             .then((secondaryDownloaded) => {
               const secondaryTableFilesMap = new Map<string, Map<string, string>>();
 
