@@ -511,9 +511,9 @@ export default function ProductsScreen() {
         filesToDownload: { path: string; lastModified?: string }[],
         options?: { maxConcurrent?: number; onProgress?: (completed: number, total: number) => void }
       ): Promise<Map<string, string>> => {
-        // Use lower concurrency on Android for better stability
-        const defaultConcurrency = Platform.OS === 'android' ? 6 : 12;
-        const maxConcurrent = Math.max(1, Math.min(24, options?.maxConcurrent ?? defaultConcurrency));
+        // Use same concurrency on Android as web - files are small text files
+        const defaultConcurrency = 16;
+        const maxConcurrent = Math.max(1, Math.min(32, options?.maxConcurrent ?? defaultConcurrency));
 
         console.log('[Products] downloadFiles starting, files:', filesToDownload.length, 'concurrency:', maxConcurrent);
 
@@ -588,7 +588,7 @@ export default function ProductsScreen() {
 
       const files = await withTimeout(
         downloadFiles(priorityFiles, {
-          maxConcurrent: Platform.OS === 'android' ? 6 : 12,
+          maxConcurrent: 16,
           onProgress: (completed, total) => {
             const downloadPct = total === 0 ? 100 : Math.round((completed / total) * 100);
             const mapped = 40 + (downloadPct * 45) / 100;
@@ -644,7 +644,7 @@ export default function ProductsScreen() {
       if (secondaryFiles.length > 0) {
         setTimeout(() => {
           console.log('[Products] Background downloading secondary area files...');
-          downloadFiles(secondaryFiles, { maxConcurrent: 10 })
+          downloadFiles(secondaryFiles, { maxConcurrent: 16 })
             .then((secondaryDownloaded) => {
               const secondaryTableFilesMap = new Map<string, Map<string, string>>();
 
