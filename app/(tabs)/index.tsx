@@ -12,6 +12,7 @@ import {
   StatusBar,
   ActivityIndicator,
   TextInput,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -435,7 +436,9 @@ export default function ProductsScreen() {
         filesToDownload: { path: string; lastModified?: string }[],
         options?: { batchSize?: number; onProgress?: (completed: number, total: number) => void }
       ): Promise<Map<string, string>> => {
-        const batchSize = Math.max(10, Math.min(60, options?.batchSize ?? 50));
+        const defaultBatchSize = Platform.OS === 'android' ? 12 : 50;
+        const maxBatchSize = Platform.OS === 'android' ? 20 : 60;
+        const batchSize = Math.max(5, Math.min(maxBatchSize, options?.batchSize ?? defaultBatchSize));
         const files: Map<string, string> = new Map();
         let completed = 0;
 
@@ -483,7 +486,7 @@ export default function ProductsScreen() {
       setDownloadProgress(0);
 
       const files = await downloadFiles(priorityFiles, {
-        batchSize: 60,
+        batchSize: Platform.OS === 'android' ? 15 : 60,
         onProgress: (completed, total) => {
           const pct = total === 0 ? 100 : Math.round((completed / total) * 100);
           setDownloadProgress(pct);
