@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   TextInput,
   Platform,
+  InteractionManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -326,11 +327,26 @@ export default function ProductsScreen() {
 
   const loadAreaData = async (area: string) => {
     console.time(`[Products] loadAreaData(${area})`);
+    console.log('[Products] loadAreaData entered:', { area, platform: Platform.OS });
+    
+    // Set loading state first
     setLoadingAreaData(true);
     setDownloadProgress(0);
+    
+    // On Android native, we need to ensure the UI updates before starting heavy work
+    // Use InteractionManager to wait for animations/interactions to complete
+    if (Platform.OS !== 'web') {
+      await new Promise<void>((resolve) => {
+        InteractionManager.runAfterInteractions(() => {
+          console.log('[Products] InteractionManager completed, starting data load');
+          resolve();
+        });
+        // Fallback timeout in case runAfterInteractions doesn't fire
+        setTimeout(resolve, 100);
+      });
+    }
+    
     const startedAt = Date.now();
-
-    console.log('[Products] loadAreaData entered:', { area, platform: Platform.OS });
 
     const setProgress = (next: number) => {
       const clamped = Math.max(0, Math.min(100, Math.round(next)));
@@ -359,10 +375,11 @@ export default function ProductsScreen() {
       console.log('[Products] Platform:', Platform.OS);
       setProgress(2);
       
-      // Use setTimeout instead of requestAnimationFrame for cross-platform reliability
-      // requestAnimationFrame can hang on Android native in certain scenarios
+      // Give the UI time to render the loading state
+      // Use a longer delay on Android native to ensure state updates are flushed
+      const uiDelayMs = Platform.OS === 'android' ? 50 : 16;
       await new Promise<void>((resolve) => {
-        setTimeout(resolve, 16);
+        setTimeout(resolve, uiDelayMs);
       });
       console.log('[Products] Initial UI delay completed');
 
