@@ -1224,9 +1224,9 @@ export default function SettingsScreen() {
         },
         incremental,
         {
-          smartPluDownload: !incremental,
-          maxConcurrentDownloads: incremental ? 12 : 20,
-          aggressiveAndroidConcurrency: !incremental,
+          smartPluDownload: true,
+          maxConcurrentDownloads: 20,
+          aggressiveAndroidConcurrency: true,
         }
       );
 
