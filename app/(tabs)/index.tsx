@@ -77,7 +77,6 @@ export default function ProductsScreen() {
   const [tableModalVisible, setTableModalVisible] = useState(false);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [loadingAreaData, setLoadingAreaData] = useState(false);
-  const [pendingAreaLoad, setPendingAreaLoad] = useState<string | null>(null);
   const loadingAreaRef = useRef<string | null>(null);
   const [tableStatuses, setTableStatuses] = useState<Map<string, { hasData: boolean; subtotal: number; isLocked: boolean }>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -839,19 +838,7 @@ export default function ProductsScreen() {
     }
   }, []);
 
-  // Effect to trigger loadAreaData when pendingAreaLoad is set
-  // This ensures state updates are committed before async operation starts
-  useEffect(() => {
-    if (pendingAreaLoad) {
-      console.log('[Products] pendingAreaLoad effect triggered for:', pendingAreaLoad);
-      const areaToLoad = pendingAreaLoad;
-      setPendingAreaLoad(null);
-      loadAreaData(areaToLoad).catch((err) => {
-        console.error('[Products] loadAreaData promise rejected:', err);
-        showNotification('Failed to load area data', true);
-      });
-    }
-  }, [pendingAreaLoad, loadAreaData]);
+
 
   const group = groups.find((g) => g.id === selectedGroup);
   
@@ -2061,11 +2048,23 @@ export default function ProductsScreen() {
                           onPress={() => {
                             console.log('[Products] ========== AREA BUTTON PRESSED ==========');
                             console.log('[Products] Area selected:', area);
-                            // Set loading state FIRST, before changing selected area
+                            console.log('[Products] Platform.OS:', Platform.OS);
+                            
+                            // Set loading state and selected area
                             setLoadingAreaData(true);
                             setDownloadProgress(0);
                             setSelectedArea(area);
-                            setPendingAreaLoad(area);
+                            
+                            // Call loadAreaData directly - use setTimeout(0) to ensure
+                            // state updates are flushed before starting async operation
+                            // This works identically on both web and Android
+                            setTimeout(() => {
+                              console.log('[Products] Starting loadAreaData via setTimeout for:', area);
+                              loadAreaData(area).catch((err) => {
+                                console.error('[Products] loadAreaData promise rejected:', err);
+                                showNotification('Failed to load area data', true);
+                              });
+                            }, 0);
                           }}
                           activeOpacity={0.8}
                         >
