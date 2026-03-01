@@ -163,11 +163,23 @@ class TableDataService {
   ): Promise<void> {
     const rows = await this.createRows(table, basket, operator, vatRates);
 
-    if (!this.isFileSystemAvailable()) {
-      this.data.set(table.id, rows);
-    } else {
-      await this.clearTableDataLocally(table.id);
-      await this.appendRowsToCSV(rows);
+    this.data.set(table.id, rows);
+
+    const tableKey = `${table.area}/${table.name}`;
+    let memFiles = this.tableFiles.get(tableKey);
+    if (!memFiles) {
+      memFiles = new Map();
+      this.tableFiles.set(tableKey, memFiles);
+    }
+    memFiles.set('tabledata.csv', this.rowsToCSV(rows));
+
+    if (this.isFileSystemAvailable()) {
+      try {
+        await this.clearTableDataFromFileSystem(table.id);
+        await this.appendRowsToCSV(rows);
+      } catch (e) {
+        console.warn('[TableDataService] File system write failed (memory is up to date):', e);
+      }
     }
   }
 
@@ -179,12 +191,24 @@ class TableDataService {
   ): Promise<void> {
     const rows = await this.createRows(table, basket, operator, vatRates);
 
-    if (!this.isFileSystemAvailable()) {
-      this.data.set(table.id, rows);
-    } else {
-      await this.clearTableDataLocally(table.id);
-      await this.appendRowsToCSV(rows);
-      await this.saveTableDataToTableFolder(table, rows);
+    this.data.set(table.id, rows);
+
+    const tableKey = `${table.area}/${table.name}`;
+    let memFiles = this.tableFiles.get(tableKey);
+    if (!memFiles) {
+      memFiles = new Map();
+      this.tableFiles.set(tableKey, memFiles);
+    }
+    memFiles.set('tabledata.csv', this.rowsToCSV(rows));
+
+    if (this.isFileSystemAvailable()) {
+      try {
+        await this.clearTableDataFromFileSystem(table.id);
+        await this.appendRowsToCSV(rows);
+        await this.saveTableDataToTableFolder(table, rows);
+      } catch (e) {
+        console.warn('[TableDataService] File system write failed (memory is up to date):', e);
+      }
     }
 
     await this.syncToServer(table);
@@ -200,7 +224,7 @@ class TableDataService {
     let allFiles = await this.getAllTableFiles(table);
     
     if (Object.keys(allFiles).length === 0) {
-      console.log('[TableDataService] No files from file system, checking memory data');
+      console.log('[TableDataService] No files found, checking this.data memory');
       const memoryRows = this.data.get(table.id);
       if (memoryRows && memoryRows.length > 0) {
         console.log('[TableDataService] Found memory data, using it for upload');
@@ -282,42 +306,40 @@ class TableDataService {
   private async getAllTableFiles(table: Table): Promise<Record<string, string>> {
     const allFiles: Record<string, string> = {};
     
-    if (!this.isFileSystemAvailable() || !FileSystem.documentDirectory) {
-      console.log('[TableDataService] File system not available, checking memory storage');
-      const tableKey = `${table.area}/${table.name}`;
-      const memoryFiles = this.tableFiles.get(tableKey);
-      if (memoryFiles) {
-        console.log(`[TableDataService] Found ${memoryFiles.size} files in memory for ${tableKey}`);
-        return Object.fromEntries(memoryFiles);
+    const tableKey = `${table.area}/${table.name}`;
+    const memoryFiles = this.tableFiles.get(tableKey);
+    if (memoryFiles && memoryFiles.size > 0) {
+      console.log(`[TableDataService] Found ${memoryFiles.size} files in memory for ${tableKey}`);
+      for (const [name, content] of memoryFiles) {
+        if (name === 'tableopen.ini') continue;
+        allFiles[name] = content;
       }
-      console.log('[TableDataService] No files in memory storage');
+      if (Object.keys(allFiles).length > 0) {
+        console.log('[TableDataService] Using memory files for upload:', Object.keys(allFiles));
+        return allFiles;
+      }
+    }
+
+    if (!this.isFileSystemAvailable() || !FileSystem.documentDirectory) {
+      console.log('[TableDataService] No memory files and file system not available');
       return allFiles;
     }
 
     try {
       const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
-      console.log('[TableDataService] Reading all files from:', tableFolder);
+      console.log('[TableDataService] No memory files, reading from file system:', tableFolder);
       
       const folderInfo = await FileSystem.getInfoAsync(tableFolder);
       
-      if (!folderInfo.exists) {
-        console.log('[TableDataService] Table folder does not exist');
-        return allFiles;
-      }
-      
-      if (!folderInfo.isDirectory) {
-        console.log('[TableDataService] Path exists but is not a directory');
+      if (!folderInfo.exists || !folderInfo.isDirectory) {
+        console.log('[TableDataService] Table folder does not exist or not a directory');
         return allFiles;
       }
 
       const files = await FileSystem.readDirectoryAsync(tableFolder);
-      console.log('[TableDataService] Files found in table folder:', files);
       
       for (const file of files) {
-        if (file === 'tableopen.ini') {
-          console.log('[TableDataService] Skipping tableopen.ini');
-          continue;
-        }
+        if (file === 'tableopen.ini') continue;
         
         const filePath = `${tableFolder}${file}`;
         const fileInfo = await FileSystem.getInfoAsync(filePath);
@@ -325,32 +347,30 @@ class TableDataService {
         if (fileInfo.exists && !fileInfo.isDirectory) {
           const content = await FileSystem.readAsStringAsync(filePath);
           allFiles[file] = content;
-          console.log(`[TableDataService] Added file: ${file} (${content.length} bytes)`);
         }
       }
       
-      console.log(`[TableDataService] Total files to upload: ${Object.keys(allFiles).length}`);
-      console.log('[TableDataService] File names:', Object.keys(allFiles));
+      console.log(`[TableDataService] Total files from file system: ${Object.keys(allFiles).length}`);
     } catch (error) {
       console.error('[TableDataService] Error reading table files:', error);
-      throw error;
     }
     
     return allFiles;
   }
 
-  async loadTableData(tableId: string): Promise<TableDataRow[]> {
+  async loadTableData(tableId: string, tableObj?: Table): Promise<TableDataRow[]> {
     try {
-      // Check memory data first (from this.data)
       const memoryRows = this.data.get(tableId);
       if (memoryRows && memoryRows.length > 0) {
         console.log(`[TableDataService] Found ${memoryRows.length} rows in memory for table: ${tableId}`);
         return memoryRows;
       }
       
-      // Check memory files (from this.tableFiles - used by loadAreaData)
-      const tables = await dataSyncService.getStoredTables();
-      const table = tables.find(t => t.id === tableId);
+      let table = tableObj;
+      if (!table) {
+        const tables = await dataSyncService.getStoredTables();
+        table = tables.find(t => t.id === tableId);
+      }
       if (table) {
         const tableKey = `${table.area}/${table.name}`;
         const memoryFiles = this.tableFiles.get(tableKey);
@@ -388,7 +408,6 @@ class TableDataService {
         }
       }
       
-      // Fall back to file system only if no memory data
       if (!this.isFileSystemAvailable()) {
         return [];
       }
@@ -444,13 +463,15 @@ class TableDataService {
   }
 
   async clearTableDataLocally(tableId: string): Promise<void> {
+    this.data.delete(tableId);
 
+    if (this.isFileSystemAvailable()) {
+      await this.clearTableDataFromFileSystem(tableId);
+    }
+  }
+
+  private async clearTableDataFromFileSystem(tableId: string): Promise<void> {
     try {
-      if (!this.isFileSystemAvailable()) {
-        this.data.delete(tableId);
-        return;
-      }
-      
       const filePath = this.getFilePath();
       if (!filePath) return;
       
@@ -479,7 +500,7 @@ class TableDataService {
       const csvContent = filteredRows.map(row => row.join(',')).join('\n');
       await FileSystem.writeAsStringAsync(filePath, csvContent);
     } catch (error) {
-      console.error('[TableDataService] Clear error:', error);
+      console.error('[TableDataService] Clear file system error:', error);
     }
   }
 
@@ -487,20 +508,24 @@ class TableDataService {
     await this.clearTableDataLocally(tableId);
     
     if (table) {
+      const tableKey = `${table.area}/${table.name}`;
+      this.tableFiles.delete(tableKey);
+      console.log('[TableDataService] Cleared table files from memory:', tableKey);
+
       if (this.isFileSystemAvailable() && FileSystem.documentDirectory) {
-        const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
-        const folderInfo = await FileSystem.getInfoAsync(tableFolder);
-        if (folderInfo.exists) {
-          await FileSystem.deleteAsync(tableFolder, { idempotent: true });
-          console.log('[TableDataService] Deleted table folder:', tableFolder);
+        try {
+          const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+          const folderInfo = await FileSystem.getInfoAsync(tableFolder);
+          if (folderInfo.exists) {
+            await FileSystem.deleteAsync(tableFolder, { idempotent: true });
+            console.log('[TableDataService] Deleted table folder:', tableFolder);
+          }
+        } catch (e) {
+          console.warn('[TableDataService] File system folder delete failed:', e);
         }
-        await this.syncToServer(table);
-      } else {
-        const tableKey = `${table.area}/${table.name}`;
-        this.tableFiles.delete(tableKey);
-        console.log('[TableDataService] Cleared table files from memory:', tableKey);
-        await this.syncToServer(table);
       }
+
+      await this.syncToServer(table);
     }
   }
 
@@ -583,8 +608,8 @@ class TableDataService {
     return 'KITCHEN_PRINTER_1';
   }
 
-  async getTableStatus(tableId: string): Promise<{ hasData: boolean; subtotal: number }> {
-    const rows = await this.loadTableData(tableId);
+  async getTableStatus(tableId: string, tableObj?: Table): Promise<{ hasData: boolean; subtotal: number }> {
+    const rows = await this.loadTableData(tableId, tableObj);
     const hasData = rows.length > 0;
     const subtotal = rows.reduce((sum, row) => sum + (row.quantity * row.price), 0);
     return { hasData, subtotal };
@@ -625,41 +650,39 @@ class TableDataService {
     }
   }
 
-  async getAllTableStatuses(tableIds: string[]): Promise<Map<string, { hasData: boolean; subtotal: number; isLocked: boolean }>> {
+  async getAllTableStatuses(tableIds: string[], tableObjects?: Table[]): Promise<Map<string, { hasData: boolean; subtotal: number; isLocked: boolean }>> {
     const statusMap = new Map<string, { hasData: boolean; subtotal: number; isLocked: boolean }>();
     
     try {
-      // Always check memory first for both web and native
-      // This ensures consistent behavior when loadAreaData stores data in memory
-      const tables = await dataSyncService.getStoredTables();
+      const storedTables = tableObjects || await dataSyncService.getStoredTables();
       
       for (const tableId of tableIds) {
-        const table = tables.find(t => t.id === tableId);
+        const table = storedTables.find(t => t.id === tableId);
         let hasData = false;
         let subtotal = 0;
         let isLocked = false;
         
-        // Check memory data first (from this.data)
         const memoryRows = this.data.get(tableId);
         if (memoryRows && memoryRows.length > 0) {
           hasData = true;
           subtotal = memoryRows.reduce((sum, row) => sum + (row.quantity * row.price), 0);
         }
         
-        // Check memory files (from this.tableFiles - used by loadAreaData)
         if (table) {
           const tableKey = `${table.area}/${table.name}`;
           const memoryFiles = this.tableFiles.get(tableKey);
           if (memoryFiles) {
-            const csvContent = memoryFiles.get('tabledata.csv');
-            if (csvContent && csvContent.trim().length > 0) {
-              const rows = dataParser.parseCSV(csvContent);
-              if (rows.length > 1) {
-                hasData = true;
-                for (let i = 1; i < rows.length; i++) {
-                  const qty = parseFloat(rows[i][0] || '1');
-                  const price = parseFloat(rows[i][2] || '0');
-                  subtotal += qty * price;
+            if (!hasData) {
+              const csvContent = memoryFiles.get('tabledata.csv');
+              if (csvContent && csvContent.trim().length > 0) {
+                const rows = dataParser.parseCSV(csvContent);
+                if (rows.length > 1) {
+                  hasData = true;
+                  for (let i = 1; i < rows.length; i++) {
+                    const qty = parseFloat(rows[i][0] || '1');
+                    const price = parseFloat(rows[i][2] || '0');
+                    subtotal += qty * price;
+                  }
                 }
               }
             }
@@ -667,7 +690,6 @@ class TableDataService {
           }
         }
         
-        // Only fall back to file system if no memory data and file system is available
         if (!hasData && !isLocked && this.isFileSystemAvailable() && table) {
           try {
             const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
@@ -733,21 +755,25 @@ class TableDataService {
   ): Promise<void> {
     const rows = await this.createRows(table, basket, operator, vatRates);
     
-    if (!this.isFileSystemAvailable()) {
-      this.data.set(table.id, rows);
-      console.log('[TableDataService] Stored table data in memory for web upload');
-      
-      const tableKey = `${table.area}/${table.name}`;
-      let files = this.tableFiles.get(tableKey);
-      if (!files) {
-        files = new Map();
-        this.tableFiles.set(tableKey, files);
+    this.data.set(table.id, rows);
+    console.log('[TableDataService] Stored table data in memory for upload');
+    
+    const tableKey = `${table.area}/${table.name}`;
+    let files = this.tableFiles.get(tableKey);
+    if (!files) {
+      files = new Map();
+      this.tableFiles.set(tableKey, files);
+    }
+    const csvContent = this.rowsToCSV(rows);
+    files.set('tabledata.csv', csvContent);
+    console.log(`[TableDataService] Updated tabledata.csv in memory for ${tableKey}`);
+
+    if (this.isFileSystemAvailable()) {
+      try {
+        await this.saveTableDataToTableFolder(table, rows);
+      } catch (e) {
+        console.warn('[TableDataService] File system write failed (memory is up to date):', e);
       }
-      const csvContent = this.rowsToCSV(rows);
-      files.set('tabledata.csv', csvContent);
-      console.log(`[TableDataService] Updated tabledata.csv in memory for ${tableKey}`);
-    } else {
-      await this.saveTableDataToTableFolder(table, rows);
     }
     
     await this.syncToServer(table);
@@ -780,34 +806,39 @@ class TableDataService {
         const rows = await this.createRows(table, billItems, operator, vatRates);
         const csvContent = this.rowsToCSV(rows);
         
-        if (!this.isFileSystemAvailable()) {
-          memoryFiles.set(fileName, csvContent);
-          console.log(`[TableDataService] Saved ${fileName} to memory (${billItems.length} items)`);
-        } else if (FileSystem.documentDirectory) {
-          const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
-          const folderInfo = await FileSystem.getInfoAsync(tableFolder);
-          if (!folderInfo.exists) {
-            await FileSystem.makeDirectoryAsync(tableFolder, { intermediates: true });
+        memoryFiles.set(fileName, csvContent);
+        console.log(`[TableDataService] Saved ${fileName} to memory (${billItems.length} items)`);
+
+        if (this.isFileSystemAvailable() && FileSystem.documentDirectory) {
+          try {
+            const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+            const folderInfo = await FileSystem.getInfoAsync(tableFolder);
+            if (!folderInfo.exists) {
+              await FileSystem.makeDirectoryAsync(tableFolder, { intermediates: true });
+            }
+            const filePath = `${tableFolder}${fileName}`;
+            await FileSystem.writeAsStringAsync(filePath, csvContent);
+          } catch (e) {
+            console.warn(`[TableDataService] File system write of ${fileName} failed:`, e);
           }
-          const filePath = `${tableFolder}${fileName}`;
-          await FileSystem.writeAsStringAsync(filePath, csvContent);
-          console.log(`[TableDataService] Saved ${fileName} to file system (${billItems.length} items)`);
         }
       } else {
         const emptyCSV = 'X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?';
         
-        if (!this.isFileSystemAvailable()) {
-          memoryFiles.set(fileName, emptyCSV);
-          console.log(`[TableDataService] Saved empty ${fileName} to memory`);
-        } else if (FileSystem.documentDirectory) {
-          const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
-          const folderInfo = await FileSystem.getInfoAsync(tableFolder);
-          if (!folderInfo.exists) {
-            await FileSystem.makeDirectoryAsync(tableFolder, { intermediates: true });
+        memoryFiles.set(fileName, emptyCSV);
+
+        if (this.isFileSystemAvailable() && FileSystem.documentDirectory) {
+          try {
+            const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+            const folderInfo = await FileSystem.getInfoAsync(tableFolder);
+            if (!folderInfo.exists) {
+              await FileSystem.makeDirectoryAsync(tableFolder, { intermediates: true });
+            }
+            const filePath = `${tableFolder}${fileName}`;
+            await FileSystem.writeAsStringAsync(filePath, emptyCSV);
+          } catch (e) {
+            console.warn(`[TableDataService] File system write of empty ${fileName} failed:`, e);
           }
-          const filePath = `${tableFolder}${fileName}`;
-          await FileSystem.writeAsStringAsync(filePath, emptyCSV);
-          console.log(`[TableDataService] Saved empty ${fileName} to file system`);
         }
       }
     }
@@ -841,14 +872,18 @@ class TableDataService {
       const fileName = fileNames[i];
       let csvContent = '';
       
-      if (!this.isFileSystemAvailable()) {
-        csvContent = memoryFiles?.get(fileName) || '';
-      } else if (FileSystem.documentDirectory) {
-        const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
-        const filePath = `${tableFolder}${fileName}`;
-        const fileInfo = await FileSystem.getInfoAsync(filePath);
-        if (fileInfo.exists) {
-          csvContent = await FileSystem.readAsStringAsync(filePath);
+      csvContent = memoryFiles?.get(fileName) || '';
+      
+      if (!csvContent && this.isFileSystemAvailable() && FileSystem.documentDirectory) {
+        try {
+          const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+          const filePath = `${tableFolder}${fileName}`;
+          const fileInfo = await FileSystem.getInfoAsync(filePath);
+          if (fileInfo.exists) {
+            csvContent = await FileSystem.readAsStringAsync(filePath);
+          }
+        } catch (e) {
+          console.warn(`[TableDataService] File system read of ${fileName} failed:`, e);
         }
       }
       
@@ -877,17 +912,21 @@ class TableDataService {
       return;
     }
 
-    if (!this.isFileSystemAvailable()) {
-      this.data.delete(table.id);
-      const tableKey = `${table.area}/${table.name}`;
-      this.tableFiles.delete(tableKey);
-      console.log('[TableDataService] Cleared table data from memory for web upload');
-    } else if (FileSystem.documentDirectory) {
-      const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
-      const folderInfo = await FileSystem.getInfoAsync(tableFolder);
-      if (folderInfo.exists) {
-        await FileSystem.deleteAsync(tableFolder, { idempotent: true });
-        console.log('[TableDataService] Deleted table folder for clear sync:', tableFolder);
+    this.data.delete(table.id);
+    const tableKey = `${table.area}/${table.name}`;
+    this.tableFiles.delete(tableKey);
+    console.log('[TableDataService] Cleared table data from memory');
+
+    if (this.isFileSystemAvailable() && FileSystem.documentDirectory) {
+      try {
+        const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+        const folderInfo = await FileSystem.getInfoAsync(tableFolder);
+        if (folderInfo.exists) {
+          await FileSystem.deleteAsync(tableFolder, { idempotent: true });
+          console.log('[TableDataService] Deleted table folder for clear sync:', tableFolder);
+        }
+      } catch (e) {
+        console.warn('[TableDataService] File system delete failed:', e);
       }
     }
 
@@ -921,28 +960,28 @@ class TableDataService {
     const emptyCSV = 'X,Product,Price,PLUFile,Group,Department,VATCode,VATPercentage,VATAmount,Added By,Time/Date Added,PRINTER 1,PRINTER 2,PRINTER 3,Item Printed?';
     const tableKey = `${table.area}/${table.name}`;
     
-    if (!this.isFileSystemAvailable()) {
-      let memoryFiles = this.tableFiles.get(tableKey);
-      if (memoryFiles) {
-        memoryFiles.set(fileName, emptyCSV);
-        console.log(`[TableDataService] Cleared ${fileName} in memory`);
-      }
-      
-      if (splitBillIndex === -1) {
-        this.data.delete(table.id);
-      }
-    } else if (FileSystem.documentDirectory) {
-      const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
-      const filePath = `${tableFolder}${fileName}`;
-      const fileInfo = await FileSystem.getInfoAsync(filePath);
-      
-      if (fileInfo.exists) {
-        await FileSystem.writeAsStringAsync(filePath, emptyCSV);
-        console.log(`[TableDataService] Cleared ${fileName} in file system`);
-      }
-      
-      if (splitBillIndex === -1) {
-        this.data.delete(table.id);
+    let memoryFiles = this.tableFiles.get(tableKey);
+    if (memoryFiles) {
+      memoryFiles.set(fileName, emptyCSV);
+      console.log(`[TableDataService] Cleared ${fileName} in memory`);
+    }
+    
+    if (splitBillIndex === -1) {
+      this.data.delete(table.id);
+    }
+
+    if (this.isFileSystemAvailable() && FileSystem.documentDirectory) {
+      try {
+        const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+        const filePath = `${tableFolder}${fileName}`;
+        const fileInfo = await FileSystem.getInfoAsync(filePath);
+        
+        if (fileInfo.exists) {
+          await FileSystem.writeAsStringAsync(filePath, emptyCSV);
+          console.log(`[TableDataService] Cleared ${fileName} in file system`);
+        }
+      } catch (e) {
+        console.warn(`[TableDataService] File system clear of ${fileName} failed:`, e);
       }
     }
   }
@@ -997,15 +1036,19 @@ class TableDataService {
     for (const fileName of fileNames) {
       let csvContent = '';
       
-      if (!this.isFileSystemAvailable()) {
-        const memoryFiles = this.tableFiles.get(tableKey);
-        csvContent = memoryFiles?.get(fileName) || '';
-      } else if (FileSystem.documentDirectory) {
-        const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
-        const filePath = `${tableFolder}${fileName}`;
-        const fileInfo = await FileSystem.getInfoAsync(filePath);
-        if (fileInfo.exists) {
-          csvContent = await FileSystem.readAsStringAsync(filePath);
+      const memoryFiles = this.tableFiles.get(tableKey);
+      csvContent = memoryFiles?.get(fileName) || '';
+      
+      if (!csvContent && this.isFileSystemAvailable() && FileSystem.documentDirectory) {
+        try {
+          const tableFolder = `${FileSystem.documentDirectory}tables/${table.area}/${table.name}/`;
+          const filePath = `${tableFolder}${fileName}`;
+          const fileInfo = await FileSystem.getInfoAsync(filePath);
+          if (fileInfo.exists) {
+            csvContent = await FileSystem.readAsStringAsync(filePath);
+          }
+        } catch (e) {
+          console.warn(`[TableDataService] File system read of ${fileName} failed:`, e);
         }
       }
       

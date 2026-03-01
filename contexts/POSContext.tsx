@@ -591,7 +591,7 @@ export const [POSProvider, usePOS] = createContextHook<POSContextType>(() => {
     setCurrentTable(table);
     if (table) {
       
-      const csvRows = await tableDataService.loadTableData(table.id);
+      const csvRows = await tableDataService.loadTableData(table.id, table);
       if (csvRows.length > 0) {
         console.log(`[POS] Loading basket from CSV... Found ${csvRows.length} rows`);
         const products = await dataSyncService.getStoredProducts();
