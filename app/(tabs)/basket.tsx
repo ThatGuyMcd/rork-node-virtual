@@ -280,17 +280,24 @@ const SwipeableBasketItem = memo(({
         ]}
       >
         <View style={styles.itemTopRow}>
-          <View style={styles.itemNameContainer}>
-            {prefix !== '' && (
-              <Text style={[styles.itemPrefix, { color: colors.primary }]}>{prefix} </Text>
-            )}
-            <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
-              {displayName}
-            </Text>
-            {isRefundItem && (
-              <View style={[styles.refundBadge, { backgroundColor: colors.error }]}>
-                <Text style={styles.refundBadgeText}>REFUND</Text>
-              </View>
+          <View style={styles.itemNameWrapper}>
+            <View style={styles.itemNameContainer}>
+              {prefix !== '' && (
+                <Text style={[styles.itemPrefix, { color: colors.primary }]}>{prefix} </Text>
+              )}
+              <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
+                {displayName.split(' - ')[0]}
+              </Text>
+              {isRefundItem && (
+                <View style={[styles.refundBadge, { backgroundColor: colors.error }]}>
+                  <Text style={styles.refundBadgeText}>REFUND</Text>
+                </View>
+              )}
+            </View>
+            {displayName.includes(' - ') && (
+              <Text style={styles.itemMessage} numberOfLines={1}>
+                {'    - '}{displayName.split(' - ').slice(1).join(' - ')}
+              </Text>
             )}
           </View>
           <View style={styles.quantitySection}>
@@ -2383,12 +2390,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
+  itemNameWrapper: {
+    flex: 1,
+    paddingTop: 5,
+  },
   itemNameContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
     flexWrap: 'wrap' as const,
-    paddingTop: 5,
+  },
+  itemMessage: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: '#D32F2F',
+    marginTop: 2,
   },
   itemPrefix: {
     fontSize: 15,
